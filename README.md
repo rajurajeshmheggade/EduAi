@@ -1,4 +1,4 @@
-# EduAI Platform (ICME Next-Gen)
+# EduAI Platform 
 
 Phase 1 + 2 of the FRD: foundation (JWT + RBAC, pgvector schema, persistent job state), textbook
 vectorization, strict **k=3** RAG chatbot with `[Page X]` citations, and the AI **How-to-Teach** planner.
