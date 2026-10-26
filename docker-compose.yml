@@ -1,0 +1,15 @@
+# Optional: use Docker instead of the bundled dev database (python -m app.devdb start).
+# Set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/eduai and REDIS_URL=redis://localhost:6379/0
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: eduai
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+volumes:
+  pgdata:
