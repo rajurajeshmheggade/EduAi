@@ -83,6 +83,37 @@ Typed PDFs are read from their text layer (works offline in `mock` mode with a r
 scripts need `PROVIDER_MODE=azure|openai` (GPT-4o vision OCR + the FRD examiner prompt). Try it with
 `python -m scripts.sample_evaluation` → files in `.data/sample_evaluation/` (Grade-10-A, PHY101, `teacher@demo.edu`).
 
+## Lesson Plans & Session Plans (Teacher → Lesson Plans)
+
+Ported from the Rapid / SARAS teacher console — same flows, prompts and content, in EduAI's UI, running on EduAI's
+own AI provider (`PROVIDER_MODE`, works offline in `mock`).
+
+* **Lesson Plan Repository** — search, class / subject filters, Completed / Draft, live session count, Edit / Edit
+  Draft (reopens the creator where you left off), Preview, Delete.
+* **Create → Manual**: the 7-step creator — Basic Setup (class, subject, board, chapter from your indexed textbooks
+  or typed, duration, optional PDF / DOCX / TXT that grounds the plan) → Course Outcomes → Expected Learning Outcomes
+  (Bloom HOTS counts, skills, competencies, attitudes) → Objective Mapping → Assessment items per ELO → Learning
+  Experience (pedagogical approaches, intelligences, 5E design per ELO with resources, ELO merge) → Review & Create.
+  Every AI item can be edited, regenerated with extra instructions or deleted; Save as Draft at any step.
+* **Create → AI Bot**: a chat assistant collects class, subject, chapter, COs, duration and Bloom counts, then runs the
+  same pipeline and saves the plan.
+* **Lesson Plan View** — school / teacher header, core objectives, ELOs, assessment, assignments, 5E design model;
+  edit any section and Save; Download PDF / Word (.docx).
+* **Session Manager** (Session chip) — sessions of a plan: Create Session (title, duration, instructions, the plan's own
+  ELOs, resources per Resource Category from the **Resource Library**: your links / files, indexed textbooks, tests,
+  questions, homework), AI-generated session plan with **Current Affairs, Video References, Images and Educational
+  Documents** fetched live, Preview + Launch (projection player), Download PDF, Delete.
+
+Content agents (per agent the first source that answers wins, results reviewed by the AI for relevance, cached 6 h):
+Images SerpAPI → Wikimedia Commons → Openverse · Videos YouTube Data API v3 → SerpAPI · Current affairs SerpAPI
+Google News → Wikinews · Documents SerpAPI + `filetype:pdf` (NCERT / DIKSHA). Set `SERPAPI_API_KEY` and
+`YOUTUBE_API_KEY` in `.env` (see `.env.example`); a block with no source simply says so.
+
+API: `/ICMELive/api/v1/lessonplan/{scope, chapters, extract-text, course-outcomes, skills-per-co, competencies-per-co,
+elos, regenerate-*, pedagogical-approaches, assessment-items, five-e-resource, assignments, save-unit-plan, plans,
+assistant/chat}` · `/ICMELive/api/v1/lessonplan/sessions/{elos, list, get, save, delete, generate, resource-library,
+resource-content, resources}`. Tables: migration `010_lesson_session_plans.sql`.
+
 ## Modes
 
 | Setting | Dev default | Production |

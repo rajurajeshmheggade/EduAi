@@ -8,6 +8,7 @@ import Login from '@/pages/auth/Login'
 // Route-level code splitting keeps react-pdf (large) out of the initial bundle.
 const TeacherDashboard = lazy(() => import('@/pages/teacher/TeacherDashboard'))
 const TextbookHowToTeach = lazy(() => import('@/pages/teacher/TextbookHowToTeach'))
+const LessonPlans = lazy(() => import('@/pages/teacher/LessonPlans'))
 const MyClasses = lazy(() => import('@/pages/teacher/MyClasses'))
 const TeacherAttendance = lazy(() => import('@/pages/teacher/TeacherAttendance'))
 const TeacherTimetable = lazy(() => import('@/pages/teacher/TeacherTimetable'))
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/teacher/tests/create" element={<Navigate to="/teacher/tests?new=1" replace />} />
             <Route path="/teacher/assignments/create" element={<Navigate to="/teacher/assignments?new=1" replace />} />
             <Route path="/teacher/textbooks" element={<TextbookHowToTeach />} />
+            <Route path="/teacher/lesson-plans" element={<LessonPlans />} />
           </Route>
         </Route>
 

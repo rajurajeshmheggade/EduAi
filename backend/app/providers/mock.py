@@ -64,6 +64,13 @@ class MockLLM:
 
     # -- chat ---------------------------------------------------------------
     def chat(self, system: str, messages: list[dict], *, json_mode: bool = False, temperature: float = 0.2) -> str:
+        lp = re.search(r"\[TASK:LP:(\w+)\]", system)
+        if lp:
+            from .mock_lessonplan import answer
+
+            kind = lp.group(1)
+            prompt = system if kind == "assistant" else (messages[-1]["content"] if messages else "")
+            return answer(kind, prompt, messages)
         if "[TASK:GUIDE]" in system:
             return json.dumps(self._guide(system, messages[-1]["content"]))
         if "[TASK:RAG]" in system:

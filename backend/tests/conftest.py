@@ -12,6 +12,10 @@ os.environ["PROVIDER_MODE"] = "mock"
 os.environ["STORAGE_MODE"] = "local"
 os.environ["STORAGE_ROOT"] = tempfile.mkdtemp(prefix="eduai-test-storage-")
 os.environ["REDIS_URL"] = ""
+# Tests never reach the live search APIs (keys in backend/.env are for running the app).
+os.environ["SERPAPI_API_KEY"] = ""
+os.environ["YOUTUBE_API_KEY"] = ""
+os.environ["SESSION_AGENTS_CACHE_MINUTES"] = "0"
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402

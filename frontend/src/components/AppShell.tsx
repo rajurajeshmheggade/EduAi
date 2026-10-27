@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { BookOpenCheck, ChevronsLeft, ChevronsRight, CalendarCheck, CalendarClock, ClipboardCheck, ClipboardList, HeartPulse, KeyRound, LayoutDashboard, MessageSquareText, PencilRuler, ScanText, School, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
+import { BookOpenCheck, ChevronsLeft, ChevronsRight, CalendarCheck, CalendarClock, ClipboardCheck, ClipboardList, HeartPulse, KeyRound, LayoutDashboard, MessageSquareText, NotebookPen, PencilRuler, ScanText, School, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ChangePasswordDialog, ProfileMenu } from '@/components/ProfileMenu'
 import { Badge } from '@/components/ui/badge'
+import { Toaster } from '@/components/ui/toast'
 import { cn, roleLabel } from '@/lib/utils'
 import type { Role, UserProfile } from '@/types'
 
@@ -18,6 +19,7 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/teacher/attendance', section: 'Teaching', label: 'Attendance', icon: CalendarCheck },
     { to: '/teacher/homework', section: 'Teaching', label: 'Homework', icon: ClipboardList },
     { to: '/teacher/textbooks', section: 'Teaching', label: 'Textbooks & How to Teach', icon: BookOpenCheck },
+    { to: '/teacher/lesson-plans', section: 'Teaching', label: 'Lesson Plans', icon: NotebookPen },
     { to: '/teacher/tests', section: 'Assessments', label: 'Online tests', icon: PencilRuler, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/assignments', section: 'Assessments', label: 'Assignments', icon: ClipboardCheck, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/evaluation', section: 'Assessments', label: 'AI Evaluation', icon: ScanText, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
@@ -136,6 +138,7 @@ export function AppShell() {
         </footer>
       </div>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
+      <Toaster />
     </div>
   )
 }
