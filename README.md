@@ -114,6 +114,62 @@ elos, regenerate-*, pedagogical-approaches, assessment-items, five-e-resource, a
 assistant/chat}` · `/ICMELive/api/v1/lessonplan/sessions/{elos, list, get, save, delete, generate, resource-library,
 resource-content, resources}`. Tables: migration `010_lesson_session_plans.sql`.
 
+## Student Wellness — MindAlign companion (Student → Wellness, Teacher → Wellbeing & Mindset)
+
+The MindAlign stress & mental-wellness companion (github.com/Sk2003pm/H2S-Main-Challenge) integrated into EduAI. No
+separate login: the student opens their EduAI account, confirms the first step (name, class, section, subjects and
+knowledge level all read from their account; they pick an avatar and, optionally, when their next exams start) and the
+app becomes their wellness tracker.
+
+**Pitched at the student, not at an entrance exam.** MindAlign asked users to pick JEE / NEET / UPSC and aimed every
+prompt at it. Here there is no exam picker: `backend/app/services/wellness/context.py` builds each student's academic
+context server-side on every request — class and section, term, the class's subjects, a **knowledge level** from their
+graded EduAI assessments (newest 20, only results the student can already see; Advanced ≥85 % · Proficient ≥70 % ·
+Developing ≥50 % · Foundational, or *Not yet assessed*), the subject that needs most support, and upcoming tests and
+homework. Journal analysis, Aura, daily tips, the quiz (today's class subject, difficulty set by the student's level in
+it), check-ins, fallbacks, guardrail wording and the stress-buster worries all use it; the AI is told not to assume an
+entrance exam unless the student mentions one. The countdown targets the next assigned online test or the student's own
+exam date, whichever is sooner. Only the first name goes to the AI.
+
+* **Dashboard** — AI focus tip, stress-reliever and affirmation; avg stress, journal logs, mindful cycles; 7-entry mood
+  trend; daily mood check-in (+15 XP); Zen Brain quiz on a class subject at the student's level (+25 / +10 XP); learning profile (class, subjects,
+  knowledge level per subject, what is due); Focus Mode (countdown to the next test,
+  Pomodoro, synthesised ocean waves / 10 Hz binaural beats, +50 XP); evidence-based coping toolkit.
+* **Journal** — AI analysis: calm gauge (1-100), emotions, hidden stress triggers, coping checklist (+20 XP each),
+  encouragement for upcoming school assessments (+40 XP per entry); history; crisis language surfaces helplines.
+* **Aura Chat / Aura Live** — empathetic companion grounded in the student's journal entries and long-term memory, with
+  quick worry chips, "discuss this entry", a memory panel; Aura Live adds webcam preview, hands-free speech-to-text
+  (browser STT, server Whisper fallback) and spoken replies with captions.
+* **Breathing** (Box 4-4-4-4, 4-7-8, voice guide in sync), **Stress Buster** balloon game, **XP & levels**
+  (Mindful Rookie → Zen Scholar → Focus Guru → Calm Conqueror → Ascended Sage).
+* **Teacher ▸ Wellbeing & Mindset** — per class: onboarding / participation, average stress, trigger distribution, each
+  student's mood sparkline, knowledge level, risk (high / watch / ok / inactive), activity, and safety alerts to acknowledge. Teachers
+  never see journal or chat text — students are told this on the first screen.
+
+AI mechanisms (same as MindAlign, on EduAI's provider): MindAlign's prompts and JSON contracts, re-aimed at the academic context above; JSON replies validated against Pydantic
+schemas; a 45 s time budget per call with MindAlign's local keyword fallbacks (also used in `PROVIDER_MODE=mock`);
+**deterministic guardrails before any AI call** — Tier 1 crisis / self-harm (Tele-MANAS 14416, KIRAN 1800-599-0019,
+Vandrevala, AASRA, NIMHANS), Tier 2 medication / study-drug boundary, Tier 3 academic catastrophizing reframing, Tier 4
+jailbreak / prompt-injection; memory extraction into Aura's long-term memory; journal-grounded chat context.
+
+Security & performance (hardening over the standalone app):
+
+| Concern | Measure |
+| --- | --- |
+| Identity / IDOR | Student and teacher come from the JWT; MindAlign trusted a client-sent `username` on every route — removed |
+| Prompt injection (OWASP LLM01) | Guardrail tier 4; chat history + journal context built **server-side** (browser can't inject "journal" text); student text fenced and declared data in the system directives |
+| Output handling (LLM02) | All AI text rendered as text, never HTML; schema validation + length clamps on every structured reply |
+| Sensitive data (LLM06) | Journals/chats visible only to the student; teacher endpoints return aggregates + alert metadata; `Cache-Control: no-store` on every wellness response; rows cascade-delete with the student |
+| Integrity | XP awarded server-side (fixed amounts, daily caps, row lock); quiz answer checked server-side, `correctIdx` withheld until answered |
+| Abuse / cost | Per-user sliding-window rate limits (chat 20/min, journal 10/10 min, tips, quiz, transcription); body limits (journal 5 000, chat 2 000 chars, audio 4 MB, allow-listed audio types) |
+| Availability | 45 s AI budget + local fallbacks, guardrails never depend on the AI; tips cached per day/latest journal |
+| Frontend performance | Each tab is its own chunk; three.js / Web Audio load only on demand; 3D loops pause when hidden and honour `prefers-reduced-motion` |
+
+API: `/ICMELive/api/v1/wellness/{meta, me, me/profile, me/tips, me/quiz, me/quiz/answer, me/checkin, me/journals,
+me/journals/{id}/coping, me/chat, me/memories, me/activity, me/transcribe}` (students) ·
+`/ICMELive/api/v1/wellness/{classes, classes/{code}/overview, classes/{code}/students/{student}, alerts/{id}/acknowledge}`
+(teachers). Tables: migration `011_wellness.sql`.
+
 ## Modes
 
 | Setting | Dev default | Production |

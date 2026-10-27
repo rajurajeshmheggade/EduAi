@@ -9,6 +9,8 @@ import Login from '@/pages/auth/Login'
 const TeacherDashboard = lazy(() => import('@/pages/teacher/TeacherDashboard'))
 const TextbookHowToTeach = lazy(() => import('@/pages/teacher/TextbookHowToTeach'))
 const LessonPlans = lazy(() => import('@/pages/teacher/LessonPlans'))
+const Wellbeing = lazy(() => import('@/pages/teacher/Wellbeing'))
+const Wellness = lazy(() => import('@/pages/student/Wellness'))
 const MyClasses = lazy(() => import('@/pages/teacher/MyClasses'))
 const TeacherAttendance = lazy(() => import('@/pages/teacher/TeacherAttendance'))
 const TeacherTimetable = lazy(() => import('@/pages/teacher/TeacherTimetable'))
@@ -46,6 +48,8 @@ export default function App() {
             <Route path="/teacher/assignments/create" element={<Navigate to="/teacher/assignments?new=1" replace />} />
             <Route path="/teacher/textbooks" element={<TextbookHowToTeach />} />
             <Route path="/teacher/lesson-plans" element={<LessonPlans />} />
+            <Route path="/teacher/wellbeing" element={<Wellbeing />} />
+            <Route path="/teacher/mindset" element={<Navigate to="/teacher/wellbeing" replace />} />
           </Route>
         </Route>
 
@@ -57,6 +61,7 @@ export default function App() {
             <Route path="/student/timetable" element={<StudentTimetable />} />
             <Route path="/student/homework" element={<StudentHomework />} />
             <Route path="/student/evaluations" element={<StudentEvaluations />} />
+            <Route path="/student/wellness" element={<Wellness />} />
             <Route path="/student/tests" element={<StudentAssessments kind="ONLINE_TEST" />} />
             <Route path="/student/tests/:id" element={<StudentAssessments kind="ONLINE_TEST" />} />
             <Route path="/student/tests/:id/take" element={<TestRunner />} />

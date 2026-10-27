@@ -23,7 +23,7 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/teacher/tests', section: 'Assessments', label: 'Online tests', icon: PencilRuler, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/assignments', section: 'Assessments', label: 'Assignments', icon: ClipboardCheck, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/evaluation', section: 'Assessments', label: 'AI Evaluation', icon: ScanText, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
-    { to: '/teacher/mindset', section: 'Coming soon', label: 'Wellbeing & Mindset', icon: HeartPulse, soon: true },
+    { to: '/teacher/wellbeing', section: 'Wellbeing', label: 'Wellbeing & Mindset', icon: HeartPulse },
   ],
   student: [
     { to: '/student/dashboard', section: 'Overview', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,6 +35,7 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/student/tests', section: 'Assessments', label: 'Tests', icon: PencilRuler, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/student/assignments', section: 'Assessments', label: 'Assignments', icon: ClipboardCheck, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/student/evaluations', section: 'Assessments', label: 'Exam results', icon: ScanText, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
+    { to: '/student/wellness', section: 'Wellbeing', label: 'Wellness', icon: HeartPulse },
   ],
   orgadmin: [{ to: '/admin-dashboard', section: 'Manage', label: 'Admin console', icon: ShieldCheck }],
   superadmin: [{ to: '/admin-dashboard', section: 'Manage', label: 'Admin console', icon: ShieldCheck }],
