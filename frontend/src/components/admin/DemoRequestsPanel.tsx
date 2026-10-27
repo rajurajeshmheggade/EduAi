@@ -4,19 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, Textarea } from '@/components/ui/field'
-import { api, errorMessage } from '@/services/apiClient'
-
-type LeadStatus = 'NEW' | 'CONTACTED' | 'DEMO_DONE' | 'WON' | 'LOST'
-interface Lead {
-  request_id: string; full_name: string; email: string; phone: string | null; institution_name: string
-  institution_type: string; role: string | null; city: string | null; student_count: string | null
-  interests: string[]; message: string | null; status: LeadStatus; notes: string | null; created_at: string
-}
-const STATUS: Record<LeadStatus, { label: string; tone: 'brand' | 'warn' | 'aqua' | 'ok' | 'neutral' }> = {
-  NEW: { label: 'New', tone: 'brand' }, CONTACTED: { label: 'Contacted', tone: 'warn' }, DEMO_DONE: { label: 'Demo done', tone: 'aqua' },
-  WON: { label: 'Won', tone: 'ok' }, LOST: { label: 'Lost', tone: 'neutral' },
-}
-const B = '/ICMELive/api/v1/admin/demo-requests'
+import { errorMessage } from '@/services/apiClient'
+import { LEAD_STATUS as STATUS, leadsService, type Lead, type LeadStatus } from '@/services/leadsService'
 
 /** Platform owner's inbox for demo requests from the public landing page. */
 export function DemoRequestsPanel() {
@@ -28,7 +17,7 @@ export function DemoRequestsPanel() {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get<{ requests: Lead[]; counts: Partial<Record<LeadStatus, number>> }>(B, { params: filter ? { status_filter: filter } : {} })
+      const data = await leadsService.list(filter)
       setLeads(data.requests); setCounts(data.counts)
     } catch (e) { setError(errorMessage(e)) }
   }, [filter])
@@ -36,7 +25,7 @@ export function DemoRequestsPanel() {
 
   async function update(id: string, patch: { status?: LeadStatus; notes?: string }) {
     setError(null)
-    try { await api.patch(`${B}/${id}`, patch); await load() } catch (e) { setError(errorMessage(e)) }
+    try { await leadsService.update(id, patch); await load() } catch (e) { setError(errorMessage(e)) }
   }
 
   return (

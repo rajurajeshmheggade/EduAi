@@ -69,10 +69,10 @@ export const adminService = {
   async classes(org?: string | null): Promise<SchoolClass[]> {
     return (await api.get<{ classes: SchoolClass[] }>(`${B}/classes`, q(org))).data.classes
   },
-  async createClass(body: { class_code: string; class_name: string; class_teacher_code?: string | null; room_number?: string | null }, org?: string | null) {
+  async createClass(body: { class_code: string; class_name: string; class_teacher_code?: string | null; room_number?: string | null; grade_number?: number | null }, org?: string | null) {
     return (await api.post<SchoolClass>(`${B}/classes`, body, q(org))).data
   },
-  async updateClass(code: string, body: { class_name: string; class_teacher_code: string | null; is_active: boolean; room_number?: string | null }, org?: string | null) {
+  async updateClass(code: string, body: { class_name: string; class_teacher_code: string | null; is_active: boolean; room_number?: string | null; grade_number?: number | null }, org?: string | null) {
     return (await api.put<SchoolClass>(`${B}/classes/${encodeURIComponent(code)}`, body, q(org))).data
   },
   async setClassSubject(code: string, subject: string, body: { subject_name: string; teacher_code: string | null; subject_type?: SubjectType }, org?: string | null) {

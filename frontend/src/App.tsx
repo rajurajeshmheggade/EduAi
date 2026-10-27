@@ -22,6 +22,10 @@ const StudentEvaluations = lazy(() => import('@/pages/student/StudentEvaluations
 const StudentAssessments = lazy(() => import('@/pages/student/StudentAssessments'))
 const TestRunner = lazy(() => import('@/pages/student/TestRunner'))
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
+const TeacherLibrary = lazy(() => import('@/pages/teacher/TeacherLibrary'))
+const StudentLibrary = lazy(() => import('@/pages/student/StudentLibrary'))
+const BookReader = lazy(() => import('@/pages/library/BookReader'))
+const DikshaReader = lazy(() => import('@/pages/library/DikshaReader'))
 
 export default function App() {
   return (
@@ -44,6 +48,7 @@ export default function App() {
             <Route path="/teacher/tests/create" element={<Navigate to="/teacher/tests?new=1" replace />} />
             <Route path="/teacher/assignments/create" element={<Navigate to="/teacher/assignments?new=1" replace />} />
             <Route path="/teacher/textbooks" element={<TextbookHowToTeach />} />
+            <Route path="/teacher/library" element={<TeacherLibrary />} />
           </Route>
         </Route>
 
@@ -54,12 +59,20 @@ export default function App() {
             <Route path="/student/attendance" element={<MyAttendance />} />
             <Route path="/student/timetable" element={<StudentTimetable />} />
             <Route path="/student/homework" element={<StudentHomework />} />
+            <Route path="/student/library" element={<StudentLibrary />} />
             <Route path="/student/evaluations" element={<StudentEvaluations />} />
             <Route path="/student/tests" element={<StudentAssessments kind="ONLINE_TEST" />} />
             <Route path="/student/tests/:id" element={<StudentAssessments kind="ONLINE_TEST" />} />
             <Route path="/student/tests/:id/take" element={<TestRunner />} />
             <Route path="/student/assignments" element={<StudentAssessments kind="ASSIGNMENT" />} />
             <Route path="/student/assignments/:id" element={<StudentAssessments kind="ASSIGNMENT" />} />
+          </Route>
+        </Route>
+
+        <Route element={<RequireRole roles={['teacher', 'student', 'orgadmin', 'superadmin']} />}>
+          <Route element={<AppShell />}>
+            <Route path="/library/read/:bookId" element={<BookReader />} />
+            <Route path="/library/diksha/:sourceId" element={<DikshaReader />} />
           </Route>
         </Route>
 

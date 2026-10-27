@@ -79,6 +79,20 @@ class Settings(BaseSettings):
     # --- Attendance ---
     attendance_threshold: float = 75.0  # default % below which a student is flagged (per-org override)
 
+    # --- DIKSHA source (Digital Library) — public, anonymous APIs; see docs/DIKSHA_API_DISCOVERY.md ---
+    diksha_enabled: bool = True
+    diksha_api_base_url: str = "https://diksha.gov.in"
+    diksha_api_timeout_seconds: float = 15.0
+    diksha_request_rate_limit: float = 5.0          # outbound requests per second (per API process)
+    library_cache_ttl_seconds: int = 900            # metadata cache for search / read / hierarchy responses
+    library_metadata_refresh_hours: int = 24        # stored metadata of published items is re-read after this
+    # Supported boards exactly as DIKSHA's se_boards facet names them (case-insensitive on DIKSHA).
+    diksha_boards: str = "NCERT,CBSE,State (Karnataka)"
+    # Hosts our viewer may load DIKSHA files from (no copying, no proxying — the browser loads them directly).
+    diksha_asset_hosts: str = "obj.diksha.gov.in,files.odev.oci.diksha.gov.in"
+    # CC *NonCommercial* licences need a reviewed decision before in-app display inside a commercial LMS.
+    diksha_embed_noncommercial: bool = False
+
     # --- RAG / chunking (FRD 4.2, 4.3) ---
     rag_top_k: int = 3
     chunk_tokens: int = 600
@@ -90,6 +104,14 @@ class Settings(BaseSettings):
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def diksha_board_list(self) -> list[str]:
+        return [b.strip() for b in self.diksha_boards.split(",") if b.strip()]
+
+    @property
+    def diksha_asset_host_list(self) -> list[str]:
+        return [h.strip().lower() for h in self.diksha_asset_hosts.split(",") if h.strip()]
 
 
 @lru_cache

@@ -154,6 +154,7 @@ export interface SchoolClass {
   student_count: number
   subjects: ClassSubject[]
   room_number?: string | null
+  grade_number?: number | null
 }
 
 export interface TeacherClass {

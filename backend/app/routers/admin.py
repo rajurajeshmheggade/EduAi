@@ -275,6 +275,7 @@ class ClassCreate(BaseModel):
     year_code: str | None = Field(default=None, max_length=32)
     cycle_code: str | None = Field(default=None, max_length=32)
     room_number: str | None = Field(default=None, max_length=32)
+    grade_number: int | None = Field(default=None, ge=1, le=12, description="Class 1-12, used to match library books")
 
 
 class ClassUpdate(BaseModel):
@@ -282,6 +283,7 @@ class ClassUpdate(BaseModel):
     class_teacher_code: str | None = None
     is_active: bool = True
     room_number: str | None = Field(default=None, max_length=32)
+    grade_number: int | None = Field(default=None, ge=1, le=12)
 
 
 class ClassSubject(BaseModel):
@@ -290,9 +292,9 @@ class ClassSubject(BaseModel):
     subject_type: Literal["THEORY", "LAB", "COACHING_TEST"] = "THEORY"
 
 
-def _set_room(org: str, class_code: str, room: str | None) -> None:
-    db.execute("UPDATE public.classes SET room_number = %s WHERE org_code = %s AND class_code = %s",
-               (room or None, org, class_code))
+def _set_room(org: str, class_code: str, room: str | None, grade: int | None = None) -> None:
+    db.execute("UPDATE public.classes SET room_number = %s, grade_number = %s WHERE org_code = %s AND class_code = %s",
+               (room or None, grade, org, class_code))
 
 
 @router.get("/classes")
@@ -307,7 +309,7 @@ def create_class(body: ClassCreate, org_code: str | None = None, user: CurrentUs
     db.call_scalar("usp_create_class", org["org_code"], body.class_code, body.class_name,
                    body.year_code or org["current_year_code"], body.cycle_code or org["current_cycle_code"],
                    body.class_teacher_code)
-    _set_room(org["org_code"], body.class_code, body.room_number)
+    _set_room(org["org_code"], body.class_code, body.room_number, body.grade_number)
     return _class(org["org_code"], body.class_code)
 
 
@@ -317,7 +319,7 @@ def update_class(class_code: str, body: ClassUpdate, org_code: str | None = None
     _active_teacher(org, body.class_teacher_code)
     if not db.call_scalar("usp_update_class", org, class_code, body.class_name, body.class_teacher_code, body.is_active):
         raise HTTPException(404, "Class not found")
-    _set_room(org, class_code, body.room_number)
+    _set_room(org, class_code, body.room_number, body.grade_number)
     return _class(org, class_code)
 
 

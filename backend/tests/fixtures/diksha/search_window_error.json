@@ -1,0 +1,14 @@
+{
+ "id": "api.content.search",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:38:44.694Z",
+ "params": {
+  "resmsgid": "9076af60-d142-11f1-8b5f-23fd16dec384",
+  "msgid": null,
+  "status": "failed",
+  "err": "ERR_SYSTEM_EXCEPTION",
+  "errmsg": "method [POST], host [http://<redacted>:9200], URI [/compositesearch/_search ...] Result window is too large, from + size must be less than or equal to: [10000] but was [10004]."
+ },
+ "responseCode": "SERVER_ERROR",
+ "result": {}
+}

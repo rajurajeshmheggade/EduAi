@@ -1,0 +1,72 @@
+{
+ "id": "api.content.read",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:38:38.676Z",
+ "params": {
+  "resmsgid": "8ce06940-d142-11f1-b851-f70ca326020f",
+  "msgid": "8cdfcd00-d142-11f1-91cf-d7a248e3db75",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_431359533151554764811286",
+   "name": "1- Introduction to Accounting",
+   "description": "This resource is based on Introduction to Accounting.",
+   "mimeType": "application/pdf",
+   "primaryCategory": "eTextbook",
+   "contentType": "eTextBook",
+   "objectType": "Content",
+   "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/artifact/keac1cc.thumb.jpg",
+   "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/artifact/keac1cc.jpg",
+   "se_boards": [
+    "NCERT"
+   ],
+   "se_gradeLevels": [
+    "Class 11"
+   ],
+   "se_subjects": [
+    "Accountancy"
+   ],
+   "se_mediums": [
+    "English"
+   ],
+   "board": "NCERT",
+   "gradeLevel": [
+    "Class 11"
+   ],
+   "subject": [
+    "Accountancy"
+   ],
+   "medium": [
+    "English"
+   ],
+   "license": "CC BY-NC-ND 4.0",
+   "licenseDetails": {
+    "name": "CC BY-NC-ND 4.0",
+    "url": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+    "description": "For details see below:"
+   },
+   "author": "NCERT",
+   "creator": "ALOK KUMAR",
+   "attributions": [
+    "NCERT"
+   ],
+   "copyright": "NCERT",
+   "copyrightYear": 2024,
+   "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+   "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+   "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+   "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/1-introduction-to-accounting_1726831944537_do_431359533151554764811286_4.ecar",
+   "size": 2142987,
+   "pkgVersion": 4,
+   "lastPublishedOn": "2024-09-20T11:32:24.450+0000",
+   "status": "Live",
+   "visibility": "Default",
+   "channel": "0125196274181898243",
+   "framework": "ncert_k-12"
+  }
+ }
+}

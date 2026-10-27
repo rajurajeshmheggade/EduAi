@@ -54,7 +54,7 @@ def run(demo_attendance: bool = False) -> None:
     # Earlier seeds used SUPER001 / super@eduai.app — rename in place so there is a single platform owner.
     db.execute("UPDATE public.app_users SET user_code = %s, email = 'superadmin@eduai.cloud' "
                "WHERE user_code = 'SUPER001'", (SUPERADMIN[0],))
-    db.call_scalar("usp_create_user", SUPERADMIN[0], PLATFORM, "ICME", "Platform Owner (SuperAdmin)",
+    db.call_scalar("usp_create_user", SUPERADMIN[0], PLATFORM, "ICME", "Super Admin",
                    "superadmin@eduai.cloud", hash_password(SUPERADMIN[1]), "superadmin", None, None, None, [],
                    casts=[None] * 10 + ["text[]"])
     db.execute("UPDATE public.app_users SET must_change_password = TRUE WHERE user_code = %s", (SUPERADMIN[0],))

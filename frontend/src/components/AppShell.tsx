@@ -1,14 +1,16 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { BookOpenCheck, ChevronsLeft, ChevronsRight, CalendarCheck, CalendarClock, ClipboardCheck, ClipboardList, HeartPulse, KeyRound, LayoutDashboard, MessageSquareText, PencilRuler, ScanText, School, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { BookOpenCheck, ChevronsLeft, ChevronsRight, CalendarCheck, CalendarClock, ClipboardCheck, ClipboardList, HeartPulse, KeyRound, Library, LayoutDashboard, MessageSquareText, PencilRuler, ScanText, School, Sparkles, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ChangePasswordDialog, ProfileMenu } from '@/components/ProfileMenu'
 import { Badge } from '@/components/ui/badge'
+import { adminTabLink, adminTabsFor, type AdminTab } from '@/lib/adminTabs'
 import { cn, roleLabel } from '@/lib/utils'
+import { leadsService } from '@/services/leadsService'
 import type { Role, UserProfile } from '@/types'
 
-interface NavItem { to: string; label: string; icon: LucideIcon; section: string; soon?: boolean; needs?: (u: UserProfile) => boolean }
+interface NavItem { to: string; label: string; icon: LucideIcon; section: string; soon?: boolean; needs?: (u: UserProfile) => boolean; tab?: AdminTab }
 
 const NAV: Record<Role, NavItem[]> = {
   teacher: [
@@ -17,6 +19,7 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/teacher/classes', section: 'Teaching', label: 'My classes', icon: School },
     { to: '/teacher/attendance', section: 'Teaching', label: 'Attendance', icon: CalendarCheck },
     { to: '/teacher/homework', section: 'Teaching', label: 'Homework', icon: ClipboardList },
+    { to: '/teacher/library', section: 'Teaching', label: 'Digital Library', icon: Library },
     { to: '/teacher/textbooks', section: 'Teaching', label: 'Textbooks & How to Teach', icon: BookOpenCheck },
     { to: '/teacher/tests', section: 'Assessments', label: 'Online tests', icon: PencilRuler, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/assignments', section: 'Assessments', label: 'Assignments', icon: ClipboardCheck, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
@@ -28,14 +31,16 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/student/timetable', section: 'Learning', label: 'Timetable', icon: CalendarClock },
     { to: '/student/classroom', section: 'Learning', label: 'AI Classroom', icon: MessageSquareText,
       needs: (u) => !u.ai_modules || u.ai_modules.some((m) => m === 'rag_chatbot' || m === 'ai_avatar_tutor') },
+    { to: '/student/library', section: 'Learning', label: 'My Library', icon: Library },
     { to: '/student/homework', section: 'Learning', label: 'Homework', icon: ClipboardList },
     { to: '/student/attendance', section: 'Learning', label: 'My attendance', icon: CalendarCheck },
     { to: '/student/tests', section: 'Assessments', label: 'Tests', icon: PencilRuler, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/student/assignments', section: 'Assessments', label: 'Assignments', icon: ClipboardCheck, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/student/evaluations', section: 'Assessments', label: 'Exam results', icon: ScanText, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
   ],
-  orgadmin: [{ to: '/admin-dashboard', section: 'Manage', label: 'Admin console', icon: ShieldCheck }],
-  superadmin: [{ to: '/admin-dashboard', section: 'Manage', label: 'Admin console', icon: ShieldCheck }],
+  // Admin consoles: one sidebar entry per console page (`/admin-dashboard?tab=…`).
+  orgadmin: adminTabsFor(false).map((t) => ({ to: adminTabLink(t.id), section: t.section, label: t.label, icon: t.icon, tab: t.id })),
+  superadmin: adminTabsFor(true).map((t) => ({ to: adminTabLink(t.id), section: t.section, label: t.label, icon: t.icon, tab: t.id })),
 }
 
 const YEAR = new Date().getFullYear()
@@ -51,13 +56,22 @@ const linkCls = ({ isActive }: { isActive: boolean }) =>
 
 export function AppShell() {
   const { user } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [pwOpen, setPwOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  const [newLeads, setNewLeads] = useState(0)
+  const isSuper = user?.role === 'superadmin'
+  const adminTab = pathname === '/admin-dashboard' ? new URLSearchParams(search).get('tab') ?? 'overview' : null
+  const onLeads = adminTab === 'leads'
+  useEffect(() => {
+    if (isSuper) leadsService.list('NEW').then((d) => setNewLeads(d.counts.NEW ?? 0)).catch(() => {})
+  }, [isSuper, onLeads])
   if (!user) return null
   const items = NAV[user.role].filter((i) => !i.needs || i.needs(user))
   const sections = [...new Set(items.map((i) => i.section))]
   const toggle = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1') } catch { /* storage unavailable */ } return !c })
+  const isActive = (i: NavItem) => (i.tab ? adminTab === i.tab : pathname.startsWith(i.to))
+  const badgeFor = (i: NavItem) => (i.tab === 'leads' && newLeads > 0 ? newLeads : 0)
   const initials = user.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 
   return (
@@ -79,17 +93,21 @@ export function AppShell() {
           {sections.map((sec) => (
             <div key={sec} className="flex flex-col gap-1">
               {collapsed ? <div className="mx-auto h-px w-6 bg-line" /> : <div className="px-3 text-[10.5px] font-semibold uppercase tracking-widest text-ink-500">{sec}</div>}
-              {items.filter((i) => i.section === sec).map(({ to, label, icon: Icon, soon }) =>
-                soon ? (
+              {items.filter((i) => i.section === sec).map((item) => { const { to, label, icon: Icon, soon } = item
+                return soon ? (
                   <div key={to} aria-disabled title={collapsed ? `${label} (soon)` : undefined} className={cn('flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-500', collapsed && 'justify-center')}>
                     <Icon className="h-4.5 w-4.5 shrink-0" />{!collapsed && <><span className="flex-1">{label}</span><Badge className="!text-[10px]">Soon</Badge></>}
                   </div>
                 ) : (
-                  <NavLink key={to} to={to} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined} className={(st) => cn(linkCls(st), collapsed && 'justify-center')}>
-                    <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />{!collapsed && label}
-                  </NavLink>
-                ),
-              )}
+                  <Link key={to} to={to} title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined}
+                    aria-current={isActive(item) ? 'page' : undefined} className={cn(linkCls({ isActive: isActive(item) }), 'relative', collapsed && 'justify-center')}>
+                    <Icon className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110" />{!collapsed && <span className="flex-1">{label}</span>}
+                    {badgeFor(item) > 0 && (collapsed
+                      ? <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-warn" aria-label={`${badgeFor(item)} new`} />
+                      : <span className="rounded-full bg-warn px-1.5 text-[10px] font-semibold leading-4 text-white">{badgeFor(item)}</span>)}
+                  </Link>
+                )
+              })}
             </div>
           ))}
         </nav>
@@ -118,8 +136,9 @@ export function AppShell() {
           <ProfileMenu />
         </header>
         <nav aria-label="Primary (mobile)" className="flex gap-1 overflow-x-auto border-b border-line bg-ink-900 px-2 py-1.5 md:hidden">
-          {items.filter((i) => !i.soon).map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => cn(linkCls({ isActive }), 'shrink-0 py-1.5 text-xs')}><Icon className="h-4 w-4" />{label}</NavLink>
+          {items.filter((i) => !i.soon).map((item) => (
+            <Link key={item.to} to={item.to} aria-current={isActive(item) ? 'page' : undefined}
+              className={cn(linkCls({ isActive: isActive(item) }), 'shrink-0 py-1.5 text-xs')}><item.icon className="h-4 w-4" />{item.label}</Link>
           ))}
         </nav>
         {user.must_change_password && (

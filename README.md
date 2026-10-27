@@ -83,6 +83,37 @@ Typed PDFs are read from their text layer (works offline in `mock` mode with a r
 scripts need `PROVIDER_MODE=azure|openai` (GPT-4o vision OCR + the FRD examiner prompt). Try it with
 `python -m scripts.sample_evaluation` → files in `.data/sample_evaluation/` (Grade-10-A, PHY101, `teacher@demo.edu`).
 
+## Digital Library (school catalog + DIKSHA)
+
+Teacher → **Digital Library**, Student → **My Library**, Admin console → **Digital library**.
+
+* **School catalog** — books an admin adds and verifies (source URL, licence, in-app / download permissions, optional
+  authorised PDF). Admins can import a CSV and see the publishing log.
+* **DIKSHA** — live search of DIKSHA digital textbooks and learning resources for **NCERT, CBSE and Karnataka State
+  Board, Classes 5–12**: board / class / subject / language / content-type filters come from DIKSHA's own facets.
+  Teachers open a textbook's chapter tree, preview resources and publish a whole textbook or individual resources to a
+  class subject. Students see them under *From DIKSHA*, browse the chapters and read / watch with the method each
+  resource's licence allows (PDF view, video, audio, YouTube player) or open them on DIKSHA.
+* Content stays on DIKSHA: the LMS stores metadata references for published items only and never copies or proxies
+  files. Licences are checked per resource (NonCommercial items open on DIKSHA unless `DIKSHA_EMBED_NONCOMMERCIAL=true`).
+* Docs: [`docs/DIKSHA_API_DISCOVERY.md`](docs/DIKSHA_API_DISCOVERY.md) (verified endpoints),
+  [`docs/DIKSHA_CONTENT_ACCESS_MATRIX.md`](docs/DIKSHA_CONTENT_ACCESS_MATRIX.md),
+  [`docs/DIKSHA_LICENSE_AND_ATTRIBUTION.md`](docs/DIKSHA_LICENSE_AND_ATTRIBUTION.md).
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `DIKSHA_ENABLED` | `true` | Turn the DIKSHA source on/off |
+| `DIKSHA_API_BASE_URL` | `https://diksha.gov.in` | Verified public API host (no key needed) |
+| `DIKSHA_API_TIMEOUT_SECONDS` | `15` | Per-request timeout |
+| `DIKSHA_REQUEST_RATE_LIMIT` | `5` | Outbound requests per second per API process |
+| `LIBRARY_CACHE_TTL_SECONDS` | `900` | Cache for search / read / hierarchy responses |
+| `LIBRARY_METADATA_REFRESH_HOURS` | `24` | Age after which `POST /library/diksha/refresh` re-reads published items |
+| `DIKSHA_BOARDS` | `NCERT,CBSE,State (Karnataka)` | Boards offered (DIKSHA `se_boards` names) |
+| `DIKSHA_ASSET_HOSTS` | `obj.diksha.gov.in,files.odev.oci.diksha.gov.in` | Hosts the in-app viewer may load DIKSHA files from |
+| `DIKSHA_EMBED_NONCOMMERCIAL` | `false` | Allow in-app display of CC *NC* content (decide after legal review) |
+
+Set a class's **Grade** (Classes & subjects) so publishing checks that a book or resource is for that class.
+
 ## Modes
 
 | Setting | Dev default | Production |
@@ -98,7 +129,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 98 tests: chunker, RBAC, RAG, guides, admin, attendance, timetable, homework, AI evaluation, tests & assignments
+cd backend ; .venv\Scripts\python -m pytest        # 134 tests incl. digital library + DIKSHA (mocked source, no live calls)
 cd frontend ; npm test ; npm run build
 ```
 
@@ -119,6 +150,13 @@ Classroom (`/ICMELive/api/v1/classroom`): `my-classes` · `classes/{code}/studen
 
 Attendance % = (present + late) ÷ (periods − leave); students below the institution threshold (default 75%) are flagged.
 Institution plan: `max_students` is enforced on enrolment; `ai_modules` switches the AI chatbot / classroom on or off per tenant.
+
+Library (`/ICMELive/api/v1/library`): `meta` · `subjects` · `books` (+ admin create / PATCH / DELETE / `import` CSV /
+`{id}/file` / `{id}/check-link`) · `books/{id}/access` · `targets` · `publications` (publish, admin log) ·
+`publications/mine` · `publications/{id}/unpublish` · `student/books` (school books + published DIKSHA items).
+
+DIKSHA (`/ICMELive/api/v1/library/diksha`): `meta` · `filters` · `search` · `items/{id}` · `textbooks/{id}` (chapter tree) ·
+`resources/{id}?within=` (permitted viewer) · `publications` (teacher) · `refresh` (admin).
 
 Interactive docs at `/docs`.
 
