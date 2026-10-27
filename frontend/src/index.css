@@ -127,6 +127,29 @@ body {
 .prose-edu h1, .prose-edu h2, .prose-edu h3 { margin: 0.9rem 0 0.4rem; color: var(--color-fg); }
 .prose-edu h1 { font-size: 1.25rem; } .prose-edu h2 { font-size: 1.1rem; } .prose-edu h3 { font-size: 1rem; }
 
+/* Lesson Plan / Session Plan loaders */
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+@keyframes lp-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes lp-pulse { 0%, 100% { opacity: .5; transform: scale(.92); } 50% { opacity: .9; transform: scale(1.05); } }
+@keyframes lp-float { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-5px) rotate(1deg); } }
+@keyframes lp-phase { 0% { opacity: 0; transform: translateY(8px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+@keyframes lp-comet { 0% { left: -42%; } 100% { left: 100%; } }
+@keyframes lp-pop { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes lp-row { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes lp-bar { 0% { transform: translateX(-110%); } 100% { transform: translateX(370%); } }
+@keyframes lp-fly { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes lp-badge-pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes lp-count { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes lp-picked { 0% { box-shadow: 0 0 0 0 hsl(152 64% 40% / .45); } 100% { box-shadow: 0 0 0 12px hsl(152 64% 40% / 0); } }
+.lp-fly { animation: lp-fly .28s cubic-bezier(.2,.9,.3,1.2) both; }
+.lp-badge-pop { animation: lp-badge-pop .34s .12s cubic-bezier(.2,.9,.3,1.4) both; }
+.lp-count { animation: lp-count .4s cubic-bezier(.2,.9,.3,1.3) both; }
+.lp-picked { animation: lp-picked .9s ease-out both; }
+.lp-rich-editor:empty::before { content: attr(data-placeholder); color: var(--color-ink-500); pointer-events: none; }
+.lp-rich-editor ol, .lp-rich-editor ul { margin: 4px 0; padding-left: 22px; }
+.lp-rich-editor ol { list-style: decimal; } .lp-rich-editor ul { list-style: disc; }
+.lp-html ol { list-style: decimal; padding-left: 20px; } .lp-html ul { list-style: disc; padding-left: 20px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

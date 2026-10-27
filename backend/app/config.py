@@ -93,6 +93,28 @@ class Settings(BaseSettings):
     # CC *NonCommercial* licences need a reviewed decision before in-app display inside a commercial LMS.
     diksha_embed_noncommercial: bool = False
 
+    # --- Session Plan content agents (Current Affairs / Video References / Images / Educational Documents) ---
+    # Same sources and defaults as the Rapid "SessionAgents" section. Per agent, the first source that answers
+    # wins: Images SerpAPI google_images -> Wikimedia Commons -> Openverse; Videos YouTube Data API v3 ->
+    # SerpAPI youtube; Current Affairs SerpAPI google_news -> Wikinews; Documents SerpAPI google + filetype:.
+    serpapi_api_key: str = Field("", validation_alias=AliasChoices("SERPAPI_API_KEY", "SERP_API_KEY",
+                                                                     "SESSION_AGENTS_SERPAPI_KEY"))
+    youtube_api_key: str = Field("", validation_alias=AliasChoices("YOUTUBE_API_KEY", "SESSION_AGENTS_YOUTUBE_API_KEY"))
+    # Optional external agent service (the Python LessonPlanApi) and per-agent URLs; empty = not used.
+    session_agents_base_url: str = ""
+    session_agents_current_affairs_url: str = ""
+    session_agents_videos_url: str = ""
+    session_agents_images_url: str = ""
+    session_agents_documents_url: str = ""
+    session_agents_timeout_seconds: int = 45
+    session_agents_cache_minutes: int = 360
+    session_agents_prefer_free_sources: bool = False
+    # DuckDuckGo answers 403 on many school networks; leave off unless duckduckgo.com is reachable.
+    session_agents_enable_web_fallback: bool = False
+    wikimedia_user_agent: str = "EduAI/1.0 (https://eduai.local; ai-support@excelindia.com)"
+    # Set false to skip the AI relevance review of agent results (saves one LLM call per block).
+    session_agents_validate: bool = True
+
     # --- RAG / chunking (FRD 4.2, 4.3) ---
     rag_top_k: int = 3
     chunk_tokens: int = 600

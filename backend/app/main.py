@@ -13,7 +13,7 @@ from psycopg import errors as pg_errors
 
 from . import db
 from .config import get_settings
-from .routers import admin, assessments, auth, classroom, curriculum, dashboards, diksha, evaluation, library, public, rag, syllabus
+from .routers import admin, assessments, auth, classroom, curriculum, dashboards, diksha, evaluation, lessonplan, library, public, rag, syllabus
 from .services.storage import LocalStorage, get_storage
 
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +50,9 @@ app.include_router(syllabus.teacher_router)
 app.include_router(library.router)
 app.include_router(diksha.router)
 app.include_router(public.admin_router)
+# Session routes are registered first: their prefix is nested under the lesson-plan prefix.
+app.include_router(lessonplan.sessions_router)
+app.include_router(lessonplan.router)
 
 
 @app.exception_handler(pg_errors.UniqueViolation)
