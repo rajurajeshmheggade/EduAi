@@ -47,6 +47,10 @@ export function useCreatorStore(p: CreatorProps) {
   const [hours, setHours] = useState(init.hours ?? '')
   const [minutes, setMinutes] = useState(init.minutes ?? '')
   const [file, setFile] = useState<File | null>(null)
+  // Chapter library (backend/nlp/) content — an alternative to uploading a file; whichever is set grounds
+  // the Course Outcomes. Ephemeral like `file` (not persisted in the draft snapshot).
+  const [ncertText, setNcertText] = useState<string | null>(null)
+  const [ncertChapter, setNcertChapter] = useState<string | null>(null)
 
   // ── Step 2 — objectives (raw COs from the API are threaded into the ELO / assessment / 5E steps)
   const [rawCos, setRawCos] = useState<CourseOutcome[]>(init.rawCos ?? [])
@@ -106,10 +110,13 @@ export function useCreatorStore(p: CreatorProps) {
   const dragRef = useRef<{ eloId: string; phaseKey: string; fromIdx: number } | null>(null)   // resource drag-reorder
 
   // ── derived
+  // classCode/subjectCode may be one of the teacher's own room assignments (scope.classes) OR a chapter-library
+  // selection (e.g. "X" / "Mathematics") — the server accepts both (see lessonplan.py's _guard). Fall back to
+  // the raw code/name when it isn't a room assignment, so the chapter-library path still shows something sane.
   const cls = scope.classes.find((c) => c.class_code === classCode)
   const subjectOpts = cls?.subjects ?? []
-  const className = cls?.class_name ?? ''
-  const subjectName = subjectOpts.find((x) => x.subject_code === subjectCode)?.subject_name ?? ''
+  const className = cls?.class_name ?? (classCode ? `Class ${classCode}` : '')
+  const subjectName = subjectOpts.find((x) => x.subject_code === subjectCode)?.subject_name ?? subjectCode
   // Every generator call carries this: names go into the prompt, codes drive the server's assignment check.
   const ctx: GenCtx = { board, grade: className, subject: subjectName, class_code: classCode, subject_code: subjectCode }
   const totalMins = (parseInt(hours, 10) || 0) * 60 + (parseInt(minutes, 10) || 0)
@@ -233,7 +240,8 @@ export function useCreatorStore(p: CreatorProps) {
     current, done, busy, setBusy, gen, setGen, savedId, setSavedId, compactStepper, mark, scrollTo,
     board, setBoard, classCode, subjectCode, className, subjectName, subjectOpts, selectClass, selectSubject,
     chapter, textbookId, chapterNumber, linkedTextbookId, linkedChapterNumber, customChapter, chapterOpts, chaptersLoading, selChapter, pickChapter, typeChapter,
-    hours, changeHours, minutes, changeMinutes, file, setFile, ctx, totalMins, setupOk, chapterOk, durationOk, canGenCOs,
+    hours, changeHours, minutes, changeMinutes, file, setFile, ncertText, setNcertText, ncertChapter, setNcertChapter,
+    ctx, totalMins, setupOk, chapterOk, durationOk, canGenCOs,
     rawCos, setRawCos, objectives, setObjectives, deletedStack, setDeletedStack, editObjId, setEditObjId, editObjText, setEditObjText,
     customRows, setCustomRows, regenModal, setRegenModal, regenBusy, setRegenBusy, activeObjectives, activeCos, coForElo,
     blooms, setBlooms, bloomCounts, setBloomCounts, skills, setSkills, comps, setComps, attitudes, setAttitudes,

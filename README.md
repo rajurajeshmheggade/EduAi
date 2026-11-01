@@ -114,6 +114,37 @@ Teacher → **Digital Library**, Student → **My Library**, Admin console → *
 
 Set a class's **Grade** (Classes & subjects) so publishing checks that a book or resource is for that class.
 
+## Virtual Labs (Teacher / Student → Virtual Labs)
+
+DIKSHA's [Virtual Labs](https://diksha.gov.in/virtuallabs.html) for **Classes 6–12** (NCERT with Amrita Vishwa
+Vidyapeetham and C-DAC "OLabs"): 58 lab manuals / activity books in English and Hindi medium, ~1,400 experiments, ~775
+with an HTML5 simulation. The 58 entry points are catalogued in `backend/app/services/virtual_labs/catalog.py`; the
+experiments inside are read live from DIKSHA's hierarchy API (cached), one top-level unit = one experiment.
+
+* **Teacher** — pick class, medium and subject, search the experiments, preview the simulation, theory, procedure,
+  animation and lab manual, then **Assign to class**: due date (late work on/off), optional opening time, minimum time
+  in the lab, and a lab worksheet the AI drafts (aim, apparatus, procedure checklist, observation table with units,
+  4 viva MCQs + 2 short answers, conclusion prompt) and the teacher edits. *Assigned* shows each class's progress; the
+  student list shows time in the lab, simulation launches, MCQ score and the AI-suggested marks; the teacher sets the
+  final marks and feedback or **returns the lab for redo**, and can extend, close / reopen or delete it.
+* **Student** — *Virtual Labs* lists the class's labs (to do / submitted / marked). The workspace shows the simulation
+  beside the worksheet: aim → procedure checklist → observation table → viva → conclusion, with autosave, a time-in-lab
+  clock and an **AI lab assistant** that gives hints but never the worksheet answers. On submit MCQs are marked at
+  once and the AI gives feedback on short answers and the lab record; answers and explanations are shown afterwards.
+* **Time in the lab** counts while the workspace is visible and the student is active (including working inside the
+  simulation frame) or, after opening the lab on DIKSHA, while they are away on it (max 20 min per launch). Every
+  report is capped by the server clock, so it cannot run ahead of real time.
+* **Licences** — simulations run unmodified from DIKSHA's host (`obj.diksha.gov.in`) in a sandboxed frame only when the
+  licence allows in-app display. Almost all virtual-lab content is **CC BY-NC-SA / BY-NC-ND**, so with the default
+  `DIKSHA_EMBED_NONCOMMERCIAL=false` it opens in DIKSHA's player in a new tab (launch and time are still tracked);
+  set it to `true` after your institution's licence review to run labs inside EduAI. H5P self-checks always open on
+  DIKSHA. Source, licence and attribution are shown with every resource.
+* **AI** uses the tutor model (`AI_TUTOR_PROVIDER`, else `PROVIDER_MODE`) and sees only DIKSHA's metadata (titles,
+  descriptions, keywords), never the licensed files. Without an AI provider the worksheet is a plain template, the
+  assistant gives general guidance and the teacher marks short answers / the record.
+
+Migration `017_virtual_labs.sql` (assignments + attempts).
+
 ## Lesson Plans & Session Plans (Teacher → Lesson Plans)
 
 Ported from the Rapid / SARAS teacher console — same flows, prompts and content, in EduAI's UI, running on EduAI's
@@ -145,6 +176,130 @@ elos, regenerate-*, pedagogical-approaches, assessment-items, five-e-resource, a
 assistant/chat}` · `/ICMELive/api/v1/lessonplan/sessions/{elos, list, get, save, delete, generate, resource-library,
 resource-content, resources}`. Tables: migration `010_lesson_session_plans.sql`.
 
+## AI avatar tutor (Student → AI Classroom)
+
+The subject teacher's avatar explains the open textbook page aloud, like a teacher in class, with lip-sync.
+
+* **Teacher explains** (default): the page text goes to the tutor LLM, which returns an NCERT-style lesson. It has an
+  introduction, every key point explained in classroom language, important words, a recap and a check question. The
+  avatar speaks it, and the PDF highlights the exact words of the point being explained. **Word for word** reads the
+  page itself. Running headers, page numbers and footers are skipped.
+* **Avatar & voice follow the teacher**: male avatar and voice when the subject teacher's gender is *Male*,
+  otherwise female. Admins set gender in Admin console → Teachers; it is never guessed from a name. The female avatar is
+  the 3D Ready Player Me model `frontend/public/avatars/teacher-female.glb`. A gender without a model (see
+  `src/lib/avatars.ts`) uses the 2D avatar.
+* **Lip-sync**: [wawa-lipsync](https://github.com/wass08/wawa-lipsync) analyses the voice in the browser every frame.
+  The resulting Oculus viseme drives the model's `viseme_*` morph targets, blended and scaled by loudness. The face
+  also blinks, smiles a little and moves its head and eyes (off under *reduce motion*).
+* **Voice**: Kokoro neural voice, offline on the server CPU, with no cloud cost. Pronunciation is cleaned up first:
+  "e.g." → "for example", "1789" → "seventeen eighty-nine", units, per cent. The first sentence of a page is voiced on
+  its own, so speech starts quickly. The server then voices the rest of the page and prepares the next page in the
+  background. Explanations and audio are cached, so each page is explained and voiced once for everybody.
+* Only textbook page text is sent to the AI and the voice, never student data. The feature uses the per-institution
+  AI module *AI avatar tutor*.
+
+```powershell
+cd backend ; .venv\Scripts\python -m scripts.download_voice    # Kokoro model + voices (~350 MB) into .data/models/kokoro
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `AI_TUTOR_PROVIDER` | empty (= `PROVIDER_MODE`) | `azure` / `openai`: the AI explains pages while the rest of the app stays on `PROVIDER_MODE`. `mock` builds an offline extractive lesson. |
+| `TTS_MODE` | `auto` | `auto` uses Kokoro if downloaded, else provider TTS (`PROVIDER_MODE` azure/openai), else the OS voice (Windows SAPI / espeak-ng). `kokoro` / `provider` / `offline` force one. |
+| `KOKORO_VOICE_FEMALE` / `KOKORO_VOICE_MALE` | `af_heart` / `am_michael` | Kokoro voices (`bf_emma`, `bm_george` … for British English) |
+| `KOKORO_LANG` / `KOKORO_SPEED` | `en-us` / `0.95` | Pronunciation (`en-us` or `en-gb`) and pace |
+| `READ_ALOUD_PREWARM` | `true` | Voice the rest of the page and the next page in the background |
+
+Licences: the Kokoro-82M weights and voices are Apache-2.0, and kokoro-onnx and wawa-lipsync are MIT. Kokoro's
+phonemizer / espeak-ng are GPL-3.0; that is fine for a hosted service, but review it before shipping on-premise
+copies. The avatar is a Ready Player Me model.
+
+API (`/ICMELive/api/v1/read-aloud/textbooks/{id}`): `voice` · `pages/{n}?mode=explain|read` · `pages/{n}/segments/{i}/audio?mode=`.
+Migration `016_read_aloud_avatar.sql` (teacher gender).
+
+## Admission tests with AI proctoring (Teacher → Assessments → Admissions)
+
+A teacher builds an admission test from the questions of their **own Assignments and Online tests** (copied as
+snapshots), adds an **HQ (Human Quotient)** section, publishes it, and **launches** it for a candidate on a device where
+the teacher is signed in. The browser goes full screen into a locked exam view (no portal chrome); the teacher's portal
+session on that device is closed, and the portal comes back only after the teacher signs in again. On-device AI watches
+camera, microphone level and the shared screen; every breach is a **flag** (live warning to the candidate, live alert on
+the teacher's monitor, evidence snapshot) feeding a **server-computed integrity score**. On submit a background job
+scores the answers, builds the HQ profile and composes a printable **report** (Print / Save as PDF, A4).
+
+```powershell
+cd frontend ; npm run models:proctor          # once: self-hosts the proctoring models (~26 MB) in public/models/proctor
+cd backend  ; .venv\Scripts\python -m scripts.migrate ; .venv\Scripts\python -m scripts.seed_admission_test   # demo Assignment
+```
+
+* **Teacher:** *Tests* (sections, import from Assignments / Online tests with key + rubric preview, HQ item bank — 68
+  age-banded SJT / reflective / ideas items, AI drafts that must be approved, editor for every type, proctoring preset
+  strict / standard / lenient with per-rule switches, scoring weights and cut-offs, publish) · *Candidates* (form or CSV
+  with a validation preview; delete-all-data) · *Launch* (browser gate, device pre-check, model preload, guardian consent
+  for under-18s) · *Live monitor* (open it on another device: progress, time left, live status chips, integrity,
+  warnings, latest flags, alerts, End session) · *Results* (composite, band, academic, HQ, integrity, CSV export, open /
+  regenerate report). Org admins: Admin console → **Admission tests** (read-only + candidate data deletion).
+* **Candidate (exam view):** confirm name + date of birth (3 tries, then locked) → privacy notice + consent → system
+  check (secure page, single screen, camera, virtual-camera check, microphone noise floor, models, one centred face,
+  network, entire-screen share, full screen) → ID photo (sharpest of 3; the face template stays in memory only) → start.
+  Shuffled questions without keys, autosave (offline queue in IndexedDB), server-set deadline, mark for review, proctor
+  HUD, warnings (n / max), pause overlay (full screen, camera, screen share, second monitor — the timer keeps running),
+  supervisor end (teacher password), hand-back screen with teacher sign-in.
+* **Proctoring:** browser events (full screen, visibility, focus, copy / paste, blocked shortcuts, right-click, print,
+  resize, devtools heuristic, page injection, offline, second monitor, portal opened in another tab, second exam tab) and
+  a Web Worker running MediaPipe FaceLandmarker (faces, head pose — no expressions), MediaPipe EfficientDet-Lite0 (phone,
+  book, laptop / TV, person) and a face-api descriptor (match against the ID photo); mic speech-band level only. Rules
+  (durations, 2-of-3 confirmation, 2 s merging, 60 s calibration) are in `frontend/src/lib/proctor/rules.ts`; severity,
+  points, caps, warnings, integrity and auto-submit are decided by the server
+  (`backend/app/services/admission_test/{config,integrity}.py`), which also raises HEARTBEAT_MISSING and TIME_ANOMALY.
+* **AI** (`ADMISSION_AI_PROVIDER`, else `PROVIDER_MODE`): grades short / descriptive answers against the imported
+  rubric (`key_rubric_points` → criterion + marks), scores HQ written evidence, writes the integrity summary and the
+  report narrative, drafts items. Every step validates JSON, has a 45 s budget and one retry, and falls back to a
+  deterministic result marked `fallback`; the AI never changes a number. `PROVIDER_MODE=mock` runs it all offline.
+* **Security:** the exam token (32 random bytes, SHA-256 at rest, 4 h, bound to the device and one page at a time) works
+  only on `/admission/session/*`; teacher JWTs do not. No key, rubric or model answer reaches the exam view (tested).
+  Evidence is JPEG ≤ 200 KB, re-encoded (EXIF stripped), served by 5-minute signed links; launches, supervisor ends,
+  report views and evidence access are audited (`admission_test_audit`). The exam route adds its own CSP
+  (`script-src 'self' 'wasm-unsafe-eval'`, no frames) and `no-referrer`; set `Permissions-Policy: camera=(self),
+  microphone=(self), display-capture=(self)` on the web server in production.
+* **Privacy:** notice + explicit consent before any capture; guardian consent recorded by the teacher for under-18s
+  (in person / signed form; OTP needs a sender that is not configured); no video or audio recording, no emotion
+  analysis, the face template is never stored. Run `python -m scripts.admission_test_retention` daily: evidence, ID
+  photos and raw event details older than 90 days are deleted, aggregates stay.
+* **Browser:** desktop Chrome or Edge (screen-count detection, keyboard lock and entire-screen sharing are Chromium
+  features). For labs, kiosk mode (`--kiosk`) adds OS-level lockdown; the web app works without it.
+* **Limits (also printed in every report):** browser proctoring is best-effort — it cannot see a second device outside
+  the camera's view, cannot reliably detect virtual cameras / injected video or block OS shortcuts (switching apps is
+  still detected), and heuristics can misfire. The voice rule measures speech-band loudness only, so steady sounds
+  (e.g. a beeping device) can trigger it — switch it off per test if needed. Flags are indicators, not proof.
+* **Calibrate before go-live:** `face_match_threshold` (Euclidean distance of face-api descriptors, default 0.6) and
+  the voice margin (`voice_db`, 15 dB) on a small labelled set; see `config.py` for all tunables.
+
+Migration `018_admission_proctoring.sql` (tests, questions, HQ bank, candidates, sessions, answers, append-only proctor
+events, reports, audit). API under `/ICMELive/api/v1/admission`: `tests`, `question-bank`, `hq-bank`, `candidates`,
+`launches`, `sessions/{id}/end`, `live`, `results(.csv)`, `reports/{id}` (+ `/regenerate`, `/evidence/{event}`) and the
+exam-token routes `session/*`.
+
+## Admissions — Pravesh (Milestone 1: foundation)
+
+Admin console → **Admissions home / Admissions team / Privacy & consent**, counsellor home `/admissions/counsellor`,
+reviewer home `/admissions/reviewer`, parent portal `/parent` (English, Hindi, Kannada, Tamil). `Ctrl/⌘-K` opens the
+command palette everywhere.
+
+* **Tenant isolation in the database** — schema `admission`, row-level security forced on every table; admissions
+  queries run over the non-superuser login role `admission_login` → `SET LOCAL ROLE admission_app` with the school set
+  per transaction. Parents see only their own family.
+* **DPDP core** — versioned parental consent notices (per school and language, tick-box confirmation, stored with
+  version, language, time, IP), withdrawal, access / correction / erasure / grievance requests due in 30 days,
+  per-school retention timers (`python -m scripts.admission_retention`), breach log with the 72-hour Board deadline,
+  append-only audit log without personal data.
+* Demo logins (password `Passw0rd!`): `counsellor@demo.edu`, `reviewer@demo.edu`, `parent@demo.edu` (Hindi),
+  `principal@svm.edu` / `parent@svm.edu` (ICSE school, Tamil), `principal@kps.edu` / `parent@kps.edu` (State board,
+  Kannada); `admin@demo.edu` is the Demo school's principal.
+* Production: `ALTER ROLE admission_login PASSWORD '…'` and set `ADMISSION_DATABASE_URL` (empty = local trust auth only).
+
+Details, screens, decisions and risks: [`docs/PRAVESH_M1.md`](docs/PRAVESH_M1.md). Migration `015_admission_foundation.sql`.
+
 ## Modes
 
 | Setting | Dev default | Production |
@@ -160,7 +315,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 145 tests incl. lesson plans, digital library + DIKSHA (mocked source, no live calls)
+cd backend ; .venv\Scripts\python -m pytest        # 201 tests incl. lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS
 cd frontend ; npm test ; npm run build
 ```
 
@@ -188,6 +343,13 @@ Library (`/ICMELive/api/v1/library`): `meta` · `subjects` · `books` (+ admin c
 
 DIKSHA (`/ICMELive/api/v1/library/diksha`): `meta` · `filters` · `search` · `items/{id}` · `textbooks/{id}` (chapter tree) ·
 `resources/{id}?within=` (permitted viewer) · `publications` (teacher) · `refresh` (admin).
+
+Virtual Labs (`/ICMELive/api/v1/virtual-labs`): `catalog` · `collections/{id}` · `collections/{id}/labs/{lab}` (+ `/worksheet`
+AI draft) · `assignments` (teacher: POST / GET / PATCH / DELETE, `{id}/attempts/{student}[/review]`) · `my` (student) ·
+`my/{id}` · `my/{id}/{start, activity, work, submit, ask}`.
+
+Admissions (`/ICMELive/api/v1/admission`): `overview` · `applicants` · `team` · `consent-templates` · `consent-versions` ·
+`retention` · `data-requests` · `breaches` · `audit` · `parent/{home, consent, consents, requests, language}`.
 
 Interactive docs at `/docs`.
 

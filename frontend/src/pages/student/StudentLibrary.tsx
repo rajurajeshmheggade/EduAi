@@ -105,7 +105,7 @@ export default function StudentLibrary() {
         </div>}
         {data.external.length > 0 && (
           <section aria-labelledby="dk-h" className="space-y-3">
-            <h2 id="dk-h" className="flex items-center gap-2 font-display text-lg font-semibold text-fg"><Globe2 className="h-5 w-5 text-brand-600" /> From DIKSHA</h2>
+            <h2 id="dk-h" className="flex items-center gap-2 font-display text-lg font-semibold text-fg"><Globe2 className="h-5 w-5 text-brand-600" /> From the Catalogue</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {data.external.map((x) => <ExternalCard key={x.source_id} x={x} onOpen={() => nav(dikshaReaderLink(x.source_id, x.kind, { within: x.context?.textbook_id, from: '/student/library' }))} />)}
             </div>
@@ -127,7 +127,7 @@ function ExternalCard({ x, onOpen }: { x: PublishedExternal; onOpen: () => void 
           {x.context ? ` · from ${x.context.textbook_name}` : ''}</p>
         <SourceAttribution item={x.metadata} compact />
         <Button size="sm" className="w-full" disabled={gone} onClick={onOpen} aria-label={`Open ${x.name}`}>
-          {gone ? 'No longer available on DIKSHA' : x.kind === 'textbook' ? <><BookOpen className="h-3.5 w-3.5" /> Open textbook</> : <><BookOpen className="h-3.5 w-3.5" /> Open</>}
+          {gone ? 'No longer available in the Catalogue' : x.kind === 'textbook' ? <><BookOpen className="h-3.5 w-3.5" /> Open textbook</> : <><BookOpen className="h-3.5 w-3.5" /> Open</>}
         </Button>
       </div>} />
   )

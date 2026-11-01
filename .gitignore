@@ -40,3 +40,6 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Admission-test proctoring models (npm run models:proctor)
+frontend/public/models/proctor/

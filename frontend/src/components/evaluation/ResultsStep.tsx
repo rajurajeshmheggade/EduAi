@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { AlertOctagon, Clock, Download, Eye, EyeOff, LifeBuoy, Loader2, PencilLine, Trophy, Users } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AlertOctagon, Clock, Download, Eye, EyeOff, LifeBuoy, Loader2, PencilLine, TrendingUp, Trophy, Users } from 'lucide-react'
 import { BarList } from '@/components/evaluation/BarList'
 import { ReportSkeleton, ReportView } from '@/components/evaluation/ReportView'
 import { Badge } from '@/components/ui/badge'
@@ -8,11 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
 import { StatCard } from '@/components/ui/stat'
+import { toast } from '@/components/ui/toast'
 import { errorMessage } from '@/services/apiClient'
 import { downloadBlob } from '@/services/classroomService'
 import { evaluationService } from '@/services/evaluationService'
 import { cn } from '@/lib/utils'
+import { describeNearCompletion, newlyNearCompletion } from '@/lib/testProgress'
 import { num, type EvalDashboard, type EvalReport, type EvalTest, type RegisterRowEval, type ScoreRow, type SubmissionProgress } from '@/types'
+
+/** How often the teacher's results view re-reads live progress while an online test is being taken (FR-TST-PROGRESS). */
+const PROGRESS_POLL_MS = 15_000
 
 /** FR-EV-12 teacher analytics + register + per-student reports (with mark moderation) + publish. */
 export function ResultsStep({ test, onChanged, readOnly = false, org }: { test: EvalTest; onChanged: () => void; readOnly?: boolean; org?: string | null }) {
@@ -22,15 +27,38 @@ export function ResultsStep({ test, onChanged, readOnly = false, org }: { test: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const id = test.eval_test_id
+  // Students already notified about in this view, so a 15 s re-poll never repeats a toast. `seeded` is false for
+  // the very first load, which only records who is already near completion — it never announces them (opening,
+  // or re-opening, the Results tab must not toast for students flagged before the teacher looked); every poll
+  // after that only announces students that are new to the list since the previous one.
+  const notified = useRef<Set<string>>(new Set())
+  const seeded = useRef(false)
 
   const load = useCallback(async () => {
     try {
       const [d, r] = await Promise.all([evaluationService.dashboard(id, org),
         readOnly ? evaluationService.adminScores({ eval_test_id: id }, org).then((x) => ({ rows: x.rows ?? [] })) : evaluationService.register(id)])
       setDash(d); setRows(r.rows)
+      if (test.assessment_type === 'ONLINE_TEST') {
+        if (seeded.current) {
+          for (const s of newlyNearCompletion(d.submission.near_completion_students, notified.current)) {
+            toast(`⚠ ${describeNearCompletion(s)} of “${test.test_title}”`, 'info')
+          }
+        }
+        notified.current = new Set(d.submission.near_completion_students.map((s) => s.user_code))
+        seeded.current = true
+      }
     } catch (e) { setError(errorMessage(e)) }
-  }, [id, org, readOnly])
+  }, [id, org, readOnly, test.assessment_type, test.test_title])
   useEffect(() => { void load() }, [load])
+
+  // Live sync while the test is in progress: students' 80%-completion flag is server-persisted, so polling here
+  // just re-reads it — the student and teacher views can never disagree (FR-TST-PROGRESS real-time requirement).
+  useEffect(() => {
+    if (test.assessment_type !== 'ONLINE_TEST' || readOnly) return
+    const t = window.setInterval(() => { void load() }, PROGRESS_POLL_MS)
+    return () => window.clearInterval(t)
+  }, [test.assessment_type, readOnly, load])
 
   async function togglePublish() {
     setBusy(true); setError(null)
@@ -155,7 +183,7 @@ export function ResultsStep({ test, onChanged, readOnly = false, org }: { test: 
   )
 }
 
-function SubmissionCard({ p }: { p: SubmissionProgress }) {
+export function SubmissionCard({ p }: { p: SubmissionProgress }) {
   const pct = p.enrolled ? Math.round((100 * p.submitted) / p.enrolled) : 0
   return (
     <Card>
@@ -172,6 +200,13 @@ function SubmissionCard({ p }: { p: SubmissionProgress }) {
           <span className={p.not_submitted ? 'text-bad' : 'text-ok'}>{p.not_submitted} not submitted</span>
         </div>
         <Progress value={pct} tone="ok" />
+        {p.near_completion_students.length > 0 && (
+          <p className="flex flex-wrap items-start gap-1.5 rounded-lg border border-brand-400/30 bg-brand-500/8 px-3 py-2 text-xs text-ink-100">
+            <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" />
+            <span><b className="text-brand-600">{p.near_completion_students.length} at {p.progress_threshold}%+ completion:</b>{' '}
+              {p.near_completion_students.map((s) => `${s.roll_number ? `${s.roll_number}. ` : ''}${s.full_name} (${s.progress_percentage}%)`).join(', ')}</span>
+          </p>
+        )}
         {p.not_submitted_students.length > 0 && (
           <p className="text-xs text-ink-300"><b className="text-ink-100">Pending:</b> {p.not_submitted_students.map((s) => `${s.roll_number ? `${s.roll_number}. ` : ''}${s.full_name}`).join(', ')}</p>
         )}
@@ -211,7 +246,8 @@ export function RegisterTable({ rows, onOpen, editable = false }: { rows: Regist
         <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">
           <th className="py-2 pr-2 font-medium">Rank</th><th className="py-2 pr-3 font-medium">Roll</th><th className="py-2 pr-3 font-medium">Student</th>
           <th className="py-2 pr-3 text-right font-medium">Attempted</th><th className="py-2 pr-3 text-right font-medium">Unanswered</th>
-          <th className="py-2 pr-3 text-right font-medium">Marks</th><th className="py-2 pr-3 text-right font-medium">%</th><th className="py-2 pr-3 font-medium">Grade</th><th className="py-2 pr-3 font-medium">Status</th>{editable && <th />}
+          <th className="py-2 pr-3 text-right font-medium">Marks</th><th className="py-2 pr-3 text-right font-medium">%</th><th className="py-2 pr-3 font-medium">Grade</th><th className="py-2 pr-3 font-medium">Status</th>
+          <th className="py-2 pr-3 font-medium" title="Camera/mic check flags during the test">Flags</th>{editable && <th />}
         </tr></thead>
         <tbody>{rows.map((r) => {
           const done = r.processing_status === 'EVALUATED' || r.processing_status === 'REVIEWED'
@@ -228,6 +264,7 @@ export function RegisterTable({ rows, onOpen, editable = false }: { rows: Regist
               <td className="py-2 pr-3 text-right tabular-nums">{done ? `${num(r.percentage)}%` : '—'}</td>
               <td className="py-2 pr-3">{r.grade ? <Badge tone={r.result === 'Fail' ? 'bad' : 'ok'}>{r.grade}</Badge> : '—'}</td>
               <td className={cn('py-2 pr-3 text-xs', r.processing_status === 'NOT_SUBMITTED' ? 'text-bad' : 'text-ink-500')}>{label}{r.processing_status === 'REVIEWED' && ' · edited'}</td>
+              <td className="py-2 pr-3">{r.proctor_flag_count ? <Badge tone="warn">{r.proctor_flag_count}</Badge> : <span className="text-ink-500">—</span>}</td>
               {editable && <td className="py-2 text-right">{done && <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); onOpen?.(r.script_id) }}
                 aria-label={`Edit marks for ${r.student_name ?? r.uploaded_pdf_filename}`}><PencilLine className="h-3.5 w-3.5" /> Edit marks</Button>}</td>}
             </tr>

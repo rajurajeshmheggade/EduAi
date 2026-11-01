@@ -49,7 +49,9 @@ def _profile(u: dict) -> dict:
         "allowed_subjects": list(u["allowed_subjects"] or []),
         # FR-AUTH-03 post-login routing target
         "home_route": {"superadmin": "/admin-dashboard", "orgadmin": "/admin-dashboard",
-                       "teacher": "/teacher/dashboard", "student": "/student/dashboard"}[role],
+                       "teacher": "/teacher/dashboard", "student": "/student/dashboard",
+                       "counsellor": "/admissions/counsellor", "reviewer": "/admissions/reviewer",
+                       "parent": "/parent"}.get(role, "/"),
     }
 
 

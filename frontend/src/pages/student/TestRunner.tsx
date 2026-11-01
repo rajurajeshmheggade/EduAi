@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CloudCheck, Flag, Loader2, Send, Timer } from 'lucide-react'
+import { LiveCameraCheck } from '@/components/proctor/LiveCameraCheck'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/field'
+import { toast } from '@/components/ui/toast'
 import { errorMessage } from '@/services/apiClient'
 import { assessmentService } from '@/services/assessmentService'
 import { cn } from '@/lib/utils'
@@ -25,6 +27,8 @@ export default function TestRunner() {
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Gates manual submit only (see LiveCameraCheck) — auto-submit at time-up must never be blocked by this.
+  const [cameraReady, setCameraReady] = useState(false)
   const latest = useRef({ answers, flagged })  // read by autosave / submit without re-subscribing timers
   useEffect(() => { latest.current = { answers, flagged } }, [answers, flagged])
   const done = useRef(false)
@@ -65,6 +69,9 @@ export default function TestRunner() {
       try {
         const r = await assessmentService.autosave(id, latest.current.answers, latest.current.flagged)
         setLeft(r.seconds_left); setSaveState('saved')
+        // FR-TST-PROGRESS: the server raises this exactly once per attempt (persisted, never re-sent on resume),
+        // so this toast can never repeat for the same test even if several autosaves land in quick succession.
+        if (r.milestone_reached) toast(`✓ You have completed ${r.progress_percentage}% of this test.`, 'success')
       } catch { setSaveState('error') }
     }, AUTOSAVE_MS)
     return () => window.clearTimeout(t)
@@ -146,6 +153,10 @@ export default function TestRunner() {
           </div>
         </Card>
 
+        <div className="space-y-4">
+          <LiveCameraCheck title="Test camera check" totalQuestions={qs.length} answered={qs.length - unanswered}
+            reportFlag={() => assessmentService.proctorFlag(id)} onReady={setCameraReady} />
+
         <Card className="h-fit p-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Questions</div>
           <div className="grid grid-cols-5 gap-1.5" role="list" aria-label="Question palette">
@@ -164,14 +175,16 @@ export default function TestRunner() {
             <li className="flex items-center gap-2"><Flag className="h-3 w-3 fill-warn text-warn" /> Flagged ({flagged.length})</li>
           </ul>
         </Card>
+        </div>
       </div>
 
       <Dialog open={confirming} onClose={() => setConfirming(false)} title="Submit your test?" description="You can’t change your answers after submitting.">
         <div className="space-y-4 text-sm">
           <p>{qs.length - unanswered} of {qs.length} answered.{unanswered > 0 && <b className="text-warn"> {unanswered} unanswered question{unanswered === 1 ? '' : 's'} will score 0.</b>}{flagged.length > 0 && ` ${flagged.length} flagged for review.`}</p>
+          {!cameraReady && <p className="text-warn">Turn on the camera check in the sidebar before submitting.</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirming(false)}>Keep working</Button>
-            <Button onClick={() => submit(false)} disabled={submitting} id="confirm-submit">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit test</Button>
+            <Button onClick={() => submit(false)} disabled={submitting || !cameraReady} id="confirm-submit">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit test</Button>
           </div>
         </div>
       </Dialog>

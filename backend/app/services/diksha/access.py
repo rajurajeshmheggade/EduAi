@@ -6,9 +6,12 @@ decided per resource:
 
   discover / link      always (public metadata + official DIKSHA link)
   embed (in-app view)  CC BY, BY-SA, BY-ND: yes (unmodified, with attribution, streamed from DIKSHA's host)
-                       CC *NC*: only when DIKSHA_EMBED_NONCOMMERCIAL is enabled after review; otherwise official link
+                       CC *NC*: only when DIKSHA_EMBED_NONCOMMERCIAL is enabled after review; otherwise official link.
+                       Enabling it does not remove the licence note — it changes to say the institution approved it.
                        YouTube licence: only through YouTube's own embedded player
                        unknown / missing licence: never — official link + "needs review"
+  HTML5 packages       (e.g. OLabs virtual-lab simulations) run unmodified from DIKSHA's own host in a sandboxed frame,
+                       under the same embed rule; H5P and ECML packages need DIKSHA's player -> official link
   download             documents (PDF/EPUB) only, from DIKSHA's own host, when in-app display is allowed
   store a local copy   never (the LMS does not mirror DIKSHA content)
   redistribute         never by the LMS (it links to / streams from the source)
@@ -46,8 +49,9 @@ def permissions(item: dict) -> dict:
         notes.append("YouTube licence: shown only through YouTube's own embedded player.")
     elif lic["family"] == "cc":
         embed = (not lic["nc"]) or s.diksha_embed_noncommercial
-        if lic["nc"] and not embed:
-            notes.append("NonCommercial licence: opens on DIKSHA until your institution approves in-app display.")
+        if lic["nc"]:
+            notes.append("NonCommercial licence: opens on DIKSHA until your institution approves in-app display." if not embed
+                          else "NonCommercial licence — shown in-app because your institution has approved it.")
     else:
         embed = False
         notes.append("Licence missing or not recognised: official DIKSHA link only, needs review.")
@@ -68,8 +72,19 @@ def permissions(item: dict) -> dict:
     }
 
 
+HTML_ARCHIVE = "application/vnd.ekstep.html-archive"
+
+
+def html_entry(item: dict, hosts: list[str]) -> str | None:
+    """index.html of an extracted HTML5 package on DIKSHA's host (…/content/html/<id>-latest), as DIKSHA's player loads it."""
+    base = safe_url(item.get("streaming_url"), hosts) or safe_url(item.get("preview_url"), hosts)
+    if not base or "/content/html/" not in base or "?" in base or "#" in base:
+        return None
+    return base.rstrip("/") + "/index.html"
+
+
 def viewer(item: dict, perms: dict | None = None) -> dict:
-    """How the LMS may present a resource: pdf | video | audio | youtube | official (DIKSHA player link)."""
+    """How the LMS may present a resource: pdf | video | audio | youtube | html | official (DIKSHA player link)."""
     perms = perms or permissions(item)
     hosts = get_settings().diksha_asset_host_list
     official = {"viewer": "official", "src": None, "official_url": item.get("official_url")}
@@ -89,6 +104,11 @@ def viewer(item: dict, perms: dict | None = None) -> dict:
         if not src or (rtype == "video" and src.lower().endswith(".m3u8")):
             return {**official, "reason": "No directly playable file from DIKSHA's host."}
         return {"viewer": rtype, "src": src, "official_url": item.get("official_url")}
+    if item.get("mime_type") == HTML_ARCHIVE:
+        src = html_entry(item, hosts)
+        if src:
+            return {"viewer": "html", "src": src, "official_url": item.get("official_url")}
+        return {**official, "reason": "This interactive package is not available as a web page on DIKSHA's host."}
     return {**official, "reason": "Interactive or packaged content runs only in DIKSHA's official player."}
 
 

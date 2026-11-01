@@ -90,6 +90,9 @@ def _view(t: dict, s: dict | None, *, with_questions: bool) -> dict:
             "file_url": get_storage().signed_url(s["script_key"]) if s and s.get("script_key") else None,
             "submitted_by_teacher": bool(s and s.get("submission_mode") == "TEACHER_FOLDER_UPLOAD"),
             "error": s and s.get("error"),
+            # Progress tracking: persisted server-side, so it survives a refresh or a fresh login (FR-TST-PROGRESS).
+            "progress_percentage": float(s["progress_percentage"]) if s and s.get("progress_percentage") is not None else 0.0,
+            "progress_flagged": bool(s and s.get("progress_flagged_at")),
         },
         "result_available": visible,
         "result_pending_publish": bool(s and status == "EVALUATED" and not visible),
@@ -172,6 +175,22 @@ def _open_attempt(t: dict, user: CurrentUser) -> dict:
     return s
 
 
+@router.post("/my/{test_id}/proctor-flag")
+def proctor_flag(test_id: UUID, user: CurrentUser = Depends(student_only)):
+    """A light camera/mic check flagged something during the test (same advisory, count-only check as Virtual
+    Labs' VivaProctor: multiple people, no one in frame, a phone/laptop/TV in shot, or background noise). Only a
+    running count is kept — no video, audio or flag detail — so the teacher can see something was flagged
+    without this becoming a surveillance log."""
+    t = _assessment(user, test_id)
+    s = _open_attempt(t, user)
+    row = db.fetch_one(
+        "UPDATE public.evaluation_candidate_scripts SET proctor_flag_count = proctor_flag_count + 1 "
+        "WHERE script_id = %s AND processing_status = 'IN_PROGRESS' RETURNING proctor_flag_count", (s["script_id"],))
+    if not row:
+        raise HTTPException(409, "This test has already been submitted")
+    return {"flag_count": row["proctor_flag_count"]}
+
+
 @router.post("/my/{test_id}/start")
 def start_test(test_id: UUID, user: CurrentUser = Depends(student_only)):
     ensure_module(user, MODULE)
@@ -208,7 +227,10 @@ def autosave(test_id: UUID, body: Answers, user: CurrentUser = Depends(student_o
     answers, flagged = _clean_answers(t, body)
     db.execute("UPDATE public.evaluation_candidate_scripts SET answers_json = %s, flagged_sl_nos = %s WHERE script_id = %s",
                (Jsonb(answers), flagged, s["script_id"]))
-    return {"saved": len(answers), "seconds_left": max(0, int((rules.attempt_deadline(t, s["started_at"]) - rules.now()).total_seconds()))}
+    # FR-TST-PROGRESS: detect + persist the 80% completion flag server-side on every autosave.
+    progress = rules.update_progress(s["script_id"], len(answers), t["total_questions"])
+    return {"saved": len(answers), "seconds_left": max(0, int((rules.attempt_deadline(t, s["started_at"]) - rules.now()).total_seconds())),
+            **progress}
 
 
 @router.post("/my/{test_id}/submit")
@@ -222,6 +244,7 @@ def submit_test(test_id: UUID, body: Answers, user: CurrentUser = Depends(studen
     answers = _clean_answers(t, body)[0] if on_time else (s["answers_json"] or {})  # late: autosaved answers only
     submitted_at = rules.now() if on_time else deadline
     late = bool(s["is_late"] or (t["due_at"] and submitted_at > t["due_at"]))
+    rules.update_progress(s["script_id"], len(answers), t["total_questions"])  # final % + flag, even on a direct submit
     row = db.fetch_one(
         "UPDATE public.evaluation_candidate_scripts SET answers_json = %s, processing_status = 'QUEUED', submitted_at = %s, "
         "is_late = %s WHERE script_id = %s AND processing_status = 'IN_PROGRESS' RETURNING script_id",

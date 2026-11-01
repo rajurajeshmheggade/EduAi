@@ -8,7 +8,7 @@ import { errorMessage } from '@/services/apiClient'
 import { dikshaService, type PublishSelection } from '@/services/dikshaService'
 import type { PublishTarget } from '@/services/libraryService'
 
-/** Review DIKSHA selections against the target class subject, then publish references (not copies). */
+/** Review Catalogue selections against the target class subject, then publish references (not copies). */
 export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
   selections: PublishSelection[]; target: PublishTarget; onClose: () => void; onDone: (msg: string) => void
 }) {
@@ -29,14 +29,14 @@ export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
         class_code: target.class_code, subject_code: target.subject_code,
       })
       const parts = []
-      if (r.published.length) parts.push(`Published ${r.published.length} DIKSHA item${r.published.length === 1 ? '' : 's'} to ${target.class_name} · ${target.subject_name} (${r.student_count} students).`)
+      if (r.published.length) parts.push(`Published ${r.published.length} Catalogue item${r.published.length === 1 ? '' : 's'} to ${target.class_name} · ${target.subject_name} (${r.student_count} students).`)
       if (r.already_published.length) parts.push(`${r.already_published.length} already published there — left unchanged.`)
       onDone(parts.join(' '))
     } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
   }
 
   return (
-    <Dialog open onClose={onClose} title="Publish DIKSHA content" description="Students get a link to the source content — nothing is copied into the LMS." className="w-[min(38rem,calc(100vw-2rem))]">
+    <Dialog open onClose={onClose} title="Publish Catalogue content" description="Students get a link to the source content — nothing is copied into the LMS." className="w-[min(38rem,calc(100vw-2rem))]">
       <div className="space-y-4 text-sm">
         <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-ink-800 p-3">
           <dt className="text-ink-500">Class</dt><dd className="font-medium text-fg">{target.class_name}{grade ? ` (Class ${grade})` : ''}</dd>
@@ -54,10 +54,10 @@ export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
           ))}
         </ul>
         {wrongClass.length > 0 && <Warn tone="bad">{wrongClass.length} item(s) are not for Class {grade}. Remove them to publish.</Warn>}
-        {otherSubject.length > 0 && <Warn>{otherSubject.length} item(s) are tagged with a different subject than {target.subject_name} on DIKSHA.</Warn>}
+        {otherSubject.length > 0 && <Warn>{otherSubject.length} item(s) are tagged with a different subject than {target.subject_name} in the Catalogue.</Warn>}
         {!grade && <Warn>This class has no grade set, so the class of each item is not checked automatically.</Warn>}
         {linkOnly.length > 0 && <p className="flex items-start gap-2 rounded-lg bg-aqua-500/10 px-3 py-2 text-aqua-400"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
-          {linkOnly.length} item(s) open on DIKSHA (licence or format does not allow in-app display).</p>}
+          {linkOnly.length} item(s) open on the source site (licence or format does not allow in-app display).</p>}
         {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-bad">{error}</p>}
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

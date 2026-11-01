@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, GraduationCap, PencilRuler, ScanText, School,
-  Settings2, TriangleAlert, UserPlus, Users,
+  TriangleAlert, UserPlus, Users,
 } from 'lucide-react'
 import { Columns, Empty, Kpi, Panel, Ring } from '@/components/dashboard/Widgets'
 import { BarList } from '@/components/evaluation/BarList'
@@ -13,7 +13,7 @@ import { dashboardService, type AdminDash } from '@/services/dashboardService'
 import { shortDate } from '@/lib/datetime'
 import { num, type AdminOverview } from '@/types'
 
-type Go = 'teachers' | 'classes' | 'timetable' | 'students' | 'attendance' | 'evaluation' | 'settings'
+type Go = 'teachers' | 'classes' | 'timetable' | 'students' | 'attendance' | 'evaluation'
 
 export function OverviewPanel({ org, onGo }: { org?: string | null; onGo: (tab: Go) => void }) {
   const [data, setData] = useState<AdminOverview | null>(null)
@@ -41,7 +41,6 @@ export function OverviewPanel({ org, onGo }: { org?: string | null; onGo: (tab: 
     { go: 'timetable', label: 'Build timetable', icon: CalendarClock },
     { go: 'attendance', label: 'Attendance report', icon: CalendarCheck },
     { go: 'evaluation', label: 'Score register', icon: ScanText },
-    { go: 'settings', label: 'Settings', icon: Settings2 },
   ]
 
   return (

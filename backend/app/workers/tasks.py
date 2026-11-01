@@ -80,7 +80,15 @@ def evaluate_test(test_id: str, job_id: str, script_ids: list[str] | None = None
     run(test_id, job_id, script_ids)
 
 
-TASKS: dict[str, Callable[..., None]] = {"vectorize_textbook": vectorize_textbook, "evaluate_test": evaluate_test}
+def admission_report(session_id: str) -> None:
+    """Admission test: score, AI-grade, HQ, integrity narrative and compose the report (services/admission_test/report.py)."""
+    from ..services.admission_test.report import build
+
+    build(session_id)
+
+
+TASKS: dict[str, Callable[..., None]] = {"vectorize_textbook": vectorize_textbook, "evaluate_test": evaluate_test,
+                                         "admission_report": admission_report}
 
 
 def enqueue(task_name: str, **kwargs) -> None:

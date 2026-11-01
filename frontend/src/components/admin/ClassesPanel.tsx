@@ -12,11 +12,31 @@ import { adminTabLink } from '@/lib/adminTabs'
 import { cn } from '@/lib/utils'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
+import { dikshaService, type FacetOption } from '@/services/dikshaService'
 import { syllabusCounts, type SyllabusCounts } from '@/services/syllabusService'
 import type { ClassSubject, Member, SchoolClass, SubjectType } from '@/types'
 
 const TYPE_LABEL: Record<SubjectType, string> = { THEORY: 'Theory', LAB: 'Lab', COACHING_TEST: 'Test series' }
-const EMPTY_CLASS = { class_code: '', class_name: '', class_teacher_code: '', room_number: '', grade_number: '' }
+const EMPTY_CLASS = { class_code: '', class_name: '', class_teacher_code: '', room_number: '', grade_number: '', board: '' }
+
+/** CBSE / NCERT / State board options for a class — set once by the admin here, then followed automatically by
+ * the Digital Library's DIKSHA catalog for every teacher and student of that class (no board picker for them). */
+function useBoardOptions() {
+  const [boards, setBoards] = useState<FacetOption[]>([])
+  useEffect(() => { dikshaService.meta().then((m) => setBoards(m.boards)).catch(() => setBoards([])) }, [])
+  return boards
+}
+
+function BoardField({ id, value, onChange, boards }: { id: string; value: string; onChange: (v: string) => void; boards: FacetOption[] }) {
+  return (
+    <div><Label htmlFor={id}>Board</Label>
+      <Select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Not set</option>
+        {boards.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+      </Select>
+    </div>
+  )
+}
 
 /**
  * Admin: set up the academic structure — teachers → classes → subjects (with subject teachers) → chapters → sub-topics.
@@ -32,6 +52,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const boards = useBoardOptions()
 
   const load = useCallback(async () => {
     try {
@@ -51,7 +72,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
     e.preventDefault()
     setBusy(true)
     const code = form.class_code.trim()
-    const ok = await run(() => adminService.createClass({ ...form, class_code: code, class_teacher_code: form.class_teacher_code || null, room_number: form.room_number || null, grade_number: form.grade_number ? Number(form.grade_number) : null }, org))
+    const ok = await run(() => adminService.createClass({ ...form, class_code: code, class_teacher_code: form.class_teacher_code || null, room_number: form.room_number || null, grade_number: form.grade_number ? Number(form.grade_number) : null, board: form.board || null }, org))
     if (ok) { setForm(EMPTY_CLASS); setShowNew(false); setSelected(code) }
     setBusy(false)
   }
@@ -92,7 +113,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
             <Button size="icon" variant="ghost" aria-label="Close" onClick={() => setShowNew(false)}><X className="h-4 w-4" /></Button>
           </CardHeader>
           <CardContent>
-            <form onSubmit={create} className="grid gap-3 sm:grid-cols-[1fr_1.3fr_0.8fr_1.3fr_0.7fr_auto] sm:items-end">
+            <form onSubmit={create} className="grid gap-3 sm:grid-cols-[1fr_1.3fr_0.8fr_1fr_1.3fr_0.7fr_auto] sm:items-end">
               <div><Label htmlFor="c-code">Class code</Label><Input id="c-code" required autoFocus placeholder="Grade-8-C" value={form.class_code} onChange={(e) => setForm({ ...form, class_code: e.target.value })} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" /></div>
               <div><Label htmlFor="c-name">Display name</Label><Input id="c-name" required minLength={2} placeholder="Grade 8 — Section C" value={form.class_name} onChange={(e) => setForm({ ...form, class_name: e.target.value })} /></div>
               <div><Label htmlFor="c-grade">Grade</Label>
@@ -100,6 +121,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
                   <option value="">—</option>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>Class {i + 1}</option>)}
                 </Select>
               </div>
+              <BoardField id="c-board" value={form.board} onChange={(board) => setForm({ ...form, board })} boards={boards} />
               <div><Label htmlFor="c-teacher">Class teacher</Label>
                 <Select id="c-teacher" value={form.class_teacher_code} onChange={(e) => setForm({ ...form, class_teacher_code: e.target.value })}>
                   <option value="">— Assign later —</option>
@@ -160,24 +182,24 @@ export function ClassesPanel({ org }: { org?: string | null }) {
               <div className="mt-3"><Button size="sm" onClick={() => setShowNew(true)}><Plus className="h-3.5 w-3.5" /> New class</Button></div></div>
           </Card>
         ) : (
-          <ClassDetail key={current.class_code} c={current} classes={classes} teachers={teachers} run={run} org={org} />
+          <ClassDetail key={current.class_code} c={current} classes={classes} teachers={teachers} run={run} org={org} boards={boards} />
         )}
       </div>
     </div>
   )
 }
 
-function ClassDetail({ c, classes, teachers, run, org }: {
-  c: SchoolClass; classes: SchoolClass[]; teachers: Member[]; run: (fn: () => Promise<unknown>) => Promise<boolean>; org?: string | null
+function ClassDetail({ c, classes, teachers, run, org, boards }: {
+  c: SchoolClass; classes: SchoolClass[]; teachers: Member[]; run: (fn: () => Promise<unknown>) => Promise<boolean>; org?: string | null; boards: FacetOption[]
 }) {
   const [editing, setEditing] = useState(false)
-  const [info, setInfo] = useState({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '' })
+  const [info, setInfo] = useState({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '', board: c.board ?? '' })
   const [sub, setSub] = useState({ subject_code: '', subject_name: '', teacher_code: '', subject_type: 'THEORY' as SubjectType })
   const [active, setActive] = useState<string | null>(c.subjects[0]?.subject_code ?? null)
   const [counts, setCounts] = useState<SyllabusCounts>({})
   const tOptions = teachers.map((t) => <option key={t.user_code} value={t.user_code}>{t.full_name}</option>)
-  const save = (patch: Partial<{ class_name: string; class_teacher_code: string | null; is_active: boolean; room_number: string | null; grade_number: number | null }>) =>
-    run(() => adminService.updateClass(c.class_code, { class_name: c.class_name, class_teacher_code: c.class_teacher_code, is_active: c.is_active, room_number: c.room_number ?? null, grade_number: c.grade_number ?? null, ...patch }, org))
+  const save = (patch: Partial<{ class_name: string; class_teacher_code: string | null; is_active: boolean; room_number: string | null; grade_number: number | null; board: string | null }>) =>
+    run(() => adminService.updateClass(c.class_code, { class_name: c.class_name, class_teacher_code: c.class_teacher_code, is_active: c.is_active, room_number: c.room_number ?? null, grade_number: c.grade_number ?? null, board: c.board ?? null, ...patch }, org))
 
   useEffect(() => { syllabusCounts(c.class_code, org).then(setCounts).catch(() => setCounts({})) }, [c.class_code, org])
   const activeSubject = c.subjects.find((s) => s.subject_code === active) ?? null
@@ -194,14 +216,15 @@ function ClassDetail({ c, classes, teachers, run, org }: {
       <Card>
         <CardHeader>
           {editing ? (
-            <form className="grid gap-3 sm:grid-cols-[1.5fr_0.8fr_1fr_auto] sm:items-end"
-              onSubmit={async (e) => { e.preventDefault(); if (await save({ class_name: info.class_name.trim(), room_number: info.room_number.trim() || null, grade_number: info.grade_number ? Number(info.grade_number) : null })) setEditing(false) }}>
+            <form className="grid gap-3 sm:grid-cols-[1.5fr_0.8fr_1fr_1fr_auto] sm:items-end"
+              onSubmit={async (e) => { e.preventDefault(); if (await save({ class_name: info.class_name.trim(), room_number: info.room_number.trim() || null, grade_number: info.grade_number ? Number(info.grade_number) : null, board: info.board || null })) setEditing(false) }}>
               <div><Label htmlFor="e-name">Display name</Label><Input id="e-name" required minLength={2} autoFocus value={info.class_name} onChange={(e) => setInfo({ ...info, class_name: e.target.value })} /></div>
               <div><Label htmlFor="e-grade">Grade</Label>
                 <Select id="e-grade" value={info.grade_number} onChange={(e) => setInfo({ ...info, grade_number: e.target.value })}>
                   <option value="">Not set</option>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>Class {i + 1}</option>)}
                 </Select>
               </div>
+              <BoardField id="e-board" value={info.board} onChange={(board) => setInfo({ ...info, board })} boards={boards} />
               <div><Label htmlFor="e-room">Room</Label><Input id="e-room" maxLength={32} value={info.room_number} onChange={(e) => setInfo({ ...info, room_number: e.target.value })} /></div>
               <div className="flex gap-2">
                 <Button type="button" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
@@ -215,8 +238,9 @@ function ClassDetail({ c, classes, teachers, run, org }: {
                 <CardDescription><span className="font-mono">{c.class_code}</span>{c.grade_number ? ` · Class ${c.grade_number}` : ''} · {c.year_code} {c.cycle_code}{c.room_number ? ` · ${c.room_number}` : ''}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {c.board ? <Badge tone="brand">{c.board}</Badge> : <Badge tone="warn" title="Set the board so the Digital Library's DIKSHA catalog is scoped automatically for this class">Board not set</Badge>}
                 <Badge tone="aqua"><Users className="h-3 w-3" /> {c.student_count} students</Badge>
-                <Button size="sm" variant="secondary" onClick={() => { setInfo({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '' }); setEditing(true) }}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+                <Button size="sm" variant="secondary" onClick={() => { setInfo({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '', board: c.board ?? '' }); setEditing(true) }}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
                 <Button size="sm" variant="secondary" onClick={() => save({ is_active: !c.is_active })}>
                   {c.is_active ? <><Archive className="h-3.5 w-3.5" /> Archive</> : <><RotateCcw className="h-3.5 w-3.5" /> Restore</>}
                 </Button>

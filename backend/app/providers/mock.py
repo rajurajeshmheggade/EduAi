@@ -71,10 +71,17 @@ class MockLLM:
             kind = lp.group(1)
             prompt = system if kind == "assistant" else (messages[-1]["content"] if messages else "")
             return answer(kind, prompt, messages)
+        adm = re.search(r"\[TASK:ADM:(\w+)\]", system)
+        if adm:
+            from .mock_admission import answer as adm_answer
+
+            return adm_answer(adm.group(1), system, messages)
         if "[TASK:GUIDE]" in system:
             return json.dumps(self._guide(system, messages[-1]["content"]))
         if "[TASK:RAG]" in system:
             return self._rag(system, messages[-1]["content"])
+        if "[TASK:COPILOT]" in system:
+            return self._copilot(system, messages[-1]["content"] if messages else "")
         return "Mock response."
 
     def chat_stream(self, system: str, messages: list[dict], *, temperature: float = 0.2) -> Iterator[str]:
@@ -119,6 +126,77 @@ class MockLLM:
         pages = sorted({p for p, _ in picked}, key=int)
         refs = ", ".join(f"[Page {p}]" for p in pages)
         return "Here is what your textbook says:\n\n" + "\n".join(lines) + f"\n\nFor more detail, read {refs}."
+
+    # -- Admin Copilot --------------------------------------------------------
+    def _copilot(self, system: str, question: str) -> str:
+        """Answers from the REAL aggregated snapshot embedded in the system prompt (see services/copilot.py) —
+        only the natural-language templating is mocked, same as _rag/_guide above."""
+        m = re.search(r"\n(\{.*\})\s*$", system, re.S)
+        try:
+            snap = json.loads(m.group(1)) if m else {}
+        except (ValueError, AttributeError):
+            snap = {}
+        q = question.lower()
+        if "attendance_this_month_percent" in snap:  # student snapshot shape (services/copilot.py build_student_snapshot)
+            return self._copilot_student(snap, q)
+        return self._copilot_staff(snap, q)
+
+    def _copilot_staff(self, snap: dict, q: str) -> str:
+        inst, adm = snap.get("institution"), snap.get("admissions")
+        lines: list[str] = []
+        if inst and any(w in q for w in ("teacher", "staff")):
+            lines.append(f"{inst['teachers']} active teacher(s)."
+                         + (f" {inst['classes_without_class_teacher']} class(es) still need a class teacher."
+                            if inst["classes_without_class_teacher"] else ""))
+        if inst and ("student" in q or "class" in q or "seat" in q):
+            lines.append(f"{inst['students']} active student(s) across {inst['classes']} class(es).")
+        if inst and "attendance" in q:
+            today, month = inst["attendance_today_percent"], inst["attendance_this_month_percent"]
+            lines.append(f"Attendance is {today if today is not None else 'not yet marked'}% today and "
+                         f"{month if month is not None else 'not available'}% so far this month.")
+        if adm and any(w in q for w in ("admission", "applicant", "consent", "enquir", "withdraw")):
+            lines.append(f"{adm['applicants_total']} applicant(s) on file. Consent: {adm['consent_granted']} granted, "
+                         f"{adm['consent_pending']} pending, {adm['consent_withdrawn']} withdrawn."
+                         + (f" {adm['data_requests_overdue']} data request(s) are overdue." if adm["data_requests_overdue"] else ""))
+        if not lines:
+            if inst:
+                lines.append(f"This institution has {inst['students']} students, {inst['teachers']} teachers and "
+                             f"{inst['classes']} classes; attendance today is "
+                             f"{inst['attendance_today_percent'] if inst['attendance_today_percent'] is not None else 'not yet marked'}%.")
+            if adm:
+                lines.append(f"Admissions: {adm['applicants_total']} applicant(s), {adm['consent_pending']} awaiting consent.")
+        if not lines:
+            return "I don't have an aggregated snapshot to answer from yet — make sure an institution is selected."
+        return " ".join(lines)
+
+    def _copilot_student(self, snap: dict, q: str) -> str:
+        if "note" in snap:
+            return snap["note"]
+        lines: list[str] = []
+        if "attendance" in q:
+            lines.append(f"Your attendance is {snap['attendance_this_month_percent'] if snap['attendance_this_month_percent'] is not None else 'not yet marked'}% "
+                         f"this month ({snap['attendance_overall_percent'] if snap['attendance_overall_percent'] is not None else 'n/a'}% overall).")
+        if any(w in q for w in ("homework", "due", "assignment", "pending")):
+            n = snap["homework_pending_count"]
+            if n:
+                nxt = snap["homework_due_soon"][0]
+                lines.append(f"You have {n} homework item(s) pending, next due: \"{nxt['title']}\" ({nxt['subject']}) by {nxt['due_date']}.")
+            else:
+                lines.append("You have no pending homework right now.")
+        if any(w in q for w in ("today", "timetable", "period", "class")):
+            periods = snap["todays_periods"]
+            lines.append(f"You have {len(periods)} period(s) today." if periods else "No periods are scheduled for you today.")
+        if any(w in q for w in ("result", "score", "mark", "grade")):
+            if snap["recent_results"]:
+                r = snap["recent_results"][0]
+                lines.append(f"Your most recent result: \"{r['title']}\" ({r['subject']}) — {r['percentage']}%, grade {r['grade']}.")
+            else:
+                lines.append("No published results yet.")
+        if not lines:
+            lines.append(f"This month your attendance is "
+                         f"{snap['attendance_this_month_percent'] if snap['attendance_this_month_percent'] is not None else 'not yet marked'}%, "
+                         f"with {snap['homework_pending_count']} homework item(s) pending.")
+        return " ".join(lines)
 
     # -- Teaching guide -----------------------------------------------------
     def _guide(self, system: str, content: str) -> dict:

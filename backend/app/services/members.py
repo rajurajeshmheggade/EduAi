@@ -21,7 +21,7 @@ Email = Annotated[str, StringConstraints(strip_whitespace=True, to_lower=True, m
                                          pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _ALPHABET = string.ascii_letters + string.digits
-_PROFILE_SQL = "UPDATE public.app_users SET qualification = %s, must_change_password = %s WHERE user_id = %s"
+_PROFILE_SQL = "UPDATE public.app_users SET qualification = %s, must_change_password = %s, gender = %s WHERE user_id = %s"
 
 
 def temp_password() -> str:
@@ -48,7 +48,7 @@ def create_member(
     password: str | None, created_by: str, year_code: str | None = None, cycle_code: str | None = None,
     class_code: str | None = None, subjects: list[str] | None = None, phone: str | None = None,
     roll_number: str | None = None, guardian_name: str | None = None, guardian_phone: str | None = None,
-    qualification: str | None = None, conn=None,
+    qualification: str | None = None, gender: str | None = None, conn=None,
 ) -> dict:
     """Creates the user (strict: duplicate code/email -> 409 via the app's UniqueViolation handler)."""
     pw = password or temp_password()
@@ -62,7 +62,7 @@ def create_member(
 
     def run(c) -> object:
         uid = c.execute(sql, args).fetchone()["v"]
-        c.execute(_PROFILE_SQL, (qualification or None, password is None, uid))
+        c.execute(_PROFILE_SQL, (qualification or None, password is None, gender, uid))
         return uid
 
     if conn is not None:

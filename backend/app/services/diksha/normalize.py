@@ -146,6 +146,7 @@ def normalize_item(raw: dict) -> dict:
         "copyright": (raw.get("copyright") or "").strip() or None,
         "copyright_year": raw.get("copyrightYear"),
         "organisation": _list(raw.get("organisation")) or _list(org.get("orgName")),
+        "keywords": _list(raw.get("keywords")),
         "leaf_count": raw.get("leafNodesCount"),
         "size_bytes": raw.get("size"),
         "duration": raw.get("duration"),

@@ -5,7 +5,7 @@ import type { DikshaUnit } from '@/services/dikshaService'
 
 /** Chapter / unit hierarchy in DIKSHA's own order. Units without linked resources are shown as such. */
 export function ChapterTree({ units, selected, onSelect }: { units: DikshaUnit[]; selected: string | null; onSelect: (u: DikshaUnit) => void }) {
-  if (!units.length) return <p className="px-2 py-4 text-sm text-ink-500">This textbook has no chapter structure on DIKSHA.</p>
+  if (!units.length) return <p className="px-2 py-4 text-sm text-ink-500">This textbook has no chapter structure in the Catalogue.</p>
   return (
     <ol className="space-y-0.5" aria-label="Chapters">
       {units.map((u, i) => <UnitNode key={u.id} u={u} number={i + 1} depth={0} selected={selected} onSelect={onSelect} />)}

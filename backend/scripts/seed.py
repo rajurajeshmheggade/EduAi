@@ -80,6 +80,8 @@ def run(demo_attendance: bool = False) -> None:
                 (ORG, klass, subj, sname, teacher),
             )
     _demo_timetable()
+    from scripts import seed_admission   # Pravesh: admissions schools, staff, families, consent notice
+    seed_admission.run()
     if demo_attendance:
         _demo_attendance()
         _demo_homework()

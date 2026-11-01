@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Video } from 'lucide-react'
 import { DAY_NAMES, DAY_SHORT, defaultPeriodTimes } from '@/lib/timetable'
 import { cn } from '@/lib/utils'
 import type { TimetableSlot } from '@/types'
+
+const SCHEDULE_LABEL: Record<string, string> = { MONTHLY: 'Monthly', YEARLY: 'Yearly' }
 
 const TYPE_TONE: Record<string, string> = {
   THEORY: 'border-brand-400/40 bg-brand-500/8',
@@ -21,7 +23,7 @@ export function WeeklyGrid({ slots, secondary, today, onCell, minPeriods = 8 }: 
   onCell?: (day: number, period: number, slot?: TimetableSlot) => void
   minPeriods?: number
 }) {
-  const days = slots.some((s) => s.day_of_week === 7) ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6]
+  const days = [1, 2, 3, 4, 5, 6, 7]
   const periods = Math.max(minPeriods, ...slots.map((s) => s.period_number))
   const at = new Map(slots.map((s) => [`${s.day_of_week}-${s.period_number}`, s]))
 
@@ -59,9 +61,13 @@ export function WeeklyGrid({ slots, secondary, today, onCell, minPeriods = 8 }: 
                     >
                       {s ? (
                         <>
-                          <div className="truncate font-semibold text-fg">{s.subject_name}</div>
+                          <div className="flex items-center gap-1 truncate font-semibold text-fg">
+                            {s.subject_name}
+                            {s.is_online && <Video className="h-3 w-3 shrink-0 text-brand-500" aria-label="Online class" />}
+                          </div>
                           <div className="truncate text-[11px] text-ink-300">{secondary === 'teacher' ? (s.teacher_name ?? 'No teacher') : s.class_name}</div>
                           <div className="text-[10px] tabular-nums text-ink-500">{s.start_time}–{s.end_time}{s.room_number ? ` · ${s.room_number}` : ''}</div>
+                          {SCHEDULE_LABEL[s.schedule_type] && <div className="truncate text-[10px] text-ink-500">{SCHEDULE_LABEL[s.schedule_type]}</div>}
                         </>
                       ) : onCell ? <Plus className="h-3.5 w-3.5" /> : null}
                     </Cell>

@@ -12,19 +12,19 @@ from __future__ import annotations
 import csv
 import io
 from datetime import date, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from psycopg import errors as pg_errors
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, StringConstraints, ValidationError
 
 from .. import db
 from ..security import ADMIN_ROLES, CurrentUser, require_role
 from ..services import attendance as att
 from ..services import attendance_export as att_export
-from ..services.members import Code, Email, Name, Password, Phone, create_member, new_student_code
+from ..services.members import Name, Password, Phone, create_member
 from ..services.storage import build_key, get_storage
 from .admin import MemberPatch, _patch_member, list_slots, org_scope
 
@@ -98,13 +98,15 @@ def class_students(class_code: str, user: CurrentUser = Depends(staff)):
 
 class StudentCreate(BaseModel):
     full_name: Name
-    user_code: Code | None = Field(default=None, description="Admission / registration number (auto if empty)")
-    email: Email | None = None
+    # The student's username IS their email (enforced here, not just in the UI): `email` doubles as the login
+    # id stored in app_users.user_code, so it's capped at 64 chars (VARCHAR(64)) rather than Email's usual 255.
+    email: Annotated[str, StringConstraints(strip_whitespace=True, to_lower=True, max_length=64,
+                                            pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
     roll_number: str | None = Field(default=None, max_length=32)
     phone: Phone | None = None
     guardian_name: str | None = Field(default=None, max_length=200)
     guardian_phone: Phone | None = None
-    password: Password | None = None
+    password: Password
 
 
 def _check_student_limit(org: str) -> None:
@@ -124,8 +126,10 @@ def _create_student(user: CurrentUser, c: dict, body: StudentCreate, conn=None) 
         "SELECT subject_code FROM public.class_subjects WHERE org_code = %s AND class_code = %s ORDER BY subject_code",
         (user.org_code, c["class_code"]))]
     return create_member(
+        # Username = email (FR: Student Creation #5): the login id is always the student's own email, never a
+        # separately chosen admission number.
         org_code=user.org_code, customer_code=user["customer_code"], role="student", full_name=body.full_name,
-        user_code=body.user_code or new_student_code(user.org_code), email=body.email, password=body.password,
+        user_code=body.email, email=body.email, password=body.password,
         created_by=user.user_code, year_code=c["year_code"], cycle_code=c["cycle_code"], class_code=c["class_code"],
         subjects=subjects, phone=body.phone, roll_number=body.roll_number, guardian_name=body.guardian_name,
         guardian_phone=body.guardian_phone, conn=conn,
@@ -137,29 +141,81 @@ def create_student(class_code: str, body: StudentCreate, user: CurrentUser = Dep
     return _create_student(user, _require_class_teacher(user, class_code), body)
 
 
-@router.post("/classes/{class_code}/students/import")
-def import_students(class_code: str, file: UploadFile = File(...), user: CurrentUser = Depends(teacher_only)):
-    """CSV columns (header row required): full_name, user_code, email, roll_number, phone, guardian_name,
-    guardian_phone, password. Only full_name is mandatory. Each row is independent: good rows are created,
-    bad rows are reported back."""
-    c = _require_class_teacher(user, class_code)
-    raw = file.file.read(2 * 1024 * 1024 + 1)
-    if len(raw) > 2 * 1024 * 1024:
-        raise HTTPException(413, "CSV exceeds 2 MB")
+IMPORT_COLUMNS = ["full_name", "email", "password", "roll_number", "phone", "guardian_name", "guardian_phone"]
+IMPORT_EXAMPLE = ["Asha Rao", "asha.rao@example.com", "Str0ngPass1", "1", "", "Ramesh Rao", "+91 98xxxxxx01"]
+
+
+def _rows_from_csv(raw: bytes) -> list[dict[str, str]]:
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         raise HTTPException(415, "CSV must be UTF-8 encoded")
     reader = csv.DictReader(io.StringIO(text))
     if not reader.fieldnames or "full_name" not in [h.strip().lower() for h in reader.fieldnames]:
-        raise HTTPException(422, "CSV must have a header row with at least a 'full_name' column")
+        raise HTTPException(422, "The file must have a header row with at least a 'full_name' column")
+    return [{(k or "").strip().lower(): (v or "").strip() for k, v in row.items()} for row in reader]
+
+
+def _rows_from_xlsx(raw: bytes) -> list[dict[str, str]]:
+    from openpyxl import load_workbook
+
+    try:
+        wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    except Exception:  # noqa: BLE001 — corrupted/unreadable file, not a validation failure to report per-row
+        raise HTTPException(415, "This .xlsx file could not be read. Re-save it from Excel and try again.")
+    ws = wb.active
+    rows = ws.iter_rows(values_only=True)
+    header = [str(h or "").strip().lower() for h in next(rows, [])]
+    if "full_name" not in header:
+        raise HTTPException(422, "The file must have a header row with at least a 'full_name' column")
+    out = []
+    for r in rows:
+        out.append({header[i]: str(v).strip() if v is not None else "" for i, v in enumerate(r) if i < len(header)})
+    return out
+
+
+@router.get("/classes/{class_code}/students/import-template.xlsx")
+def import_template_xlsx(class_code: str, user: CurrentUser = Depends(teacher_only)):
+    """Downloadable Excel import template (the CSV template is built client-side)."""
+    _require_class_teacher(user, class_code)
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Students"
+    ws.append(IMPORT_COLUMNS)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    ws.append(IMPORT_EXAMPLE)
+    for i, col in enumerate(IMPORT_COLUMNS, start=1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = max(12, len(col) + 2)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        buf.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="students-template.xlsx"'},
+    )
+
+
+@router.post("/classes/{class_code}/students/import")
+def import_students(class_code: str, file: UploadFile = File(...), user: CurrentUser = Depends(teacher_only)):
+    """CSV or Excel (.xlsx) columns (header row required): full_name, email, password, roll_number, phone,
+    guardian_name, guardian_phone. full_name, email and password are mandatory — the student signs in with
+    their email. Each row is independent: good rows are created, bad rows are reported back."""
+    c = _require_class_teacher(user, class_code)
+    raw = file.file.read(2 * 1024 * 1024 + 1)
+    if len(raw) > 2 * 1024 * 1024:
+        raise HTTPException(413, "File exceeds 2 MB")
+    name = (file.filename or "").lower()
+    is_xlsx = name.endswith(".xlsx") or file.content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    rows = _rows_from_xlsx(raw) if is_xlsx else _rows_from_csv(raw)
 
     created, errors = [], []
-    for i, row in enumerate(reader, start=2):
+    for i, clean in enumerate(rows, start=2):
         if i - 1 > MAX_CSV_ROWS:
             errors.append({"row": i, "error": f"Only the first {MAX_CSV_ROWS} rows are imported"})
             break
-        clean = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
         if not any(clean.values()):
             continue
         try:
@@ -384,13 +440,27 @@ def my_attendance(month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}
 # ---------------------------------------------------------------- timetable: read side (FR-TE-01, FR-ST-03)
 @router.get("/my-timetable")
 def my_timetable(user: CurrentUser = Depends(require_role("teacher", "student"))):
-    """Teachers: every period they teach. Students: their class's week."""
+    """Teachers: every period they teach. Students: their class's week. Also surfaces upcoming published
+    holidays (#10) and recent timetable changes (#3B) relevant to them — scoped to their own class(es),
+    never an unrelated one."""
+    today = date.today()
+    window_end = date(today.year + (1 if today.month == 12 else today.year), ((today.month % 12) + 1), 1)
     if user.role == "teacher":
-        slots = list_slots(user.org_code, None, user.user_code)
+        slots = list_slots(user.org_code, None, user.user_code, student_view=True)
+        my_classes = sorted({s["class_code"] for s in slots})
+        holidays = db.call_rows("usp_list_holidays", user.org_code, None, today, window_end, True,
+                                casts=[None, None, None, None, "boolean"])
+        changes = [c for c in db.call_rows("usp_recent_timetable_changes", user.org_code, None, 14,
+                                           casts=[None, None, "int"]) if c["class_code"] in my_classes] if my_classes else []
     else:
         me = db.call_row("usp_get_member", user.org_code, user.user_code)
-        slots = list_slots(user.org_code, me["class_code"], None) if me and me["class_code"] else []
-    return {"today": date.today().isoweekday(), "slots": slots}
+        class_code = me["class_code"] if me else None
+        slots = list_slots(user.org_code, class_code, None, student_view=True) if class_code else []
+        holidays = db.call_rows("usp_list_holidays", user.org_code, class_code, today, window_end, True,
+                                casts=[None, None, None, None, "boolean"]) if class_code else []
+        changes = db.call_rows("usp_recent_timetable_changes", user.org_code, class_code, 14,
+                               casts=[None, None, "int"]) if class_code else []
+    return {"today": today.isoweekday(), "slots": slots, "holidays": holidays, "recent_changes": changes}
 
 
 # ---------------------------------------------------------------- homework (FR-TE-04, FR-ST-04)

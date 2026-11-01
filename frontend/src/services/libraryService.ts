@@ -58,7 +58,7 @@ export interface BookAccess {
 }
 
 export interface PublishTarget {
-  class_code: string; class_name: string; grade_number: number | null; year_code: string
+  class_code: string; class_name: string; grade_number: number | null; board: string | null; year_code: string
   subject_code: string; subject_name: string; is_class_teacher: boolean; student_count: number
 }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { AlertTriangle, FileQuestion, FileText, Loader2, Plus, Save, ScrollText, Sparkles, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, Bot, FileQuestion, FileText, Loader2, Plus, Save, ScrollText, Sparkles, Trash2, Upload } from 'lucide-react'
+import { NlpChapterPicker, type NlpSelection } from '@/components/nlp/NlpChapterPicker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,15 +15,20 @@ const TYPE_LABEL: Record<QuestionType, string> = { MCQ: 'MCQ', SHORT_ANSWER: 'Sh
 const letter = (o: string, i: number) => (/^\(([a-h])\)/i.exec(o)?.[1] ?? 'abcdefgh'[i]).toLowerCase()
 const optionText = (o: string) => o.replace(/^\([a-h]\)\s*/i, '')
 
-/** FR-EV-02/03/04: question paper + SL.No model answers -> editable preview -> save (embeddings generated). */
+/** FR-EV-02/03/04: question paper + SL.No model answers -> editable preview -> save (embeddings generated).
+ * #22 adds a third source alongside upload+parse and manual entry: AI-generated MCQ / fill-in-the-blank
+ * questions grounded in a chapter picked from the chapter library. */
 export function QuestionsStep({ test, masters, onSaved }: { test: EvalTest; masters: MasterQuestion[]; onSaved: () => void }) {
   const [qp, setQp] = useState<File | null>(null)
   const [ans, setAns] = useState<File | null>(null)
   const [draft, setDraft] = useState<MasterDraft[] | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
-  const [parser, setParser] = useState<'ai' | 'rules' | null>(null)
-  const [busy, setBusy] = useState<'parse' | 'save' | null>(null)
+  const [parser, setParser] = useState<'ai' | 'rules' | 'ai_generated' | null>(null)
+  const [busy, setBusy] = useState<'parse' | 'save' | 'generate' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aiSel, setAiSel] = useState<NlpSelection | null>(null)
+  const [aiCount, setAiCount] = useState(5)
+  const [aiTypes, setAiTypes] = useState<{ MCQ: boolean; SHORT_ANSWER: boolean }>({ MCQ: true, SHORT_ANSWER: true })
   const locked = test.status === 'PROCESSING' || test.status === 'PUBLISHED'
 
   async function parse() {
@@ -32,6 +38,18 @@ export function QuestionsStep({ test, masters, onSaved }: { test: EvalTest; mast
       const r = await evaluationService.parseMasters(test.eval_test_id, qp, ans)
       setDraft(r.items.length ? r.items : [{ sl_no: '1', question_type: 'DESCRIPTIVE', mcq_options: [], correct_option: null, question_text: '', max_marks: null, model_answer_text: '', key_rubric_points: [] }])
       setWarnings(r.warnings); setParser(r.parser)
+    } catch (e) { setError(errorMessage(e)) } finally { setBusy(null) }
+  }
+
+  async function generate() {
+    if (!aiSel) return
+    const types = (['MCQ', 'SHORT_ANSWER'] as const).filter((t) => aiTypes[t])
+    if (!types.length) { setError('Pick at least one question type'); return }
+    setBusy('generate'); setError(null)
+    try {
+      const r = await evaluationService.generateMastersAi(test.eval_test_id, {
+        class_label: aiSel.classLabel, subject: aiSel.subject, chapter: aiSel.chapter, count: aiCount, types })
+      setDraft(r.items); setWarnings(r.warnings); setParser('ai_generated')
     } catch (e) { setError(errorMessage(e)) } finally { setBusy(null) }
   }
 
@@ -96,7 +114,30 @@ export function QuestionsStep({ test, masters, onSaved }: { test: EvalTest; mast
 
       {!draft && !locked && (
         <Card>
-          <CardHeader><CardTitle>{masters.length ? 'Replace from new files' : 'Upload question paper & model answers'}</CardTitle>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5 text-brand-600" /> Generate questions with AI</CardTitle>
+            <CardDescription>Pick a chapter from the chapter library — questions are generated only from its text, for you to review and edit before saving.</CardDescription></CardHeader>
+          <CardContent className="space-y-4">
+            <NlpChapterPicker idPrefix="eval-ai" onChange={setAiSel} />
+            <div className="flex flex-wrap items-end gap-4">
+              <div><label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-300" htmlFor="ai-count">Number of questions</label>
+                <Input id="ai-count" type="number" min={1} max={20} className="w-28" value={aiCount} onChange={(e) => setAiCount(Math.min(20, Math.max(1, Number(e.target.value) || 1)))} />
+              </div>
+              <div className="flex gap-3 text-sm">
+                <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={aiTypes.MCQ} onChange={(e) => setAiTypes({ ...aiTypes, MCQ: e.target.checked })} /> MCQ</label>
+                <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={aiTypes.SHORT_ANSWER} onChange={(e) => setAiTypes({ ...aiTypes, SHORT_ANSWER: e.target.checked })} /> Fill in the blank</label>
+              </div>
+            </div>
+            {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+            <Button onClick={generate} disabled={!aiSel || busy === 'generate'} id="generate-ai-questions">
+              {busy === 'generate' ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</> : <><Sparkles className="h-4 w-4" /> Generate {aiCount} question{aiCount === 1 ? '' : 's'}</>}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!draft && !locked && (
+        <Card>
+          <CardHeader><CardTitle>{masters.length ? 'Replace from new files' : 'Or upload question paper & model answers'}</CardTitle>
             <CardDescription>Number questions as SL.No 1, Q1 or 1. with marks like “(5 marks)”; give answers per SL.No with step marks like “(2M)”. PDF, DOCX, Markdown or text.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
@@ -116,7 +157,7 @@ export function QuestionsStep({ test, masters, onSaved }: { test: EvalTest; mast
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle>Review SL.No table</CardTitle>
-              <CardDescription>{draft.length} questions · {total} marks{parser && ` · parsed by ${parser === 'ai' ? 'AI' : 'rules'}`}. Edit anything before saving — the AI grades against exactly this.</CardDescription>
+              <CardDescription>{draft.length} questions · {total} marks{parser && ` · ${parser === 'ai_generated' ? 'generated by AI' : parser === 'ai' ? 'parsed by AI' : 'parsed by rules'}`}. Edit anything before saving — the AI grades against exactly this.</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>

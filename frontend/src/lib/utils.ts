@@ -7,4 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Super-admin and institution admin share one admin experience and are both shown as "Admin". */
-export const roleLabel = (r: Role) => (r === 'superadmin' ? 'Super Admin' : r === 'orgadmin' ? 'Admin' : r === 'teacher' ? 'Teacher' : 'Student')
+const ROLE_LABEL: Record<Role, string> = {
+  superadmin: 'Super Admin', orgadmin: 'Admin', teacher: 'Teacher', student: 'Student',
+  counsellor: 'Counsellor', reviewer: 'Integrity reviewer', parent: 'Parent',
+}
+export const roleLabel = (r: Role) => ROLE_LABEL[r]

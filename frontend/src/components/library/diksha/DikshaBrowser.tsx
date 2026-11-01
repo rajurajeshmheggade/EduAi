@@ -8,6 +8,7 @@ import { TeacherPublishDialog } from '@/components/library/diksha/TeacherPublish
 import { TextbookDetails } from '@/components/library/diksha/TextbookDetails'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Select } from '@/components/ui/field'
 import { errorMessage } from '@/services/apiClient'
 import {
   dikshaService, type DikshaFilterOptions, type DikshaItem, type DikshaQuery, type DikshaSearchResult, type DikshaTextbook, type PublishSelection,
@@ -15,12 +16,23 @@ import {
 import type { PublishTarget } from '@/services/libraryService'
 
 const PAGE = 24
+const targetKey = (t: PublishTarget) => `${t.class_code}|${t.subject_code}`
 
-/** Teacher: search DIKSHA (live), open textbooks and chapters, select textbooks or resources, publish to a class. */
-export function DikshaBrowser({ target, onPublished }: { target: PublishTarget | null; onPublished: (msg: string) => void }) {
+/** Teacher: search DIKSHA (live), open textbooks and chapters, select textbooks or resources, publish to a class.
+ *
+ * `targets`/`onTargetChange` are only used to render a compact publish-to switcher in the sticky footer when
+ * the teacher has more than one eligible class · subject — most teachers have exactly one, so no picker shows. */
+export function DikshaBrowser({ target, targets, onTargetChange, onPublished }: {
+  target: PublishTarget | null; targets?: PublishTarget[] | null; onTargetChange?: (key: string) => void; onPublished: (msg: string) => void
+}) {
+  // Board and class default to the admin-set class. When the admin hasn't set them, DikshaFilters shows
+  // Board + Class pickers (before Subject) so the teacher can narrow the search manually. DikshaBrowser is
+  // remounted (key={target}) by TeacherLibrary whenever the teacher switches target, so this initial state
+  // always reflects the current one.
   const [query, setQuery] = useState<DikshaQuery>(() => ({
     content_type: 'Digital Textbook', page: 1,
     ...(target?.grade_number && target.grade_number >= 5 ? { class_number: target.grade_number } : {}),
+    ...(target?.board ? { board: target.board } : {}),
   }))
   const [options, setOptions] = useState<DikshaFilterOptions | null>(null)
   const [result, setResult] = useState<DikshaSearchResult | null>(null)
@@ -78,18 +90,23 @@ export function DikshaBrowser({ target, onPublished }: { target: PublishTarget |
         <>
           <Card>
             <CardContent className="space-y-3 pt-5">
-              <DikshaFilters options={options} value={query} onChange={setQuery} />
-              <p className="text-xs text-ink-500">Live results from DIKSHA (NCERT, CBSE and Karnataka State Board, Classes 5–12). Content stays on DIKSHA; publishing shares a link with your students.</p>
+              {!target?.board && (
+                <p className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn">
+                  This class has no board set, so results include every supported board. Pick a class and board below to narrow it, or ask your admin to set it (Classes & subjects) to do this automatically.
+                </p>
+              )}
+              <DikshaFilters options={options} value={query} onChange={setQuery} lockBoardClass={!!(target?.grade_number && target?.board)} />
+              <p className="text-xs text-ink-500">Live results from the Catalogue (NCERT, CBSE and Karnataka State Board, Classes 5–12). Content stays on the source site; publishing shares a link with your students.</p>
             </CardContent>
           </Card>
 
           {error ? <ErrorState message={error} onRetry={load} /> : !result ? <LoadingState /> : result.items.length === 0 ? (
-            <EmptyState title={result.window_exceeded ? 'No more results can be shown' : 'No DIKSHA content matches these filters'}>
-              {result.window_exceeded ? 'DIKSHA returns at most 10,000 results per search — narrow the filters or search by title.' : 'Try another class, subject or language.'}
+            <EmptyState title={result.window_exceeded ? 'No more results can be shown' : 'No Catalogue content matches these filters'}>
+              {result.window_exceeded ? 'The Catalogue returns at most 10,000 results per search — narrow the filters or search by title.' : 'Try another class, subject or language.'}
             </EmptyState>
           ) : (
             <>
-              <div className="text-sm text-ink-300">{total.toLocaleString()} result{total === 1 ? '' : 's'} on DIKSHA</div>
+              <div className="text-sm text-ink-300">{total.toLocaleString()} result{total === 1 ? '' : 's'} in the Catalogue</div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {result.items.map((it) => {
                   const Card_ = it.kind === 'resource' ? ResourceCard : TextbookCard
@@ -114,7 +131,15 @@ export function DikshaBrowser({ target, onPublished }: { target: PublishTarget |
       )}
 
       <div className="sticky bottom-4 z-20 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-ink-900/95 p-3 shadow-xl backdrop-blur">
-        <span className="text-sm text-ink-300"><b className="text-fg">{chosen.length}</b> DIKSHA item{chosen.length === 1 ? '' : 's'} selected{target ? <> for <b className="text-fg">{target.class_name} · {target.subject_name}</b></> : ''}</span>
+        <span className="text-sm text-ink-300"><b className="text-fg">{chosen.length}</b> Catalogue item{chosen.length === 1 ? '' : 's'} selected</span>
+        {targets && targets.length > 1 ? (
+          <Select aria-label="Publish for (class · subject)" className="h-8 w-48" value={target ? targetKey(target) : ''}
+            onChange={(e) => onTargetChange?.(e.target.value)}>
+            {targets.map((x) => <option key={targetKey(x)} value={targetKey(x)}>{x.class_name} · {x.subject_name}</option>)}
+          </Select>
+        ) : target ? (
+          <span className="text-sm text-ink-300">for <b className="text-fg">{target.class_name} · {target.subject_name}</b></span>
+        ) : null}
         {chosen.length > 0 && <button className="cursor-pointer text-sm text-ink-500 hover:text-fg" onClick={() => setSelected({})}>Clear</button>}
         <Button className="ml-auto" id="diksha-publish" disabled={!chosen.length || !target} onClick={() => setPublishing(true)}><Send className="h-4 w-4" /> Publish selected</Button>
       </div>

@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from ... import db
+from ...config import get_settings
 from ...workers.tasks import enqueue
 
 GRACE = timedelta(seconds=60)
@@ -48,6 +49,28 @@ def queue_evaluation(test_id, script_ids: list[str]) -> str:
     job_id = db.call_scalar("usp_create_job", "answer_evaluation", str(test_id))
     enqueue("evaluate_test", test_id=str(test_id), job_id=str(job_id), script_ids=[str(s) for s in script_ids])
     return str(job_id)
+
+
+def update_progress(script_id, answered_count: int, total_questions: int) -> dict:
+    """Recompute an online-test attempt's % completion and raise the completion flag exactly once, the first time
+    it reaches TEST_PROGRESS_FLAG_THRESHOLD (default 80%). The server is the only one that decides the percentage
+    and the flag — the client only reports which questions it has answers for.
+
+    Returns {"progress_percentage": float, "milestone_reached": bool}; `milestone_reached` is True only on the
+    single call that performs the NULL -> NOW() transition (atomic `WHERE progress_flagged_at IS NULL`), so two
+    concurrent autosaves (e.g. two tabs) can never raise the flag, or notify, twice for the same attempt.
+    """
+    pct = round(100 * answered_count / total_questions, 2) if total_questions else 0.0
+    db.execute("UPDATE public.evaluation_candidate_scripts SET progress_percentage = %s WHERE script_id = %s",
+               (pct, script_id))
+    milestone_reached = False
+    if pct >= get_settings().test_progress_flag_threshold:
+        row = db.fetch_one(
+            "UPDATE public.evaluation_candidate_scripts SET progress_flagged_at = NOW() "
+            "WHERE script_id = %s AND progress_flagged_at IS NULL RETURNING progress_flagged_at",
+            (script_id,))
+        milestone_reached = row is not None
+    return {"progress_percentage": pct, "milestone_reached": milestone_reached}
 
 
 def finalize_expired(test: dict) -> int:

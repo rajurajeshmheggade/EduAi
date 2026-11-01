@@ -7,6 +7,7 @@ from collections import Counter
 from uuid import UUID
 
 from ... import db
+from ...config import get_settings
 
 DONE = ("EVALUATED", "REVIEWED")
 GRADES = [(90, "A+"), (80, "A"), (70, "B+"), (60, "B"), (50, "C"), (40, "D")]
@@ -110,9 +111,16 @@ def teacher_dashboard(test: dict) -> dict:
 
 
 def submission_progress(test: dict) -> dict:
-    """FR-DSP-02: enrolled vs submitted vs in-progress vs not submitted (with names) and late submissions."""
+    """FR-DSP-02: enrolled vs submitted vs in-progress vs not submitted (with names) and late submissions.
+
+    FR-TST-PROGRESS: `near_completion_students` surfaces every in-progress attempt that has crossed the
+    `TEST_PROGRESS_FLAG_THRESHOLD` so the teacher can monitor it live, the same persisted flag the student's
+    own toast is driven from — polling this (e.g. every 10-15 s) is how the teacher view stays in sync with the
+    student's progress without the two ever disagreeing on what "80%" means.
+    """
     rows = db.fetch_all(
-        "SELECT u.user_code, u.full_name, u.roll_number, s.processing_status, s.is_late "
+        "SELECT u.user_code, u.full_name, u.roll_number, s.processing_status, s.is_late, "
+        "s.progress_percentage, s.progress_flagged_at "
         "FROM public.app_users u LEFT JOIN public.evaluation_candidate_scripts s "
         "ON s.eval_test_id = %s AND s.student_user_code = u.user_code "
         "WHERE u.org_code = %s AND u.class_code = %s AND u.user_role = 'student' AND u.is_active "
@@ -121,6 +129,7 @@ def submission_progress(test: dict) -> dict:
     not_submitted = [r for r in rows if r["processing_status"] is None]
     in_progress = [r for r in rows if r["processing_status"] == "IN_PROGRESS"]
     submitted = [r for r in rows if r["processing_status"] not in (None, "IN_PROGRESS")]
+    near_completion = [r for r in in_progress if r["progress_flagged_at"]]
     return {
         "enrolled": len(rows), "submitted": len(submitted), "in_progress": len(in_progress),
         "not_submitted": len(not_submitted), "late": sum(1 for r in submitted if r["is_late"]),
@@ -128,6 +137,10 @@ def submission_progress(test: dict) -> dict:
         "not_submitted_students": [{"user_code": r["user_code"], "full_name": r["full_name"], "roll_number": r["roll_number"]}
                                    for r in not_submitted],
         "in_progress_students": [r["full_name"] for r in in_progress],
+        "near_completion_students": [{"user_code": r["user_code"], "full_name": r["full_name"], "roll_number": r["roll_number"],
+                                      "progress_percentage": _num(r["progress_percentage"]), "flagged_at": r["progress_flagged_at"]}
+                                     for r in near_completion],
+        "progress_threshold": get_settings().test_progress_flag_threshold,
         "due_at": test.get("due_at"),
     }
 

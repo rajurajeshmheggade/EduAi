@@ -1,15 +1,23 @@
 import { useRef, useState } from 'react'
 import { BookX, Search, X } from 'lucide-react'
 import { Input, Label, Select } from '@/components/ui/field'
+import { cn } from '@/lib/utils'
 import type { BookFilters, LibraryMeta } from '@/services/libraryService'
 
-/** Board / class / subject / language / title filters (FRD §6.1). Search is debounced. */
-export function LibraryFilters({ meta, value, onChange, subjects, extra }: {
+/**
+ * Board / class / subject / language / title filters (FRD §6.1). Search is debounced.
+ *
+ * `lockBoardClass` hides the Board and Class pickers: used by the teacher's view, where both already follow the
+ * class they are publishing for (admin-set, see Admin console → Classes & subjects). Admin's own catalog view
+ * omits this prop and keeps full free choice of board and class.
+ */
+export function LibraryFilters({ meta, value, onChange, subjects, extra, lockBoardClass }: {
   meta: LibraryMeta | null
   value: BookFilters
   onChange: (f: BookFilters) => void
   subjects: string[]
   extra?: React.ReactNode
+  lockBoardClass?: boolean
 }) {
   const [q, setQ] = useState(value.q ?? '')
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -22,20 +30,24 @@ export function LibraryFilters({ meta, value, onChange, subjects, extra }: {
   const active = !!(value.board || value.class_number || value.subject || value.language || value.q)
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_0.7fr_1fr_0.8fr_1.4fr_auto] lg:items-end">
+    <div className={cn('grid gap-3 sm:grid-cols-2 lg:items-end', lockBoardClass ? 'lg:grid-cols-[1fr_0.8fr_1.4fr_auto]' : 'lg:grid-cols-[1fr_0.7fr_1fr_0.8fr_1.4fr_auto]')}>
       {extra}
-      <div><Label htmlFor="lf-board">Board</Label>
-        <Select id="lf-board" value={value.board ?? ''} onChange={(e) => set({ board: e.target.value, subject: '' })}>
-          <option value="">All boards</option>
-          {meta?.boards.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
-        </Select>
-      </div>
-      <div><Label htmlFor="lf-class">Class</Label>
-        <Select id="lf-class" value={value.class_number ?? ''} onChange={(e) => set({ class_number: e.target.value ? Number(e.target.value) : '', subject: '' })}>
-          <option value="">All</option>
-          {meta?.classes.map((c) => <option key={c} value={c}>Class {c}</option>)}
-        </Select>
-      </div>
+      {!lockBoardClass && (
+        <>
+          <div><Label htmlFor="lf-board">Board</Label>
+            <Select id="lf-board" value={value.board ?? ''} onChange={(e) => set({ board: e.target.value, subject: '' })}>
+              <option value="">All boards</option>
+              {meta?.boards.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
+            </Select>
+          </div>
+          <div><Label htmlFor="lf-class">Class</Label>
+            <Select id="lf-class" value={value.class_number ?? ''} onChange={(e) => set({ class_number: e.target.value ? Number(e.target.value) : '', subject: '' })}>
+              <option value="">All</option>
+              {meta?.classes.map((c) => <option key={c} value={c}>Class {c}</option>)}
+            </Select>
+          </div>
+        </>
+      )}
       <div><Label htmlFor="lf-subject">Subject</Label>
         <Select id="lf-subject" value={value.subject ?? ''} onChange={(e) => set({ subject: e.target.value })}>
           <option value="">All subjects</option>

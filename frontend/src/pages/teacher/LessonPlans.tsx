@@ -47,13 +47,20 @@ export default function LessonPlans() {
     lessonPlanService.scope().then(setScope).catch((e) => setError(errorMessage(e)))
   }, [loadPlans])
 
-  const classOpts = useMemo(() => scope?.classes ?? [], [scope])
-  const subjectOpts = useMemo(() => {
-    const src = klass === 'all' ? classOpts : classOpts.filter((c) => c.class_code === klass)
+  // Options come from the plans actually saved — a plan's class/subject may be one of the teacher's own room
+  // assignments OR a chapter-library class/subject (backend/nlp/), so this covers both without a second fetch.
+  const classOpts = useMemo(() => {
     const m = new Map<string, string>()
-    src.forEach((c) => c.subjects.forEach((s) => m.set(s.subject_code, s.subject_name)))
+    ;(plans ?? []).forEach((p) => { if (p.classCode) m.set(p.classCode, p.className || p.classCode) })
+    return [...m.entries()].map(([class_code, class_name]) => ({ class_code, class_name }))
+  }, [plans])
+  const subjectOpts = useMemo(() => {
+    const m = new Map<string, string>()
+    ;(plans ?? []).forEach((p) => {
+      if (p.subjectCode && (klass === 'all' || p.classCode === klass)) m.set(p.subjectCode, p.subjectName || p.subjectCode)
+    })
     return [...m.entries()].map(([code, name]) => ({ code, name }))
-  }, [classOpts, klass])
+  }, [plans, klass])
 
   const filtered = useMemo(() => (plans ?? []).filter((p) =>
     (klass === 'all' || p.classCode === klass) &&

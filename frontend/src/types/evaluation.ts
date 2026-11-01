@@ -40,6 +40,8 @@ export interface EvalTest {
   assigned_at: string | null
   class_students: number
   submitted: number
+  /** Sum of proctor_flags across every attempt (see LiveCameraCheck) — a count, never a video/image/detail. */
+  proctor_flags: number
   window?: AssessmentWindow | null
   question_paper_name?: string | null
   model_answer_name?: string | null
@@ -125,6 +127,15 @@ export interface QuestionAnalytics {
   common_missing_points: { point: string; students: number }[]
 }
 
+/** A student whose online-test attempt has crossed the completion threshold (FR-TST-PROGRESS). */
+export interface NearCompletionStudent {
+  user_code: string
+  full_name: string
+  roll_number: string | null
+  progress_percentage: number
+  flagged_at: string
+}
+
 export interface SubmissionProgress {
   enrolled: number
   submitted: number
@@ -134,6 +145,9 @@ export interface SubmissionProgress {
   evaluating: number
   not_submitted_students: { user_code: string; full_name: string; roll_number: string | null }[]
   in_progress_students: string[]
+  /** Students still taking the test whose progress has reached `progress_threshold` — persisted server-side. */
+  near_completion_students: NearCompletionStudent[]
+  progress_threshold: number
   due_at: string | null
 }
 
@@ -243,6 +257,7 @@ export interface RegisterRowEval {
   submission_mode: SubmissionMode | null
   submitted_at: string | null
   is_late: boolean
+  proctor_flag_count: number
 }
 
 export const num = (v: Numeric | null | undefined): number => (v == null ? 0 : typeof v === 'number' ? v : Number(v))
@@ -288,6 +303,10 @@ export interface StudentAssessment {
     file_url: string | null
     submitted_by_teacher: boolean
     error: string | null
+    /** % of questions answered, recomputed server-side on every autosave/submit; persists across refresh/login. */
+    progress_percentage: number
+    /** Whether this attempt has ever crossed the completion threshold (server-persisted, never re-cleared). */
+    progress_flagged: boolean
   }
   result_available: boolean
   result_pending_publish: boolean

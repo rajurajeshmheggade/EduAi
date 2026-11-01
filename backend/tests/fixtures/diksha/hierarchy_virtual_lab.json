@@ -1,0 +1,1734 @@
+{
+ "id": "api.course.hierarchy",
+ "ver": "1.0",
+ "ts": "2026-10-28T07:38:56.341Z",
+ "params": {
+  "resmsgid": "a1a0f050-d2a2-11f1-b552-e1bc248a62cb",
+  "msgid": "a19a3990-d2a2-11f1-bac7-ab98a8c35ada",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_3135614393797099521445",
+   "name": "Science Lab Manual",
+   "description": "Science Lab Manual",
+   "appIcon": "",
+   "mimeType": "application/vnd.ekstep.content-collection",
+   "primaryCategory": "Digital Textbook",
+   "contentType": "TextBook",
+   "se_gradeLevels": [
+    "Class 10"
+   ],
+   "se_subjects": [
+    "Science"
+   ],
+   "se_mediums": [
+    "English"
+   ],
+   "gradeLevel": [
+    "Class 10"
+   ],
+   "subject": [
+    "Science"
+   ],
+   "medium": [
+    "English"
+   ],
+   "license": "CC BY-SA 4.0",
+   "author": "Creator",
+   "creator": "Creator",
+   "attributions": [],
+   "copyright": "NCERT",
+   "copyrightYear": 2022,
+   "organisation": [
+    "NCERT"
+   ],
+   "leafNodesCount": 327,
+   "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+   "pkgVersion": 56,
+   "size": 1509206,
+   "status": "Live",
+   "keywords": [
+    "Barium Chloride",
+    "aqueous solutions",
+    "Bar Magnets",
+    "cleaning efficiency",
+    "Normal",
+    "focal length",
+    "alcohol oxidation,",
+    "Allotropy",
+    "Sodium carbonate",
+    "Chemical Reaction",
+    "Stomata",
+    "cotyledons",
+    "magnet",
+    "Magnetic field",
+    "weight",
+    "hard water,",
+    "ethanoic acid,",
+    "radicle",
+    "asexual reproduction",
+    "Reflection of light",
+    "magnification",
+    "cleaning capacity",
+    "sodium hydroxide",
+    "Tetrahedron",
+    "poles",
+    "triglycerides",
+    "Optical Centre",
+    "nascent oxygen",
+    "crystallisation",
+    "reactivity series",
+    "Physical properties",
+    "aluminium reaction,",
+    "concave lens",
+    "Direct Proportion",
+    "ammeter",
+    "product formation",
+    "Bryophyllum leaf buds",
+    "Baking Soda",
+    "convex lens",
+    "Thermal Decomposition",
+    "ion exchange",
+    "Magnetic Fields",
+    ", hydrated salts,",
+    "Neutralization",
+    "sulphur dioxide",
+    "Covalent Bond",
+    "Metals",
+    "oxidation",
+    "soap formation",
+    "acids and bases",
+    "copper sulphate,",
+    "Temperature conditions",
+    "Organs",
+    "copper",
+    "basic solution",
+    "image",
+    "disinfection",
+    "physical change,",
+    "magnetic field lines",
+    "Dicot seed,",
+    "zinc reaction",
+    "principal focus",
+    "Length",
+    "Transpiration",
+    "Nature of Material",
+    "ester",
+    "Spherical mirror",
+    "compass",
+    "Calcium carbonate",
+    "North poles",
+    "Coil turns",
+    "Carbon dioxide",
+    "copper sulphate",
+    "Carbohydrates",
+    "Exothermic",
+    "Washing soda",
+    "sodium bicarbonate",
+    "exothermic reaction",
+    "Live Wire",
+    "optical centre",
+    "Mass",
+    "universal indicato",
+    "Focal Length",
+    "Baking soda",
+    "Binary fission",
+    "Sodium bicarbonate",
+    "Convex Lens",
+    "Refraction of light",
+    "Guard cells",
+    "Iodine Test",
+    "embryo",
+    "Equivalent Resistance",
+    "Water Absorption",
+    "synthesis",
+    "Series Circuit Equivalent Resistance Calculation",
+    "acetic acid",
+    "magnesium burning",
+    "Electromagnetic induction",
+    "Solvay's process",
+    "Washing Soda",
+    "calcium hypochlorite",
+    "Sodium Carbonate",
+    "Series Circuit",
+    "Imbibant",
+    "Evolution",
+    "Ohm's Law",
+    "angles of incidence",
+    "micelle",
+    "energy",
+    "spring",
+    "Evolution of Gas",
+    "resistance",
+    "precipitation reaction",
+    "Litmus Paper",
+    "Neutral Wire",
+    "cylinder",
+    "Hexagonal Array",
+    "double displacement",
+    "south poles",
+    "Osmosis",
+    "thermal decomposition,",
+    "direction",
+    "Epidermis",
+    "Plant",
+    "water of crystallization",
+    "salt solutions",
+    "zinc",
+    "chemical change",
+    "bleaching powder",
+    "Normal, Angle of Incidence",
+    "physical change",
+    "Adaptation",
+    "Alkalinity",
+    "coils and Galvonometer",
+    "foaming capacity",
+    "Anaerobic",
+    "Magnification",
+    "electrical",
+    "water of crystallization,",
+    "reflection of light,",
+    "reducing agent",
+    "object",
+    "laws of reflection",
+    "ethanol",
+    "Beyond 2F₂",
+    "Earth Wire",
+    "Reflection",
+    "hydrogen gas,",
+    "carboxylic acid",
+    "decomposition reaction",
+    "Acids Bases Salts Electrolytes Ionization Strong electrolytes Weak electrolytes Neutralization Conductivity Biological processes",
+    "dehydration",
+    "Zinc",
+    "thermal decomposition",
+    "Circuit",
+    "metal reactivity",
+    "aluminium",
+    "Concave mirror",
+    "Budding",
+    "Salt Formation",
+    "Incident Ray",
+    "voltmeter",
+    "Vegetative propagation",
+    "displacement reaction",
+    "Percentage of water",
+    "Hydrogen gas",
+    "Hooke's Law",
+    "photolysis",
+    "plane mirror",
+    "magnetic field",
+    "types of alcohol",
+    "Calculation",
+    "acidic solution",
+    "metal displacement",
+    "Angle of Reflection",
+    "Dicot seed",
+    "properties",
+    "Electric current",
+    "indices of refraction",
+    "hydrochloric acid,",
+    "iron",
+    "Enzymatic Activity",
+    "potato tuber",
+    "hard water",
+    "Metal oxides",
+    "Conductor",
+    "Yeast",
+    "reactivity series,",
+    "sodium bicarbonate,",
+    "Insulated copper wire",
+    "Short Circuit",
+    "chemical bonding",
+    "soap",
+    "rectangular glass slab",
+    "Asexual reproduction",
+    "Safety precautions",
+    "distant object",
+    "Principal Focus",
+    "sodium hydroxide,",
+    "NCERT",
+    "Solenoid",
+    "Magnetism",
+    "Parallel Circuit Equivalent Resistance Calculation",
+    "precipitation reaction,",
+    "hydrochloric acid",
+    "Salivary Amylase",
+    "Class 10",
+    "battery",
+    "Parallel Circuit",
+    "Imbibition",
+    "Hydrolysis",
+    "oxidation,",
+    "ethanoic acid",
+    "Cross-sectional Area",
+    "soft water",
+    "law of reflection",
+    "neutral solution",
+    "sodium carbonate",
+    "aluminium reaction",
+    "Real Image",
+    "Respiration",
+    "soft water,",
+    "zinc iron copper aluminium",
+    "Virtual simulation",
+    "Inverted",
+    "decomposition reaction,",
+    "Homology",
+    "displacement reaction,",
+    "Light",
+    "Raisins",
+    "Endothermic reactions",
+    "double displacement,",
+    "barium sulphate,",
+    "neutralization",
+    "Real Image,",
+    "oxidising agent",
+    "ethanol,",
+    "Sulphuric Acid",
+    "acidic nature,",
+    "Lime water",
+    "universal indicator",
+    "Analogy",
+    "concave mirror",
+    "Fleming's Left Hand Rule",
+    "Litmus paper",
+    "litmus test",
+    "Iron core",
+    "saponification",
+    "hydrated salts",
+    "esterification",
+    "chemical reaction",
+    "Imbibed",
+    "Image Formation",
+    "alcohol",
+    "Reactions with water",
+    "alkaline hydrolysis",
+    "Resistivity",
+    "Potato tubers",
+    "preparation",
+    "Chemical properties",
+    "image formation",
+    "Aerobic",
+    "current object and distance",
+    "light",
+    "Sodium Sulphate",
+    "precipitation",
+    "Phototropism Geotropism Auxin Plant responses Gravitropism Heliotropic chamber Stem growth Root growth Positive geotropism Negative phototropism",
+    "ATP",
+    "Chlorophyll",
+    "alcohol oxidation",
+    "fatty acids",
+    "Reflected Ray",
+    "barium sulphate",
+    "acidic solutio",
+    "Acid-base reaction",
+    "Achromic Point",
+    "Amoeba",
+    "Fragments",
+    "germination",
+    "reflection of light",
+    "Magnified",
+    "Electromagnet",
+    "Parallel Rays",
+    "combustion reaction",
+    "Aquatic plants",
+    "Brisk Effervescence",
+    "Lens Formula",
+    "incident ray",
+    "chemical change,",
+    "Temporary magnet",
+    "coil",
+    "Photosynthesis",
+    "sulfuric acid",
+    "ion exchange,",
+    "\"Fermentation Biochemical Pathway Microorganisms Regulatory Enzymes Anaerobic Respiration Types of Fermentation Zymology Carbon Dioxide Liberation Metabolic Process Industrial Applications\"",
+    "speed of light",
+    "combination reaction",
+    "Conductors",
+    "inverted image",
+    "acidic nature",
+    "Photosynthesis Carbon dioxide Glucose production Photosynthesis rate Global carbon cycle KOH solution Chlorophyll Alcohol extraction Iodine solution Starch formation",
+    "electrolysis",
+    "Fullerene",
+    "Eichhornia offsets",
+    "hydrogen gas",
+    "pH scale",
+    "acetic acid,",
+    "iron nails",
+    "Angle of Incidence",
+    "Chemistry",
+    "Physics",
+    "Saponification-The process of Making Soap",
+    "bleaching powder,",
+    "Lab Video",
+    "Importance of Light in Photosynthesis",
+    "Experiments",
+    "Science",
+    "Asexual Reproduction in Amoeba and Yeast",
+    "pH Determination",
+    "Cleaning Capacity of Soap",
+    "Demonstration of Stomata on a Leaf Peel",
+    "Role of Carbon dioxide During Respiration",
+    "Role of Carbon Dioxide during Respiration",
+    "Single Displacement Reaction",
+    "Equivalent Resistance of Resistors in series",
+    "Properties of Acetic Acid",
+    "Combination Reaction",
+    "Equivalent Resistance of Resistors in Parallel"
+   ],
+   "children": [
+    {
+     "identifier": "do_31356577898319052813162",
+     "name": "Chemical reactions (a)Zn with H2SO4 (b)BaCl2 and Na2SO4 (c)Decomposition of NH4Cl ",
+     "description": "2. Chemical reactions (a)Zn with H2SO4 (b)BaCl2 and Na2SO4 (c)Decomposition of NH4Cl ",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "leafNodesCount": 12,
+     "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+     "pkgVersion": 56,
+     "status": "Live",
+     "index": 1,
+     "children": [
+      {
+       "identifier": "do_31356577898098688012958",
+       "name": "Experiment PDF",
+       "description": "Experiment PDF",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 1,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 1,
+       "children": [
+        {
+         "identifier": "do_4313574306203025408115927",
+         "name": "Experiment_2",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "yogesh sayal",
+         "copyright": "2022",
+         "lastPublishedOn": "2023-03-17T19:05:15.391+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306203025408115927/artifact/experiment_2.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306203025408115927/artifact/experiment_2.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306203025408115927/artifact/experiment_2.pdf",
+         "size": 10702080,
+         "status": "Live",
+         "index": 1
+        }
+       ]
+      },
+      {
+       "identifier": "do_31356577898260889613104",
+       "name": "Explanation Resources-1",
+       "description": "Explanation Resources",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 4,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 2,
+       "children": [
+        {
+         "identifier": "do_31454734340016537616774",
+         "name": "Theory - Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454734340016537616774/artifact/book.thumb.png",
+         "mimeType": "application/pdf",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-15T07:01:22.637+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734340016537616774/theory.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734340016537616774/theory.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734340016537616774/theory.pdf",
+         "size": 107962,
+         "status": "Live",
+         "keywords": [
+          "chemical change,",
+          "physical change,",
+          "displacement reaction,",
+          "precipitation",
+          "magnesium burning"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_31454734597136384016775",
+         "name": "Procedure -  Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454734597136384016775/artifact/book.thumb.png",
+         "mimeType": "application/pdf",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-16T11:36:26.873+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734597136384016775/procedure.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734597136384016775/procedure.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734597136384016775/procedure.pdf",
+         "size": 318220,
+         "status": "Live",
+         "keywords": [
+          "chemical change",
+          "physical change",
+          "displacement reaction",
+          "precipitation",
+          "magnesium burning"
+         ],
+         "index": 2
+        },
+        {
+         "identifier": "do_31454734790267699216777",
+         "name": "Animation -  Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454734790267699216777/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-15T07:02:24.749+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734790267699216777/chemical-reactions-animation.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734790267699216777/chemical-reactions-animation.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyan33cnpo4g4euhils3uz6zvsokekq4rk7wa4pt45cejba/master.m3u8",
+         "size": 15564804,
+         "status": "Live",
+         "keywords": [
+          "chemical change,",
+          "physical change,",
+          "displacement reaction",
+          "precipitation",
+          "magnesium burning"
+         ],
+         "index": 3
+        },
+        {
+         "identifier": "do_31454734926241792016778",
+         "name": "Video -  Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454734926241792016778/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-15T07:02:55.970+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734926241792016778/chemical-reactions-video.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31454734926241792016778/chemical-reactions-video.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyalhszfnbrxgvtwj4ejl5vpuhrlrj4rpwam2wevr34q6tq/master.m3u8",
+         "size": 11637510,
+         "status": "Live",
+         "keywords": [
+          "chemical change",
+          "physical change,",
+          "displacement reaction,",
+          "precipitation",
+          "magnesium burning"
+         ],
+         "index": 4
+        }
+       ]
+      },
+      {
+       "identifier": "do_31455176503947264017337",
+       "name": "Learning Resources-1",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 2,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 3,
+       "children": [
+        {
+         "identifier": "do_31454737805130137616805",
+         "name": "Simulation -  Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454737805130137616805/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-15T07:03:16.185+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31454737805130137616805/artifact/chemical-reactions_1775802986375.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_31454737805130137616805-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_31454737805130137616805-latest",
+         "size": 1190017,
+         "status": "Live",
+         "keywords": [
+          "chemical change",
+          "physical change",
+          "displacement reaction",
+          "precipitation",
+          "magnesium burning"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_314547351743160320152887",
+         "name": "Self-Evaluation -  Chemical Reactions",
+         "description": "This experiment involves performing various reactions to classify them as physical or chemical changes. Students observe changes like burning, precipitation, displacement, and heating, helping them understand how new substances form and distinguish between reversible and irreversible changes.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314547351743160320152887/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.h5p-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Amrita Vishwa Vidyapeetham",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-04-15T07:04:06.748+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314547351743160320152887/artifact/1775799774431_do_314547351743160320152887.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/h5p/do_314547351743160320152887-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/h5p/do_314547351743160320152887-latest",
+         "size": 1853482,
+         "status": "Live",
+         "index": 2
+        }
+       ]
+      },
+      {
+       "identifier": "do_3145715449700024321996",
+       "name": "Explanation Resources-2",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 3,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 4,
+       "children": [
+        {
+         "identifier": "do_3145771785997844481244",
+         "name": "Theory- Different types of Chemical Reactions",
+         "description": "This experiment explains about various chemical reactions.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_3145771785997844481244/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "M/S Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-22T09:55:01.853+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3145771785997844481244/olab16englishtheory.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3145771785997844481244/olab16englishtheory.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya6puvnodjcryn6nz3l7rx3erpez7gawmgsn777redxz4a/master.m3u8",
+         "size": 327226560,
+         "status": "Live",
+         "keywords": [
+          "Chemical Reaction",
+          "Zinc",
+          "Sulphuric Acid",
+          "Barium Chloride",
+          "Sodium Sulphate",
+          "Thermal Decomposition",
+          "NCERT"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_3145862937832652801481",
+         "name": "Procedure- Different types of Chemical Reactions",
+         "description": "This experiment explains about various chemical reactions.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_3145862937832652801481/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "M/S Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-06-04T09:32:02.526+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3145862937832652801481/olab16englishprocedure-1.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3145862937832652801481/olab16englishprocedure-1.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyaorthigbncoxmd2mwswxqe7tw73fpuiw5rql2bojq2req/master.m3u8",
+         "size": 60143827,
+         "status": "Live",
+         "keywords": [
+          "Chemical Reaction",
+          "Zinc",
+          "Sulphuric Acid",
+          "Barium Chloride",
+          "Sodium Sulphate",
+          "Thermal Decomposition",
+          "NCERT"
+         ],
+         "index": 2
+        },
+        {
+         "identifier": "do_314565867080859648157716",
+         "name": "Video- Different types of Chemical Reactions",
+         "description": "This experiment explains about various chemical reactions",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314565867080859648157716/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "M/S Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-22T09:55:50.687+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_314565867080859648157716/olab16englishexperiment.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_314565867080859648157716/olab16englishexperiment.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya4e4iuhqwi33wofayruc7ziaywddl7zszyf6jfef5g3wa/master.m3u8",
+         "size": 552714349,
+         "status": "Live",
+         "keywords": [
+          "Chemical Reaction",
+          "Zinc",
+          "Sulphuric Acid",
+          "Barium Chloride",
+          "Sodium Sulphate",
+          "Thermal Decomposition",
+          "NCERT"
+         ],
+         "index": 3
+        }
+       ]
+      },
+      {
+       "identifier": "do_31457154514021580813611",
+       "name": "Learning Resources-2",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 2,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 5,
+       "children": [
+        {
+         "identifier": "do_3145770958918287361207",
+         "name": "Simulation- Different types of Chemical Reactions",
+         "description": "This experiment explains about various chemical reactions.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_3145770958918287361207/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "M/S Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-22T09:56:15.816+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3145770958918287361207/new.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_3145770958918287361207-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_3145770958918287361207-latest",
+         "size": 3298562,
+         "status": "Live",
+         "keywords": [
+          "Chemical Reaction",
+          "Zinc",
+          "Sulphuric Acid",
+          "Barium Chloride",
+          "Sodium Sulphate",
+          "Thermal Decomposition",
+          "NCERT"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_31456587098814054411067",
+         "name": "Assessment- Different types of Chemical Reactions",
+         "description": "This experiment explains about various chemical reactions",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31456587098814054411067/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "M/S Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-22T09:57:05.158+0000",
+         "pkgVersion": 3,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31456587098814054411067/new.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_31456587098814054411067-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_31456587098814054411067-latest",
+         "size": 10341,
+         "status": "Live",
+         "keywords": [
+          "Chemical Reaction",
+          "Zinc",
+          "Sulphuric Acid",
+          "Barium Chloride",
+          "Sodium Sulphate",
+          "Thermal Decomposition"
+         ],
+         "index": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "identifier": "do_31356577898317414413160",
+     "name": "Change in temp. during reactions of exothermic or endothermic",
+     "description": "3. Change in temp. during reactions of exothermic or endothermic",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "leafNodesCount": 2,
+     "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+     "pkgVersion": 56,
+     "status": "Live",
+     "index": 2,
+     "children": [
+      {
+       "identifier": "do_31356577898130636812988",
+       "name": "Experiment PDF",
+       "description": "Experiment PDF",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 1,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 1,
+       "children": [
+        {
+         "identifier": "do_4313574306572132352116794",
+         "name": "Experiment_3",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "yogesh sayal",
+         "copyright": "2022",
+         "lastPublishedOn": "2023-03-17T19:14:55.252+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306572132352116794/artifact/experiment_3.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306572132352116794/artifact/experiment_3.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306572132352116794/artifact/experiment_3.pdf",
+         "size": 470045,
+         "status": "Live",
+         "index": 1
+        }
+       ]
+      },
+      {
+       "identifier": "do_314500060407529472124519",
+       "name": "Learning Resources",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 1,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 2,
+       "children": [
+        {
+         "identifier": "do_314490006892929024120363",
+         "name": "Simulation - Change in temp. during reactions of exothermic or endothermic",
+         "description": "To study exothermic and endothermic reactions.",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314490006892929024120363/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "C-DAC Mumbai",
+         "creator": "ncert creator creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-02-02T11:18:05.265+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314490006892929024120363/artifact/archive_1768799675740.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314490006892929024120363-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314490006892929024120363-latest",
+         "size": 88280457,
+         "status": "Live",
+         "keywords": [
+          "Endothermic reactions",
+          "exothermic reaction",
+          "energy"
+         ],
+         "index": 1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "identifier": "do_31356577898272358413116",
+     "name": "Study the reactions of HCl with Zn, Na2CO3 and NaOH",
+     "description": "4. Study the reactions of HCl with Zn, Na2CO3 and NaOH",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "leafNodesCount": 6,
+     "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+     "pkgVersion": 56,
+     "status": "Live",
+     "index": 3,
+     "children": [
+      {
+       "identifier": "do_31356577898132275212990",
+       "name": "Experiment PDF",
+       "description": "Experiment PDF",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 1,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 1,
+       "children": [
+        {
+         "identifier": "do_4313574306934890496116797",
+         "name": "Experiment_4",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "yogesh sayal",
+         "copyright": "2022",
+         "lastPublishedOn": "2023-03-17T19:09:54.407+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306934890496116797/artifact/experiment_4.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306934890496116797/artifact/experiment_4.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574306934890496116797/artifact/experiment_4.pdf",
+         "size": 642105,
+         "status": "Live",
+         "index": 1
+        }
+       ]
+      },
+      {
+       "identifier": "do_31356577898106880012966",
+       "name": "Explanation Resources",
+       "description": "Explanation Resources",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 3,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 2,
+       "children": [
+        {
+         "identifier": "do_314560197834956800155805",
+         "name": "Theory - Reactions of Hydrochloric Acid",
+         "description": "These reactions illustrate HCl reacting with Zinc to evolve hydrogen gas, and with Sodium Carbonate to produce carbon dioxide via brisk effervescence. The reaction with Sodium Hydroxide is a classic neutralization process, forming sodium chloride and water, typically identified using a phenolphthalein indicator to observe the color change. Chemical Equations and Observations",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314560197834956800155805/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-05T09:38:20.785+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_314560197834956800155805/olab17englishtheory.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_314560197834956800155805/olab17englishtheory.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyat7bkr5i572r2pyrhkj544bpoke5ylrc5hid7sfwuxwaq/master.m3u8",
+         "size": 289620422,
+         "status": "Live",
+         "keywords": [
+          "Evolution of Gas",
+          "Exothermic",
+          "Neutralization",
+          "Brisk Effervescence",
+          "Salt Formation"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_31456020637774643219937",
+         "name": "Procedure -Reactions of Hydrochloric Acid",
+         "description": "These reactions illustrate HCl reacting with Zinc to evolve hydrogen gas, and with Sodium Carbonate to produce carbon dioxide via brisk effervescence. The reaction with Sodium Hydroxide is a classic neutralization process, forming sodium chloride and water, typically identified using a phenolphthalein indicator to observe the color change.Chemical Equations and Observations",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31456020637774643219937/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-05T09:39:05.258+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31456020637774643219937/olab17englishprocedure.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31456020637774643219937/olab17englishprocedure.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyaspicuetbnf2fnnflgem43xsur72hfz4oiutbrwchxkea/master.m3u8",
+         "size": 294388938,
+         "status": "Live",
+         "keywords": [
+          "Evolution of Gas",
+          "Exothermic",
+          "Neutralization",
+          "Brisk Effervescence",
+          "Salt Formation"
+         ],
+         "index": 2
+        },
+        {
+         "identifier": "do_31456020935190937619945",
+         "name": "Video -Reactions of Hydrochloric Acid",
+         "description": "These reactions illustrate HCl reacting with Zinc to evolve hydrogen gas, and with Sodium Carbonate to produce carbon dioxide via brisk effervescence. The reaction with Sodium Hydroxide is a classic neutralization process, forming sodium chloride and water, typically identified using a phenolphthalein indicator to observe the color change.Chemical Equations and Observations",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31456020935190937619945/artifact/tv-icon.thumb.png",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-05T09:39:53.396+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31456020935190937619945/olab17englishexperiment.mp4",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31456020935190937619945/olab17englishexperiment.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyabuhpw6xw43jtfmaot2awxmtdcb5idjuhusujoedf2u5q/master.m3u8",
+         "size": 713116804,
+         "status": "Live",
+         "keywords": [
+          "Evolution of Gas",
+          "Exothermic",
+          "Neutralization",
+          "Brisk Effervescence"
+         ],
+         "index": 3
+        }
+       ]
+      },
+      {
+       "identifier": "do_314567143818747904194",
+       "name": "Learning Resources",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 2,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 3,
+       "children": [
+        {
+         "identifier": "do_314560211922960384155828",
+         "name": "Simulation - Reactions of Hydrochloric Acid",
+         "description": "These reactions illustrate HCl reacting with Zinc to evolve hydrogen gas, and with Sodium Carbonate to produce carbon dioxide via brisk effervescence. The reaction with Sodium Hydroxide is a classic neutralization process, forming sodium chloride and water, typically identified using a phenolphthalein indicator to observe the color change.Chemical Equations and Observations",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314560211922960384155828/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-05T09:40:46.535+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314560211922960384155828/artifact/index_1777369622301.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314560211922960384155828-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314560211922960384155828-latest",
+         "size": 16079980,
+         "status": "Live",
+         "keywords": [
+          "Evolution of Gas",
+          "Exothermic",
+          "Neutralization",
+          "Brisk Effervescence",
+          "Salt Formation"
+         ],
+         "index": 1
+        },
+        {
+         "identifier": "do_314560214177980416155830",
+         "name": "Assessment - Reactions of Hydrochloric Acid",
+         "description": "These reactions illustrate HCl reacting with Zinc to evolve hydrogen gas, and with Sodium Carbonate to produce carbon dioxide via brisk effervescence. The reaction with Sodium Hydroxide is a classic neutralization process, forming sodium chloride and water, typically identified using a phenolphthalein indicator to observe the color change.Chemical Equations and Observations",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_314560214177980416155830/artifact/book.thumb.png",
+         "mimeType": "application/vnd.ekstep.html-archive",
+         "primaryCategory": "Learning Resource",
+         "contentType": "Resource",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-SA 4.0",
+         "author": "Sunitha Infovision",
+         "creator": "ncert creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2026,
+         "organisation": [
+          "Others",
+          "NCERT"
+         ],
+         "lastPublishedOn": "2026-05-05T09:41:22.259+0000",
+         "pkgVersion": 1,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314560214177980416155830/artifact/index_1777369896734.zip",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314560214177980416155830-latest",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/html/do_314560214177980416155830-latest",
+         "size": 10535,
+         "status": "Live",
+         "keywords": [
+          "Evolution of Gas",
+          "Exothermic",
+          "Neutralization",
+          "Brisk Effervescence"
+         ],
+         "index": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "identifier": "do_31356577898336256013178",
+     "name": "Interaction of metals-Mg,Zn,Fe,Sn,Pb,Cu,Al with their salt solutions ",
+     "description": "11. Interaction of metals-Mg,Zn,Fe,Sn,Pb,Cu,Al with their salt solutions ",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "leafNodesCount": 1,
+     "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+     "pkgVersion": 56,
+     "status": "Live",
+     "index": 10,
+     "children": [
+      {
+       "identifier": "do_31356577898122444812980",
+       "name": "Experiment PDF",
+       "description": "Experiment PDF",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "leafNodesCount": 1,
+       "lastPublishedOn": "2026-08-11T11:30:00.933+0000",
+       "pkgVersion": 56,
+       "status": "Live",
+       "index": 1,
+       "children": [
+        {
+         "identifier": "do_4313574311503929344115936",
+         "name": "Experiment_11",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 10"
+         ],
+         "se_subjects": [
+          "Science"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 10"
+         ],
+         "subject": [
+          "Science"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "yogesh sayal",
+         "copyright": "2022",
+         "lastPublishedOn": "2023-03-17T19:04:15.670+0000",
+         "pkgVersion": 2,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574311503929344115936/artifact/experiment_11.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574311503929344115936/artifact/experiment_11.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_4313574311503929344115936/artifact/experiment_11.pdf",
+         "size": 505109,
+         "status": "Live",
+         "index": 1
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

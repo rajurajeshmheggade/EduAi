@@ -1,17 +1,17 @@
 import { api } from './apiClient'
-import type { AttendanceDay, AttendanceRegister, AttendanceStatus, CreatedMember, Homework, HomeworkSubmission, Member, StudentAttendance, StudentHomework, TeacherClass, TimetableSlot } from '@/types'
+import type { AttendanceDay, AttendanceRegister, AttendanceStatus, CreatedMember, Holiday, Homework, HomeworkSubmission, Member, StudentAttendance, StudentHomework, TeacherClass, TimetableChange, TimetableSlot } from '@/types'
 
 const B = '/ICMELive/api/v1/classroom'
 
 export interface StudentBody {
   full_name: string
-  user_code?: string
-  email?: string
+  /** Also the student's username/login id — there is no separate admission number for sign-in anymore. */
+  email: string
   roll_number?: string
   phone?: string
   guardian_name?: string
   guardian_phone?: string
-  password?: string
+  password: string
 }
 
 const clean = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null)) as Partial<T>
@@ -32,6 +32,9 @@ export const classroomService = {
     fd.append('file', file)
     return (await api.post<{ created: CreatedMember[]; errors: { row: number; error: string }[] }>(
       `${B}/classes/${encodeURIComponent(classCode)}/students/import`, fd)).data
+  },
+  async importTemplateXlsx(classCode: string): Promise<Blob> {
+    return (await api.get<Blob>(`${B}/classes/${encodeURIComponent(classCode)}/students/import-template.xlsx`, { responseType: 'blob' })).data
   },
   async updateStudent(classCode: string, code: string, patch: Partial<StudentBody> & { is_active?: boolean; reset_password?: boolean }) {
     return (await api.patch<Member & { temporary_password: string | null }>(
@@ -75,8 +78,8 @@ export const classroomService = {
   },
 
   /** Teacher: periods I teach · Student: my class's week. `today` is the ISO weekday (1 = Monday). */
-  async myTimetable(): Promise<{ today: number; slots: TimetableSlot[] }> {
-    return (await api.get<{ today: number; slots: TimetableSlot[] }>(`${B}/my-timetable`)).data
+  async myTimetable(): Promise<{ today: number; slots: TimetableSlot[]; holidays: Holiday[]; recent_changes: TimetableChange[] }> {
+    return (await api.get<{ today: number; slots: TimetableSlot[]; holidays: Holiday[]; recent_changes: TimetableChange[] }>(`${B}/my-timetable`)).data
   },
 
   async homework(classCode: string, subject?: string): Promise<Homework[]> {

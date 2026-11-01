@@ -33,7 +33,7 @@ def tenant(client, superadmin):
 
     def teacher(code, name, email):
         t = client.post(f"{A}/teachers", headers=admin, json={"user_code": code, "full_name": name, "email": email,
-                                                              "password": "Teach3r!pass"})
+                                                              "phone": "+91 9800000000", "password": "Teach3r!pass"})
         assert t.status_code == 201, t.text
         assert t.json()["temporary_password"] is None  # admin chose the password
         return code
@@ -53,12 +53,19 @@ def tenant(client, superadmin):
     }
 
 
+PW = "Str0ngPass1"
+# Username = email now (FR: Student Creation #5) — this maps the old short admission-style codes used
+# throughout this file to each student's real login email, so the rest of the test bodies stay readable.
+SID = {"GF-S1": "gf-s1@greenfield.edu", "GF-S2": "gf-s2@greenfield.edu", "GF-S3": "gf-s3@greenfield.edu",
+      "GF-S4": "dev@greenfield.edu"}
+
+
 @pytest.fixture(scope="module")
 def students(client, tenant):
     out = {}
     for code, name, roll in [("GF-S1", "Asha", "1"), ("GF-S2", "Bilal", "2"), ("GF-S3", "Chen", "3")]:
         r = client.post(f"{C}/classes/BSC-1/students", headers=tenant["ravi"],
-                        json={"full_name": name, "user_code": code, "roll_number": roll})
+                        json={"full_name": name, "email": SID[code], "password": PW, "roll_number": roll})
         assert r.status_code == 201, r.text
         out[code] = r.json()
     return out
@@ -99,7 +106,8 @@ def test_teachers_and_students_cannot_use_admin_api(client, tenant, teacher, stu
 
 def test_duplicate_teacher_is_409(client, tenant):
     r = client.post(f"{A}/teachers", headers=tenant["admin"],
-                    json={"user_code": "GF-T1", "full_name": "Dup", "email": "dup@greenfield.edu"})
+                    json={"user_code": "GF-T1", "full_name": "Dup", "email": "dup@greenfield.edu",
+                          "phone": "+91 9800000099", "password": "Teach3r!pass"})
     assert r.status_code == 409
 
 
@@ -125,15 +133,23 @@ def test_tenant_isolation(client, tenant, admin, teacher):
 # ---------------------------------------------------------------- students: class teacher only
 def test_class_teacher_creates_students_who_get_class_subjects(client, students):
     s = students["GF-S1"]
-    assert s["temporary_password"] and s["email"].endswith(".noemail.local")
-    h = _login(client, "GF-S1", s["temporary_password"])  # login with admission number
+    # Username = email, mandatory password: no more temporary_password / admission-number-only login (FR #5).
+    assert s["temporary_password"] is None and s["email"] == SID["GF-S1"] and s["user_code"] == SID["GF-S1"]
+    h = _login(client, SID["GF-S1"], PW)
     me = client.get("/api/v1/auth/me", headers=h).json()
     assert me["role"] == "student" and me["class_code"] == "BSC-1"
     assert sorted(me["allowed_subjects"]) == ["BIO-1", "CHEM-1"]
 
 
+def test_student_creation_requires_email_and_password(client, tenant):
+    assert client.post(f"{C}/classes/BSC-1/students", headers=tenant["ravi"],
+                       json={"full_name": "No Email"}).status_code == 422
+    assert client.post(f"{C}/classes/BSC-1/students", headers=tenant["ravi"],
+                       json={"full_name": "No Password", "email": "nopw@greenfield.edu"}).status_code == 422
+
+
 def test_subject_teacher_and_admin_cannot_create_students(client, tenant, students):
-    body = {"full_name": "Intruder"}
+    body = {"full_name": "Intruder", "email": "intruder@greenfield.edu", "password": PW}
     assert client.post(f"{C}/classes/BSC-1/students", headers=tenant["sana"], json=body).status_code == 403
     assert client.post(f"{C}/classes/BSC-1/students", headers=tenant["admin"], json=body).status_code == 403
     # but the subject teacher can see the roster of a class she teaches
@@ -142,26 +158,54 @@ def test_subject_teacher_and_admin_cannot_create_students(client, tenant, studen
 
 
 def test_csv_import_reports_bad_rows(client, tenant, students):
-    csv = "full_name,user_code,roll_number,email\nDev Rao,GF-S4,4,dev@greenfield.edu\n,GF-S5,5,\nDup,GF-S1,6,\n"
+    csv = (f"full_name,email,password,roll_number\nDev Rao,{SID['GF-S4']},{PW},4\n,,,5\nDup,{SID['GF-S1']},{PW},6\n")
     r = client.post(f"{C}/classes/BSC-1/students/import", headers=tenant["ravi"],
                     files={"file": ("s.csv", csv.encode(), "text/csv")})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert [c["user_code"] for c in body["created"]] == ["GF-S4"]
+    assert [c["user_code"] for c in body["created"]] == [SID["GF-S4"]]
     assert [e["row"] for e in body["errors"]] == [3, 4]
     # deactivate the imported student so later rosters stay at three
-    p = client.patch(f"{C}/classes/BSC-1/students/GF-S4", headers=tenant["ravi"], json={"is_active": False})
+    p = client.patch(f"{C}/classes/BSC-1/students/{SID['GF-S4']}", headers=tenant["ravi"], json={"is_active": False})
     assert p.status_code == 200 and p.json()["is_active"] is False
 
 
+def test_csv_import_accepts_xlsx(client, tenant, students):
+    from openpyxl import Workbook
+
+    import io
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["full_name", "email", "password", "roll_number"])
+    ws.append(["Excel Student", "excel.student@greenfield.edu", PW, "9"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    r = client.post(f"{C}/classes/BSC-1/students/import", headers=tenant["ravi"],
+                    files={"file": ("s.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 200, r.text
+    assert [c["user_code"] for c in r.json()["created"]] == ["excel.student@greenfield.edu"]
+    client.patch(f"{C}/classes/BSC-1/students/excel.student@greenfield.edu", headers=tenant["ravi"], json={"is_active": False})
+
+
+def test_import_template_xlsx(client, tenant):
+    from openpyxl import load_workbook
+
+    import io
+    r = client.get(f"{C}/classes/BSC-1/students/import-template.xlsx", headers=tenant["ravi"])
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/vnd.openxmlformats")
+    wb = load_workbook(io.BytesIO(r.content))
+    header = [c.value for c in next(wb.active.iter_rows())]
+    assert header == ["full_name", "email", "password", "roll_number", "phone", "guardian_name", "guardian_phone"]
+
+
 def test_change_password(client, students):
-    tmp = students["GF-S2"]["temporary_password"]
-    h = _login(client, "GF-S2", tmp)
+    h = _login(client, SID["GF-S2"], PW)
     assert client.post("/api/v1/auth/change-password", headers=h,
                        json={"current_password": "wrong", "new_password": "NewPass123"}).status_code == 400
     assert client.post("/api/v1/auth/change-password", headers=h,
-                       json={"current_password": tmp, "new_password": "NewPass123"}).status_code == 200
-    _login(client, "GF-S2", "NewPass123")
+                       json={"current_password": PW, "new_password": "NewPass123"}).status_code == 200
+    _login(client, SID["GF-S2"], "NewPass123")
 
 
 # ---------------------------------------------------------------- attendance marking
@@ -173,32 +217,32 @@ def _mark(client, h, subject, statuses, slot="Period-1", day=TODAY):
 
 
 def test_subject_teacher_marks_only_own_subject(client, tenant, students):
-    r = _mark(client, tenant["sana"], "CHEM-1", {"GF-S1": "present", "GF-S2": "absent", "GF-S3": "late"})
+    r = _mark(client, tenant["sana"], "CHEM-1", {SID["GF-S1"]: "present", SID["GF-S2"]: "absent", SID["GF-S3"]: "late"})
     assert r.status_code == 200 and r.json()["saved"] == 3
-    assert _mark(client, tenant["sana"], "BIO-1", {"GF-S1": "present"}).status_code == 403
+    assert _mark(client, tenant["sana"], "BIO-1", {SID["GF-S1"]: "present"}).status_code == 403
 
 
 def test_class_teacher_can_mark_any_subject_of_class(client, tenant, students):
-    assert _mark(client, tenant["ravi"], "CHEM-1", {"GF-S1": "present", "GF-S2": "present", "GF-S3": "present"},
+    assert _mark(client, tenant["ravi"], "CHEM-1", {SID["GF-S1"]: "present", SID["GF-S2"]: "present", SID["GF-S3"]: "present"},
                  slot="Period-2").status_code == 200
-    assert _mark(client, tenant["ravi"], "BIO-1", {"GF-S1": "absent", "GF-S2": "excused", "GF-S3": "present"}).status_code == 200
+    assert _mark(client, tenant["ravi"], "BIO-1", {SID["GF-S1"]: "absent", SID["GF-S2"]: "excused", SID["GF-S3"]: "present"}).status_code == 200
 
 
 def test_attendance_validation(client, tenant, students, teacher):
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
-    assert _mark(client, tenant["ravi"], "BIO-1", {"GF-S1": "present"}, day=tomorrow).status_code == 422
+    assert _mark(client, tenant["ravi"], "BIO-1", {SID["GF-S1"]: "present"}, day=tomorrow).status_code == 422
     assert _mark(client, tenant["ravi"], "BIO-1", {"REG2026001": "present"}).status_code == 422  # not in class
-    assert _mark(client, tenant["ravi"], "BIO-1", {"GF-S4": "present"}).status_code == 422  # deactivated
-    assert _mark(client, tenant["ravi"], "BIO-1", {"GF-S1": "holiday"}).status_code == 422
-    assert _mark(client, teacher, "BIO-1", {"GF-S1": "present"}).status_code == 404  # other tenant
+    assert _mark(client, tenant["ravi"], "BIO-1", {SID["GF-S4"]: "present"}).status_code == 422  # deactivated
+    assert _mark(client, tenant["ravi"], "BIO-1", {SID["GF-S1"]: "holiday"}).status_code == 422
+    assert _mark(client, teacher, "BIO-1", {SID["GF-S1"]: "present"}).status_code == 404  # other tenant
 
 
 def test_remarking_updates_instead_of_duplicating(client, tenant, students):
-    assert _mark(client, tenant["sana"], "CHEM-1", {"GF-S2": "late"}).status_code == 200
+    assert _mark(client, tenant["sana"], "CHEM-1", {SID["GF-S2"]: "late"}).status_code == 200
     day = client.get(f"{C}/attendance", headers=tenant["sana"],
                      params={"class_code": "BSC-1", "subject_code": "CHEM-1", "attendance_date": TODAY}).json()
     assert day["is_marked"] and {s["student_user_code"]: s["status"] for s in day["students"]} == {
-        "GF-S1": "present", "GF-S2": "late", "GF-S3": "late"}
+        SID["GF-S1"]: "present", SID["GF-S2"]: "late", SID["GF-S3"]: "late"}
 
 
 def test_monthly_register_and_csv(client, tenant, students):
@@ -206,15 +250,15 @@ def test_monthly_register_and_csv(client, tenant, students):
     reg = client.get(f"{C}/attendance/register", headers=tenant["sana"], params=q).json()
     rows = {s["student_user_code"]: s for s in reg["students"]}
     assert reg["sessions_held"] == 2 and reg["marked_days"] == [TODAY]
-    assert rows["GF-S1"]["percentage"] == 100.0 and rows["GF-S2"]["percentage"] == 100.0  # late counts as attended
-    assert rows["GF-S2"]["days"][TODAY] == ["late", "present"] or rows["GF-S2"]["days"][TODAY] == ["present", "late"]
+    assert rows[SID["GF-S1"]]["percentage"] == 100.0 and rows[SID["GF-S2"]]["percentage"] == 100.0  # late counts as attended
+    assert rows[SID["GF-S2"]]["days"][TODAY] == ["late", "present"] or rows[SID["GF-S2"]]["days"][TODAY] == ["present", "late"]
     assert reg["threshold"] == 75.0
     # admin can view the register institution-wide; a different subject teacher cannot
     assert client.get(f"{C}/attendance/register", headers=tenant["admin"], params=q).status_code == 200
     bio = {**q, "subject_code": "BIO-1"}
     assert client.get(f"{C}/attendance/register", headers=tenant["sana"], params=bio).status_code == 403
     reg_bio = client.get(f"{C}/attendance/register", headers=tenant["ravi"], params=bio).json()
-    assert reg_bio["defaulters"] == ["GF-S1"]  # absent in the only session; S2 excused -> no percentage
+    assert reg_bio["defaulters"] == [SID["GF-S1"]]  # absent in the only session; S2 excused -> no percentage
 
     csv = client.get(f"{C}/attendance/register.csv", headers=tenant["ravi"], params=q)
     assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
@@ -236,7 +280,7 @@ def test_attendance_export_xlsx_and_csv(client, tenant, students):
     wb = load_workbook(io.BytesIO(r.content))
     assert wb.sheetnames == ["Overview", "BSC-1 BIO-1", "BSC-1 CHEM-1"]
     chem = [[c for c in row] for row in wb["BSC-1 CHEM-1"].iter_rows(values_only=True)]
-    names = [row[2] for row in chem if row and row[1] in ("GF-S1", "GF-S2", "GF-S3")]
+    names = [row[2] for row in chem if row and row[1] in (SID["GF-S1"], SID["GF-S2"], SID["GF-S3"])]
     assert names == ["Asha", "Bilal", "Chen"]
 
     # subject teacher: only their subject; whole class export narrows to it, other subject is 403
@@ -253,7 +297,7 @@ def test_attendance_export_xlsx_and_csv(client, tenant, students):
     assert r.status_code == 200, r.text
     lines = r.content.decode("utf-8-sig").strip().splitlines()
     assert lines[0].startswith("Class,Subject,Roll,Admission No,Name")
-    assert len(lines) == 2 and "GF-S1" in lines[1] and "Biology" in lines[1] and "Below threshold" in lines[1]
+    assert len(lines) == 2 and SID["GF-S1"] in lines[1] and "Biology" in lines[1] and "Below threshold" in lines[1]
     r = client.get(f"{C}/attendance/export", headers=tenant["admin"], params={**rng, "report": "summary"})
     assert r.status_code == 200 and load_workbook(io.BytesIO(r.content)).sheetnames == ["Overview", "Students"]
 
@@ -270,7 +314,7 @@ def test_register_any_range_lists_every_day():
 
 
 def test_student_sees_own_subject_wise_monthly_attendance(client, tenant, students):
-    h = _login(client, "GF-S1", students["GF-S1"]["temporary_password"])
+    h = _login(client, SID["GF-S1"], PW)
     r = client.get(f"{C}/my-attendance", headers=h, params={"month": MONTH})
     assert r.status_code == 200, r.text
     body = r.json()
@@ -304,7 +348,7 @@ def test_removing_subject_updates_students_and_teacher(client, tenant, students)
     assert r.status_code == 200
     assert client.get("/api/v1/auth/me", headers=tenant["ravi"]).json()["allowed_subjects"] == []
     st = {s["user_code"]: s for s in client.get(f"{A}/students", headers=tenant["admin"], params={"class_code": "BSC-1"}).json()["students"]}
-    assert st["GF-S1"]["allowed_subjects"] == ["CHEM-1"]
+    assert st[SID["GF-S1"]]["allowed_subjects"] == ["CHEM-1"]
 
 
 def test_suspended_institution_cannot_log_in(client, superadmin, tenant):

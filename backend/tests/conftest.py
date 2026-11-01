@@ -15,7 +15,14 @@ os.environ["REDIS_URL"] = ""
 # Tests never reach the live search APIs (keys in backend/.env are for running the app).
 os.environ["SERPAPI_API_KEY"] = ""
 os.environ["YOUTUBE_API_KEY"] = ""
+# Pin this independently of the repo-root .env (which a running instance may have switched on for itself): the
+# licence-matrix tests assert the *default*, unapproved behaviour and flip it on with monkeypatch where they need to.
+os.environ["DIKSHA_EMBED_NONCOMMERCIAL"] = "false"
 os.environ["SESSION_AGENTS_CACHE_MINUTES"] = "0"
+# AI avatar tutor: offline lesson + system voice, no background warm-up threads (tests swap in fakes where needed).
+os.environ["AI_TUTOR_PROVIDER"] = "mock"
+os.environ["TTS_MODE"] = "offline"
+os.environ["READ_ALOUD_PREWARM"] = "false"
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402

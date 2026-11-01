@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle, BarChart3, BookOpenCheck, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileCheck2,
+  AlertTriangle, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileCheck2,
   PencilRuler, ScanText, School, Users,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
@@ -175,11 +175,6 @@ export default function TeacherDashboard() {
         </Panel>
       </div>
 
-      <Link to="/teacher/textbooks" className="flex items-center gap-4 rounded-2xl border border-line bg-ink-900 p-4 transition-all hover:shadow-glow">
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-500/10"><BookOpenCheck className="h-5 w-5 text-brand-600" /></span>
-        <div className="flex-1"><div className="font-medium text-fg">Plan your next lesson with AI</div><div className="text-sm text-ink-300">Upload a textbook and get a chapter-wise “how to teach” guide in a minute.</div></div>
-        <span className="hidden text-sm font-medium text-brand-600 sm:block">Open planner →</span>
-      </Link>
     </div>
   )
 }

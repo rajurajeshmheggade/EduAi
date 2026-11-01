@@ -15,7 +15,7 @@ export interface DikshaPermissions {
   notes: string[]
 }
 
-export type DikshaViewer = 'pdf' | 'video' | 'audio' | 'youtube' | 'official'
+export type DikshaViewer = 'pdf' | 'video' | 'audio' | 'youtube' | 'html' | 'official'
 export interface DikshaAccess { viewer: DikshaViewer; src: string | null; official_url: string; reason?: string }
 
 export interface DikshaItem {

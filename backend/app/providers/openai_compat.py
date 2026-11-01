@@ -21,9 +21,9 @@ class _Models:
     label: str
 
 
-def _client(embedding: bool = False) -> OpenAI:
+def _client(embedding: bool = False, mode: str | None = None) -> OpenAI:
     s = get_settings()
-    if s.provider_mode == "openai":
+    if (mode or s.provider_mode) == "openai":
         if not s.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured in .env")
         return OpenAI(api_key=s.openai_api_key, base_url=s.openai_base_url or None, max_retries=0)
@@ -45,9 +45,9 @@ def _client(embedding: bool = False) -> OpenAI:
     )
 
 
-def _models() -> _Models:
+def _models(mode: str | None = None) -> _Models:
     s = get_settings()
-    if s.provider_mode == "openai":
+    if (mode or s.provider_mode) == "openai":
         return _Models(s.openai_chat_model, s.openai_embedding_model, s.openai_whisper_model, f"openai-{s.openai_chat_model}")
     return _Models(s.azure_openai_chat_deployment, s.azure_openai_embedding_deployment,
                    s.azure_openai_whisper_deployment, f"azure-{s.azure_openai_chat_deployment}")
@@ -83,9 +83,10 @@ class OpenAICompatEmbeddings:
 
 
 class OpenAICompatLLM:
-    def __init__(self) -> None:
-        self.client = _client()
-        self.m = _models()
+    def __init__(self, mode: str | None = None) -> None:
+        """`mode` (azure / openai) overrides PROVIDER_MODE, e.g. for the AI tutor (AI_TUTOR_PROVIDER)."""
+        self.client = _client(mode=mode)
+        self.m = _models(mode)
         self.name = self.m.label[:64]
 
     def _msgs(self, system: str, messages: list[dict]) -> list[dict]:

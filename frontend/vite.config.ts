@@ -11,6 +11,9 @@ const API = process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8000'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
+  // Module workers in the build too (dev always serves them as modules): the admission proctoring worker loads
+  // MediaPipe's ES-module WASM loader with import().
+  worker: { format: 'es' },
   server: {
     port: 5173,
     proxy: {

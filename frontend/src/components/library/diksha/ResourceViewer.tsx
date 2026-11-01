@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Download, ExternalLink, Info, PlayCircle } from 'lucide-react'
+import { HtmlFrame } from '@/components/library/diksha/HtmlFrame'
 import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,14 +13,34 @@ import type { DikshaItem } from '@/services/dikshaService'
  *   video   — HTML5 video streamed from DIKSHA's host
  *   audio   — HTML5 audio from DIKSHA's host
  *   youtube — YouTube's own embedded player (privacy-enhanced domain)
+ *   html    — an HTML5 package (e.g. a virtual-lab simulation) running from DIKSHA's host in a sandboxed frame
  *   official — a link to DIKSHA's official player (interactive content, NonCommercial / unknown licences, failures)
  */
-export function ResourceViewer({ item, height = '70vh' }: { item: DikshaItem; height?: string }) {
+export function ResourceViewer({ item, height = '70vh', onOpenOfficial, onFrameLoad, brandless }: {
+  item: DikshaItem
+  height?: string
+  /** Called when the user opens the resource on the source site (e.g. to count a virtual-lab launch). */
+  onOpenOfficial?: () => void
+  /** Called when an in-app HTML package has loaded. */
+  onFrameLoad?: () => void
+  /**
+   * Used by Virtual Labs: drops the source platform's name from labels/copy (the mandatory licence and copyright
+   * notice in <SourceAttribution> below is always shown regardless) and removes the toolbar's external-open button
+   * when the resource already renders in-app, so the single remaining "open elsewhere" action only appears when a
+   * licence genuinely requires it. Digital Library call sites omit this prop and keep their current behaviour.
+   */
+  brandless?: boolean
+}) {
   const [failed, setFailed] = useState(false)
   const a = item.access
   const viewer = failed ? 'official' : a.viewer
   const reason = failed ? 'The file could not be played here.' : a.reason
-  const badge = VIEWER_LABEL[viewer]
+  const badge = brandless && viewer === 'official' ? { label: 'External resource', tone: VIEWER_LABEL.official.tone } : VIEWER_LABEL[viewer]
+  const official = {
+    title: brandless ? 'This resource opens on its original source' : 'Open this resource on DIKSHA',
+    button: brandless ? 'Open resource' : 'Open on DIKSHA',
+    hint: brandless ? 'Opens in a new tab. You may need to sign in there.' : 'Opens in a new tab. DIKSHA may ask you to sign in.',
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-ink-900">
@@ -32,7 +53,11 @@ export function ResourceViewer({ item, height = '70vh' }: { item: DikshaItem; he
         {item.permissions.download && a.src && viewer === 'pdf' && (
           <a href={a.src} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="secondary"><Download className="h-3.5 w-3.5" /> Open file</Button></a>
         )}
-        <a href={a.official_url} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline"><ExternalLink className="h-3.5 w-3.5" /> Open on DIKSHA</Button></a>
+        {/* Already embedded in-app, or shown again by the fallback panel below: this toolbar link would be a second,
+            redundant way to leave the app, so it is dropped in the brandless (Virtual Labs) presentation. */}
+        {!brandless && (
+          <a href={a.official_url} target="_blank" rel="noopener noreferrer" onClick={onOpenOfficial}><Button size="sm" variant="outline"><ExternalLink className="h-3.5 w-3.5" /> Open on DIKSHA</Button></a>
+        )}
       </div>
 
       <div className="bg-ink-800/40">
@@ -42,12 +67,13 @@ export function ResourceViewer({ item, height = '70vh' }: { item: DikshaItem; he
         {viewer === 'video' && a.src && (
           <video key={a.src} controls preload="metadata" src={a.src} style={{ maxHeight: height }} className="mx-auto block w-full bg-black"
             onError={() => setFailed(true)} aria-label={item.name ?? 'Video'}>
-            Your browser cannot play this video. <a href={a.official_url}>Open it on DIKSHA</a>.
+            Your browser cannot play this video. <a href={a.official_url}>{brandless ? 'Open it on the source site' : 'Open it on DIKSHA'}</a>.
           </video>
         )}
         {viewer === 'audio' && a.src && (
           <div className="p-6"><audio controls preload="metadata" src={a.src} className="w-full" onError={() => setFailed(true)} aria-label={item.name ?? 'Audio'} /></div>
         )}
+        {viewer === 'html' && a.src && <HtmlFrame src={a.src} title={item.name ?? 'Interactive resource'} height={height} onLoad={onFrameLoad} />}
         {viewer === 'youtube' && a.src && (
           <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
             <iframe title={item.name ?? 'YouTube video'} src={a.src} className="absolute inset-0 h-full w-full border-0"
@@ -58,12 +84,12 @@ export function ResourceViewer({ item, height = '70vh' }: { item: DikshaItem; he
           <div className="grid place-items-center px-6 py-12 text-center" data-testid="official-fallback">
             <div className="max-w-md">
               <PlayCircle className="mx-auto mb-3 h-10 w-10 text-brand-600" />
-              <p className="font-display text-base font-semibold text-fg">Open this resource on DIKSHA</p>
+              <p className="font-display text-base font-semibold text-fg">{official.title}</p>
               {reason && <p className="mt-1 text-sm text-ink-300">{reason}</p>}
-              <a href={a.official_url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block">
-                <Button><ExternalLink className="h-4 w-4" /> Open on DIKSHA</Button>
+              <a href={a.official_url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block" onClick={onOpenOfficial}>
+                <Button><ExternalLink className="h-4 w-4" /> {official.button}</Button>
               </a>
-              <p className="mt-2 text-xs text-ink-500">Opens in a new tab. DIKSHA may ask you to sign in.</p>
+              <p className="mt-2 text-xs text-ink-500">{official.hint}</p>
             </div>
           </div>
         )}

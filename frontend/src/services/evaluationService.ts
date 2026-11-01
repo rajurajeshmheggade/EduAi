@@ -48,6 +48,11 @@ export const evaluationService = {
     return (await api.put<EvalTest & { masters: MasterQuestion[] }>(`${B}/tests/${id}/masters`, { items },
       { params: resetEvaluations ? { reset_evaluations: true } : {}, timeout: 120_000 })).data
   },
+  /** AI-generated questions (MCQ / fill-in-the-blank) grounded in one chapter of the chapter library (#22). */
+  async generateMastersAi(id: string, body: { class_label: string; subject: string; chapter: string; count: number; types: ('MCQ' | 'SHORT_ANSWER')[] }) {
+    return (await api.post<{ items: MasterDraft[]; warnings: string[]; parser: string }>(
+      `${B}/tests/${id}/masters/generate-ai`, body, { timeout: 120_000 })).data
+  },
   async scripts(id: string): Promise<ScriptsView> {
     return (await api.get<ScriptsView>(`${B}/tests/${id}/scripts`)).data
   },

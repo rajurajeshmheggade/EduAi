@@ -27,6 +27,7 @@ from .. import db
 from ..config import get_settings
 from ..providers import get_embedder
 from ..security import ADMIN_ROLES, CurrentUser, ensure_module, require_role
+from ..services import nlp_catalog
 from ..services.evaluation import analytics, assessments, documents, masters as master_parser, slno
 from ..services.evaluation.matching import match_student
 from ..services.storage import build_key, get_storage
@@ -285,6 +286,28 @@ def parse_masters(test_id: UUID, question_paper: UploadFile = File(...), model_a
     db.execute("UPDATE public.evaluation_tests SET question_paper_key = %s, question_paper_name = %s, model_answer_key = %s, "
                "model_answer_name = %s, updated_at = NOW() WHERE eval_test_id = %s",
                (qk, (question_paper.filename or "")[:255], ak, (model_answers.filename or "")[:255], test_id))
+    return result.as_dict()
+
+
+class GenerateQuestionsBody(BaseModel):
+    class_label: str = Field(min_length=1, max_length=16, description="NLP chapter-library class, e.g. 'X'")
+    subject: str = Field(min_length=1, max_length=120)
+    chapter: str = Field(min_length=1, max_length=200)
+    count: int = Field(default=5, ge=1, le=20)
+    types: list[Literal["MCQ", "SHORT_ANSWER"]] = Field(default_factory=lambda: ["MCQ", "SHORT_ANSWER"])
+
+
+@router.post("/tests/{test_id}/masters/generate-ai")
+def generate_masters_ai(test_id: UUID, body: GenerateQuestionsBody, user: CurrentUser = Depends(teacher_only)):
+    """AI-generated draft questions (#22) grounded in one chapter of the NLP chapter library — returns the
+    same draft shape as /masters/parse, so the teacher reviews/edits them in the identical screen before
+    saving. Nothing is saved as real questions until the teacher confirms via the existing /masters endpoint."""
+    _test(user, test_id, write=True)
+    try:
+        text = nlp_catalog.chapter_text(body.class_label, body.subject, body.chapter)
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    result = master_parser.generate_from_chapter(text, body.chapter, body.count, body.types)
     return result.as_dict()
 
 

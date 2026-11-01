@@ -8,8 +8,9 @@ import { TextbookDetails } from '@/components/library/diksha/TextbookDetails'
 import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/services/apiClient'
 import { dikshaService, type DikshaItem, type DikshaTextbook } from '@/services/dikshaService'
+import type { Role } from '@/types'
 
-const HOME = { student: '/student/library', teacher: '/teacher/library', orgadmin: '/admin-dashboard?tab=library', superadmin: '/admin-dashboard?tab=library' } as const
+const HOME: Partial<Record<Role, string>> = { student: '/student/library', teacher: '/teacher/library', orgadmin: '/admin-dashboard?tab=library', superadmin: '/admin-dashboard?tab=library' }
 
 /**
  * DIKSHA textbook / resource reader inside the LMS. The server checks that a student may open the item (published to
@@ -21,7 +22,7 @@ export default function DikshaReader() {
   const { user } = useAuth()
   const kind = params.get('kind') === 'resource' ? 'resource' : 'textbook'
   const within = params.get('within')
-  const back = (params.get('from')?.startsWith('/') ? params.get('from') : null) ?? (user ? HOME[user.role] : '/')
+  const back = (params.get('from')?.startsWith('/') ? params.get('from') : null) ?? (user ? HOME[user.role] ?? user.home_route : '/')
   const [tree, setTree] = useState<DikshaTextbook | null>(null)
   const [item, setItem] = useState<DikshaItem | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +38,7 @@ export default function DikshaReader() {
     <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-8">
       <div className="flex flex-wrap items-center gap-3">
         <Link to={back}><Button size="sm" variant="secondary"><ArrowLeft className="h-4 w-4" /> Back to library</Button></Link>
-        <span className="inline-flex items-center gap-1.5 text-sm text-ink-500"><Globe2 className="h-4 w-4" /> DIKSHA digital library</span>
+        <span className="inline-flex items-center gap-1.5 text-sm text-ink-500"><Globe2 className="h-4 w-4" /> Catalogue</span>
       </div>
       {error ? (
         <ErrorState message={error} onRetry={load} />

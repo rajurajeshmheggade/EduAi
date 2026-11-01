@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Building2, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
+import { AdmissionTeamPanel } from '@/components/admin/admissions/AdmissionTeamPanel'
+import { AdmissionTestsPanel } from '@/components/admin/admissions/AdmissionTestsPanel'
+import { AdmissionsHome } from '@/components/admin/admissions/AdmissionsHome'
+import { PrivacyPanel } from '@/components/admin/admissions/PrivacyPanel'
 import { AttendanceSummaryPanel } from '@/components/admin/AttendanceSummaryPanel'
 import { ClassesPanel } from '@/components/admin/ClassesPanel'
 import { DemoRequestsPanel } from '@/components/admin/DemoRequestsPanel'
@@ -10,7 +14,6 @@ import { InstitutionsPanel } from '@/components/admin/InstitutionsPanel'
 import { LibraryCatalogPanel } from '@/components/admin/LibraryCatalogPanel'
 import { OverviewPanel } from '@/components/admin/OverviewPanel'
 import { PlatformOverview } from '@/components/admin/PlatformOverview'
-import { SettingsPanel } from '@/components/admin/SettingsPanel'
 import { StudentsPanel } from '@/components/admin/StudentsPanel'
 import { TeachersPanel } from '@/components/admin/TeachersPanel'
 import { TimetablePanel } from '@/components/admin/TimetablePanel'
@@ -99,7 +102,10 @@ export default function AdminDashboard() {
           {tab === 'attendance' && <AttendanceSummaryPanel org={scope} />}
           {tab === 'evaluation' && <EvaluationScoresPanel org={scope} />}
           {tab === 'library' && <LibraryCatalogPanel org={scope} />}
-          {tab === 'settings' && <SettingsPanel org={scope} />}
+          {tab === 'admissions' && <AdmissionsHome org={scope} />}
+          {tab === 'admissions-team' && <AdmissionTeamPanel org={scope} />}
+          {tab === 'privacy' && <PrivacyPanel org={scope} />}
+          {tab === 'admission-tests' && <AdmissionTestsPanel org={scope} />}
         </div>}
         {!platformPage && isSuper && orgs?.length === 0 && (
           <p className="rounded-xl border border-line bg-ink-900 p-6 text-center text-sm text-ink-300">Onboard an institution first from <b>Institutions</b> in the sidebar.</p>

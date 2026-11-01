@@ -1,7 +1,8 @@
-import { Building2, CalendarCheck, CalendarClock, GraduationCap, Inbox, LayoutDashboard, Library, ScanText, School, Settings, Users, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarCheck, CalendarClock, ClipboardCheck, DoorOpen, GraduationCap, Inbox, LayoutDashboard, Library, ScanText, School, ShieldCheck, UserCog, Users, type LucideIcon } from 'lucide-react'
 
 /** Admin console pages. They live in the sidebar (AppShell) and are selected with `/admin-dashboard?tab=<id>`. */
-export type AdminTab = 'overview' | 'teachers' | 'classes' | 'timetable' | 'students' | 'attendance' | 'evaluation' | 'settings' | 'institutions' | 'leads' | 'library'
+export type AdminTab = 'overview' | 'teachers' | 'classes' | 'timetable' | 'students' | 'attendance' | 'evaluation' | 'institutions' | 'leads' | 'library'
+  | 'admissions' | 'admissions-team' | 'privacy' | 'admission-tests'
 
 export interface AdminTabDef { id: AdminTab; label: string; icon: LucideIcon; section: string; superOnly?: boolean }
 
@@ -14,10 +15,16 @@ export const ADMIN_TABS: AdminTabDef[] = [
   { id: 'classes', label: 'Classes & subjects', icon: School, section: 'Academics' },
   { id: 'timetable', label: 'Timetable', icon: CalendarClock, section: 'Academics' },
   { id: 'library', label: 'Digital library', icon: Library, section: 'Academics' },
+  { id: 'admissions', label: 'Admissions home', icon: DoorOpen, section: 'Admissions' },
+  { id: 'admissions-team', label: 'Admissions team', icon: UserCog, section: 'Admissions' },
+  { id: 'admission-tests', label: 'Admission tests', icon: ClipboardCheck, section: 'Admissions' },
+  { id: 'privacy', label: 'Privacy & consent', icon: ShieldCheck, section: 'Admissions' },
   { id: 'attendance', label: 'Attendance', icon: CalendarCheck, section: 'Reports' },
   { id: 'evaluation', label: 'Assessment scores', icon: ScanText, section: 'Reports' },
-  { id: 'settings', label: 'Settings', icon: Settings, section: 'Configure' },
 ]
+// Settings is intentionally not in the navigation (removed from the UI per product decision). The route, panel
+// and backend settings API are untouched and still reachable by anyone who already has `?tab=settings` bookmarked
+// is not supported — `isAdminTab` below rejects it and AdminDashboard falls back to 'overview'.
 
 export const adminTabsFor = (isSuper: boolean) => ADMIN_TABS.filter((t) => isSuper || !t.superOnly)
 export const isAdminTab = (v: string | null, isSuper: boolean): v is AdminTab => adminTabsFor(isSuper).some((t) => t.id === v)

@@ -6,14 +6,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
-import { Input, Label } from '@/components/ui/field'
+import { Input, Label, PasswordInput } from '@/components/ui/field'
 import { errorMessage } from '@/services/apiClient'
 import { classroomService, downloadBlob, type StudentBody } from '@/services/classroomService'
 import { cn } from '@/lib/utils'
 import type { CreatedMember, Member, TeacherClass } from '@/types'
 
-const CSV_TEMPLATE = 'full_name,user_code,roll_number,email,guardian_name,guardian_phone,phone,password\nAsha Rao,ADM-1001,1,,Ramesh Rao,+91 98xxxxxx01,,\n'
-const EMPTY: StudentBody = { full_name: '', user_code: '', roll_number: '', email: '', guardian_name: '', guardian_phone: '', phone: '', password: '' }
+const CSV_TEMPLATE = 'full_name,email,password,roll_number,guardian_name,guardian_phone,phone\nAsha Rao,asha.rao@example.com,Str0ngPass1,1,Ramesh Rao,+91 98xxxxxx01,\n'
+const EMPTY: StudentBody = { full_name: '', roll_number: '', email: '', guardian_name: '', guardian_phone: '', phone: '', password: '' }
 
 /** Teacher: classes I teach. Only the class teacher can enrol/edit students — and only in their own class. */
 export default function MyClasses() {
@@ -106,7 +106,7 @@ export default function MyClasses() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">
-                    <th className="py-2 pr-3 font-medium">Roll</th><th className="py-2 pr-3 font-medium">Student</th><th className="py-2 pr-3 font-medium">Admission no.</th>
+                    <th className="py-2 pr-3 font-medium">Roll</th><th className="py-2 pr-3 font-medium">Student</th><th className="py-2 pr-3 font-medium">Username</th>
                     <th className="py-2 pr-3 font-medium">Guardian</th><th className="py-2 pr-3 font-medium">Status</th>{roster?.is_class_teacher && <th className="py-2 text-right font-medium">Actions</th>}
                   </tr></thead>
                   <tbody>
@@ -161,12 +161,11 @@ function AddStudentDialog({ open, onClose, cls, onCreated }: { open: boolean; on
     <Dialog open={open} onClose={onClose} title={`Add student to ${cls.class_name}`} description="The student is enrolled in every subject of this class.">
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2"><Label htmlFor="s-name">Full name *</Label><Input id="s-name" required minLength={2} value={form.full_name} onChange={set('full_name')} /></div>
-        <div><Label htmlFor="s-code">Admission no.</Label><Input id="s-code" placeholder="Auto if empty" value={form.user_code} onChange={set('user_code')} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" /></div>
+        <div className="sm:col-span-2"><Label htmlFor="s-email">Email (also the student's username) *</Label><Input id="s-email" type="email" required maxLength={64} value={form.email} onChange={set('email')} /></div>
         <div><Label htmlFor="s-roll">Roll no.</Label><Input id="s-roll" value={form.roll_number} onChange={set('roll_number')} maxLength={32} /></div>
-        <div className="sm:col-span-2"><Label htmlFor="s-email">Email (optional — students can sign in with admission no.)</Label><Input id="s-email" type="email" value={form.email} onChange={set('email')} /></div>
         <div><Label htmlFor="s-gname">Guardian name</Label><Input id="s-gname" value={form.guardian_name} onChange={set('guardian_name')} /></div>
         <div><Label htmlFor="s-gphone">Guardian phone</Label><Input id="s-gphone" value={form.guardian_phone} onChange={set('guardian_phone')} /></div>
-        <div className="sm:col-span-2"><Label htmlFor="s-pw">Password (optional — auto-generated if empty)</Label><Input id="s-pw" type="password" minLength={8} value={form.password} onChange={set('password')} /></div>
+        <div className="sm:col-span-2"><Label htmlFor="s-pw">Password *</Label><PasswordInput id="s-pw" required minLength={8} value={form.password} onChange={set('password')} /></div>
         {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad sm:col-span-2">{error}</p>}
         <div className="flex justify-end gap-2 sm:col-span-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -198,10 +197,13 @@ function ImportDialog({ open, onClose, cls, onDone }: { open: boolean; onClose: 
   }
 
   return (
-    <Dialog open={open} onClose={() => { onClose(); setRes(null); setFile(null) }} title={`Import students into ${cls.class_name}`} description="UTF-8 CSV with a header row. Only full_name is required (max 500 rows).">
+    <Dialog open={open} onClose={() => { onClose(); setRes(null); setFile(null) }} title={`Import students into ${cls.class_name}`} description="CSV (UTF-8) or Excel (.xlsx) with a header row. full_name, email and password are required for every row (max 500 rows). Each student's email is also their username.">
       <div className="space-y-4">
-        <Button size="sm" variant="secondary" onClick={() => downloadBlob(new Blob([CSV_TEMPLATE], { type: 'text/csv' }), 'students-template.csv')}><Download className="h-3.5 w-3.5" /> Download template</Button>
-        <input type="file" accept=".csv,text/csv" aria-label="CSV file" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={() => downloadBlob(new Blob([CSV_TEMPLATE], { type: 'text/csv' }), 'students-template.csv')}><Download className="h-3.5 w-3.5" /> Download CSV template</Button>
+          <Button size="sm" variant="secondary" onClick={() => classroomService.importTemplateXlsx(cls.class_code).then((b) => downloadBlob(b, 'students-template.xlsx')).catch((e) => setError(errorMessage(e)))}><Download className="h-3.5 w-3.5" /> Download Excel template</Button>
+        </div>
+        <input type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label="CSV or Excel file" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="block w-full cursor-pointer rounded-xl border border-dashed border-line-strong bg-ink-800 p-4 text-sm text-ink-300 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-500 file:px-3 file:py-1.5 file:text-white" />
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}
         {res && (

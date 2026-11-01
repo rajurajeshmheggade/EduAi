@@ -10,8 +10,9 @@ import { LICENSE_LABEL } from '@/lib/library'
 import { cn } from '@/lib/utils'
 import { errorMessage } from '@/services/apiClient'
 import { libraryService, type BookAccess } from '@/services/libraryService'
+import type { Role } from '@/types'
 
-const HOME = { student: '/student/library', teacher: '/teacher/library', orgadmin: '/admin-dashboard?tab=library', superadmin: '/admin-dashboard?tab=library' } as const
+const HOME: Partial<Record<Role, string>> = { student: '/student/library', teacher: '/teacher/library', orgadmin: '/admin-dashboard?tab=library', superadmin: '/admin-dashboard?tab=library' }
 
 /**
  * Book reader (FRD §6.3). The server decides the access method; this page never embeds or offers a download
@@ -25,7 +26,7 @@ export default function BookReader() {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [frameFailed, setFrameFailed] = useState(false)
-  const back = (params.get('from')?.startsWith('/') ? params.get('from') : null) ?? (user ? HOME[user.role] : '/')
+  const back = (params.get('from')?.startsWith('/') ? params.get('from') : null) ?? (user ? HOME[user.role] ?? user.home_route : '/')
   const org = params.get('org')
 
   useEffect(() => { libraryService.access(bookId, org).then(setA).catch((e) => setError(errorMessage(e, 'This book could not be opened.'))) }, [bookId, org])

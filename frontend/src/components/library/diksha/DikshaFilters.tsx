@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { Input, Label, Select } from '@/components/ui/field'
+import { cn } from '@/lib/utils'
 import type { DikshaFilterOptions, DikshaQuery, FacetOption } from '@/services/dikshaService'
 
 const n = (o: FacetOption<string | number>) => (o.count !== undefined ? ` (${o.count})` : '')
@@ -73,21 +74,37 @@ export function ResourceSearch({ value, onSearch }: { value: string; onSearch: (
   )
 }
 
-/** Filter bar for the DIKSHA catalog. Every value comes from DIKSHA facets for the current selection. */
-export function DikshaFilters({ options, value, onChange }: { options: DikshaFilterOptions | null; value: DikshaQuery; onChange: (q: DikshaQuery) => void }) {
+/**
+ * Filter bar for the DIKSHA catalog. Every value comes from DIKSHA facets for the current selection.
+ *
+ * `lockBoardClass` hides Board and Class: the teacher's view, where both already follow the admin-set board and
+ * grade of the class they are publishing for (see Admin console → Classes & subjects).
+ */
+export function DikshaFilters({ options, value, onChange, lockBoardClass }: {
+  options: DikshaFilterOptions | null; value: DikshaQuery; onChange: (q: DikshaQuery) => void; lockBoardClass?: boolean
+}) {
   const [resetKey, setResetKey] = useState(0)
   const set = (patch: DikshaQuery) => onChange({ ...value, ...patch, page: 1 })
-  const active = !!(value.board || value.class_number || value.subject || value.medium || value.q || (value.content_type && value.content_type !== 'Digital Textbook'))
+  const active = !!((!lockBoardClass && (value.board || value.class_number)) || value.subject || value.medium || value.q
+    || (value.content_type && value.content_type !== 'Digital Textbook'))
+  function clear() {
+    setResetKey((k) => k + 1)
+    onChange({ content_type: 'Digital Textbook', page: 1, ...(lockBoardClass ? { board: value.board, class_number: value.class_number } : {}) })
+  }
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_0.8fr_1.1fr_1fr_1fr_1.3fr_auto] lg:items-end">
-      <BoardSelector options={options?.boards ?? []} value={value.board ?? ''} onChange={(board) => set({ board, subject: '', medium: '' })} />
-      <ClassSelector options={options?.classes ?? []} value={value.class_number ?? ''} onChange={(class_number) => set({ class_number, subject: '' })} />
+    <div className={cn('grid gap-3 sm:grid-cols-2 lg:items-end', lockBoardClass ? 'lg:grid-cols-[1.1fr_1fr_1fr_1.3fr_auto]' : 'lg:grid-cols-[1.1fr_0.8fr_1.1fr_1fr_1fr_1.3fr_auto]')}>
+      {!lockBoardClass && (
+        <>
+          <BoardSelector options={options?.boards ?? []} value={value.board ?? ''} onChange={(board) => set({ board, subject: '', medium: '' })} />
+          <ClassSelector options={options?.classes ?? []} value={value.class_number ?? ''} onChange={(class_number) => set({ class_number, subject: '' })} />
+        </>
+      )}
       <SubjectSelector options={options?.subjects ?? []} value={value.subject ?? ''} onChange={(subject) => set({ subject })} />
       <LanguageSelector options={options?.mediums ?? []} value={value.medium ?? ''} onChange={(medium) => set({ medium })} />
       <ResourceTypeSelector options={options?.content_types ?? [{ value: 'Digital Textbook', label: 'Digital Textbook' }]}
         value={value.content_type ?? 'Digital Textbook'} onChange={(content_type) => set({ content_type, subject: '' })} />
       <ResourceSearch key={resetKey} value={value.q ?? ''} onSearch={(q) => set({ q })} />
-      <button type="button" disabled={!active} onClick={() => { setResetKey((k) => k + 1); onChange({ content_type: 'Digital Textbook', page: 1 }) }}
+      <button type="button" disabled={!active} onClick={clear}
         className="inline-flex h-10 cursor-pointer items-center gap-1 rounded-xl px-3 text-sm text-ink-300 hover:bg-ink-800 hover:text-fg disabled:cursor-default disabled:opacity-40">
         <X className="h-4 w-4" /> Clear
       </button>

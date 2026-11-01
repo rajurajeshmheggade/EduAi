@@ -155,9 +155,13 @@ def _filters(board: str | None, class_number: int | None, subject: str | None, l
 
 
 def _teacher_targets(user: CurrentUser) -> list[dict]:
-    """Class subjects this teacher may publish to: subjects they teach + every subject of their own class."""
+    """Class subjects this teacher may publish to: subjects they teach + every subject of their own class.
+
+    `board` is the admin-set board (CBSE/NCERT/State…) for the class — the Digital Library's DIKSHA catalog is
+    scoped to it automatically, so teachers and students never pick a board themselves (FR: admin-bound board).
+    """
     return db.fetch_all(
-        "SELECT c.class_code, c.class_name, c.grade_number, c.year_code, cs.subject_code, cs.subject_name, "
+        "SELECT c.class_code, c.class_name, c.grade_number, c.board, c.year_code, cs.subject_code, cs.subject_name, "
         "  (c.class_teacher_code = %s) AS is_class_teacher, "
         "  (SELECT COUNT(*) FROM public.app_users s WHERE s.org_code = c.org_code AND s.class_code = c.class_code "
         "     AND s.user_role = 'student' AND s.is_active) AS student_count "

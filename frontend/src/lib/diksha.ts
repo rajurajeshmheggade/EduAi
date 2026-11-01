@@ -12,6 +12,7 @@ export const VIEWER_LABEL: Record<DikshaViewer, { label: string; tone: Tone }> =
   video: { label: 'Watch in app', tone: 'ok' },
   audio: { label: 'Listen in app', tone: 'ok' },
   youtube: { label: 'Watch in app', tone: 'ok' },
+  html: { label: 'Runs in app', tone: 'ok' },
   official: { label: 'Opens on DIKSHA', tone: 'aqua' },
 }
 
