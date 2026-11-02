@@ -701,7 +701,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # NNN tests incl. Copilot (suggestions, voice, privacy), AI question generator, lesson plans, digital library + catalogue (in-app only), virtual labs + video gating, admission tests + proctoring, admissions RLS + admission forms, wellness + Game Zone, dated timetable, student proctoring + teardown, avatar page pipeline, NLP PDF import
+cd backend ; .venv\Scripts\python -m pytest        # 403 tests incl. Copilot (suggestions, voice, privacy), AI question generator, lesson plans, digital library + catalogue (in-app only), virtual labs + video gating, admission tests + proctoring, admissions RLS + admission forms, wellness + Game Zone, dated timetable, student proctoring + teardown, avatar page pipeline, NLP PDF import
 cd frontend ; npm test ; npm run build
 ```
 
