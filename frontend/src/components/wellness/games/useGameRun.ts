@@ -19,6 +19,10 @@ export interface GameOutcome {
   details: string[]
   /** Anything else for the end screen (e.g. the finished drawing). */
   extra?: ReactNode
+  /** What a round that earned no XP needed (default: "Finish a full round to earn XP."). */
+  xpNote?: string
+  /** Label for the big number on the end screen (default "Score"). */
+  scoreLabel?: string
 }
 export interface GameResult extends GameOutcome { best: number; isNewBest: boolean }
 

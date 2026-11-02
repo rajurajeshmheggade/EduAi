@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { GameProps } from '../catalog'
 import { formatClock, useGameClock } from '../clock'
 import { ChoiceChips, GameShell } from '../GameShell'
-import { TONES, moveGridFocus } from '../gridKeys'
+import { TONES, moveGridFocus, radius } from '../gridKeys'
 import { useGameRun } from '../useGameRun'
 import { defaultTopic, vocabFor, vocabTopics } from '../vocab'
 import { DEFAULT_PAIRS, buildDeck, closeMiss, flipCard, isComplete, isFaceUp, isMatched, newPairsState, pairsScore, totalPairs, type PairCard, type PairsState } from './logic'
@@ -101,7 +101,7 @@ export default function ConceptPairs({ info, onExit }: GameProps) {
           return (
             <li key={card.id}>
               <button type="button" data-cell data-autofocus={i === 0 || undefined} onClick={() => flip(card)}
-                aria-label={cardLabel(card, i, state)} aria-disabled={matched || undefined}
+                aria-label={cardLabel(card, i, state)} aria-disabled={matched || undefined} style={radius('0.75rem')}
                 className={cn('relative flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 p-1.5 text-center sm:h-28 sm:p-2',
                   'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2',
                   matched ? 'border-ok/60 bg-ok/10 text-fg' : up ? 'wl-card-up border-brand-400 bg-ink-900 text-fg shadow-sm'

@@ -3,7 +3,7 @@ import { Cloud, Droplet, Eye, Flame, Hand, Leaf, Moon, Shell, Snowflake, Sparkle
 import { cn } from '@/lib/utils'
 import type { GameProps } from '../catalog'
 import { GameShell } from '../GameShell'
-import { PENTATONIC_HZ, TONES, isPlainKey, moveGridFocus, noteTone } from '../gridKeys'
+import { PENTATONIC_HZ, TONES, isPlainKey, moveGridFocus, noteTone, radius } from '../gridKeys'
 import { useGameRun } from '../useGameRun'
 import { MAX_LENGTH, SPARKS, extendSequence, judgeEcho, playbackTiming, startSequence, trailScore } from './logic'
 
@@ -153,7 +153,7 @@ export default function LanternTrail({ info, onExit }: GameProps) {
             return (
               <li key={name}>
                 <button type="button" data-cell data-autofocus={i === 4 || undefined} aria-disabled={watching || undefined} onClick={() => press(i)}
-                  aria-label={`${name} lantern, key ${i + 1}`}
+                  aria-label={`${name} lantern, key ${i + 1}`} style={radius('1rem')}
                   className={cn('relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 transition-all duration-150',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-900',
                     on ? 'border-amber-200 bg-amber-300 text-indigo-950 shadow-[0_0_32px_8px_rgb(252_211_77/0.55)]' : 'border-white/15 bg-white/5 text-amber-100/80 hover:bg-white/10',

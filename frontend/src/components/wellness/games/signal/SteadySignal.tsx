@@ -59,8 +59,8 @@ export default function SteadySignal({ info, onExit }: GameProps) {
         `Targets caught: ${t.hits} of ${t.hits + t.misses}`,
         `Shapes let pass: ${t.correctRejections} · early taps: ${t.falseAlarms}`,
         ...(avg !== null ? [`Average reaction: ${avg} ms`] : []),
-        ...(t.hits > 0 ? [] : ['Catch at least one target to earn XP.']),
       ],
+      xpNote: 'Catch at least one target to earn XP.',
     })
   }
 

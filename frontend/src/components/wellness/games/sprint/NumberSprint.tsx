@@ -51,8 +51,8 @@ export default function NumberSprint({ info, onExit }: GameProps) {
         `Answered ${f.answered} · ${f.correct} correct (${pct}%)`,
         `Longest streak: ${f.bestStreak}`,
         `Highest level: ${TIER_LABELS[f.topTier]}`,
-        ...(completed ? [] : [`Answer at least ${MIN_ANSWERS_FOR_XP} questions to earn XP.`]),
       ],
+      xpNote: `Answer at least ${MIN_ANSWERS_FOR_XP} questions to earn XP.`,
     })
   }
   const clock = useGameClock(run.active, { limitMs: SPRINT_MS, onLimit: end })

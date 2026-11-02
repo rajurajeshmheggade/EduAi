@@ -167,7 +167,7 @@ export function GameShell({ run, onExit, onStart, hud, setup, children, boardCla
         <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-ink-900/80 px-4 py-8 text-center">
           <div className="grid h-14 w-14 place-items-center rounded-full bg-amber-100"><Trophy className="h-7 w-7 text-amber-400" aria-hidden /></div>
           <h3 ref={endRef} tabIndex={-1} className="font-display text-xl font-semibold text-fg outline-none">{result.headline}</h3>
-          <p className="m-0 text-sm text-ink-300">Score <b className="block font-display text-4xl tabular-nums text-fg">{result.score}</b></p>
+          <p className="m-0 text-sm text-ink-300">{result.scoreLabel ?? 'Score'} <b className="block font-display text-4xl tabular-nums text-fg">{result.score}</b></p>
           {result.isNewBest
             ? <Badge tone="ok"><Medal className="h-3.5 w-3.5" aria-hidden />New personal best!</Badge>
             : <p className="m-0 text-xs text-ink-300">Your best: <b className="tabular-nums text-fg">{result.best}</b></p>}
@@ -178,7 +178,7 @@ export function GameShell({ run, onExit, onStart, hud, setup, children, boardCla
           )}
           {result.extra}
           <p className="m-0 text-xs text-ink-500">
-            {result.completed ? `+${run.xpEach} XP for finishing (game XP has a daily limit).` : 'Finish a full round to earn XP.'}
+            {result.completed ? `+${run.xpEach} XP for finishing (game XP has a daily limit).` : (result.xpNote ?? 'Finish a full round to earn XP.')}
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <Button onClick={onStart}><RotateCcw className="h-4 w-4" aria-hidden />Play again</Button>

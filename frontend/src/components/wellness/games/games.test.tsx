@@ -130,7 +130,7 @@ describe('Number Sprint', () => {
     start()
     tick(61_000)
     expect(screen.getByText('Answer at least 3 questions to earn XP.')).toBeInTheDocument()
-    expect(screen.getByText('Finish a full round to earn XP.')).toBeInTheDocument()
+    expect(screen.queryByText('Finish a full round to earn XP.')).not.toBeInTheDocument()
     await flush()
     expect(wellnessService.activity).not.toHaveBeenCalled()
   })

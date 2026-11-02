@@ -1,5 +1,5 @@
 /* Keyboard helpers shared by the board games, plus their synthesised sounds. */
-import type { KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import type { Tone } from './useGameRun'
 
 /** Columns in a CSS grid of items, read from the layout (items on the first row share its top edge). */
@@ -26,6 +26,12 @@ export function moveGridFocus(e: KeyboardEvent<HTMLElement>): void {
   e.preventDefault()
   items[Math.max(0, Math.min(items.length - 1, target))]?.focus()
 }
+
+/** The app's global `:focus-visible` rule (unlayered CSS) sets `border-radius: 6px`, which beats Tailwind's
+    `rounded-*` utilities — so a focused round control (the breathing orb, the sand canvas) would turn square.
+    Controls that keep focus during play pin their radius inline with these. */
+export const ROUND: CSSProperties = { borderRadius: '9999px' }
+export const radius = (r: string): CSSProperties => ({ borderRadius: r })
 
 /** Typing in a text field or pressing a modifier combo should never trigger a game shortcut. */
 export const isPlainKey = (e: KeyboardEvent | globalThis.KeyboardEvent) =>

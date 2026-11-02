@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import type { GameProps } from '../catalog'
 import { useGameClock } from '../clock'
 import { ChoiceChips, GameShell } from '../GameShell'
-import { TONES } from '../gridKeys'
+import { ROUND, TONES } from '../gridKeys'
 import { useGameRun } from '../useGameRun'
 import {
   BLOOM_BREATHS, bloomLengthMs, bloomMoment, bloomScore, breathHarmony, newHarmony, orbScale, overallHarmony, petalFor,
@@ -80,8 +80,8 @@ export default function BreathBloom({ info, onExit }: GameProps) {
       details: [
         `Petals in bloom: ${blooms} of ${BLOOM_BREATHS}`,
         `Breathing in rhythm: ${overallHarmony(h)}%`,
-        ...(blooms > 0 ? [] : ['Hold the orb as you breathe in and let go as you breathe out to open petals and earn XP.']),
       ],
+      xpNote: 'Hold the orb as you breathe in and let go as you breathe out to open petals and earn XP.',
     })
   }
 
@@ -128,7 +128,7 @@ export default function BreathBloom({ info, onExit }: GameProps) {
       hud={[
         { label: 'Breath', value: `${Math.min(m.breath + 1, BLOOM_BREATHS)}/${BLOOM_BREATHS}` },
         { label: 'Petals', value: `${blooms} in bloom` },
-        { label: 'In rhythm', value: `${harmonyPct}%` },
+        { label: 'In rhythm', value: petals.length ? `${harmonyPct}%` : '—' },
       ]}
       setup={<ChoiceChips label="Controls" options={MODES} value={mode} onChange={setMode} />}>
       <div className="flex flex-col items-center gap-4 rounded-xl bg-gradient-to-b from-emerald-50 via-teal-50/60 to-sky-50 px-3 py-5">
@@ -162,7 +162,7 @@ export default function BreathBloom({ info, onExit }: GameProps) {
             onLostPointerCapture={() => { if (mode === 'hold' && holdingRef.current) press(false) }}
             onClick={(e) => { if (mode === 'tap' && e.detail > 0) press(!holdingRef.current) }}
             onKeyDown={onKeyDown} onKeyUp={onKeyUp} onContextMenu={(e) => e.preventDefault()}
-            style={{ transform: `translate(-50%, -50%) scale(${scale})`, touchAction: 'none', WebkitTouchCallout: 'none' }}
+            style={{ ...ROUND, transform: `translate(-50%, -50%) scale(${scale})`, touchAction: 'none', WebkitTouchCallout: 'none' }}
             className={cn('absolute left-1/2 top-1/2 flex h-24 w-24 cursor-pointer select-none flex-col items-center justify-center rounded-full text-white sm:h-28 sm:w-28',
               'shadow-[0_10px_30px_-10px_rgb(13_148_136/0.6)] transition-[background-color,box-shadow] duration-500',
               'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/60',

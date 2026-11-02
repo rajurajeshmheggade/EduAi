@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { GameProps } from '../catalog'
 import { formatClock, useGameClock } from '../clock'
 import { GameShell } from '../GameShell'
-import { TONES } from '../gridKeys'
+import { ROUND, TONES } from '../gridKeys'
 import { useGameRun } from '../useGameRun'
 import { CANVAS_SIZE, MIN_CALM_MS, SAND_COLORS, SYMMETRIES, calmScore, moveBrush, symmetricSegments, type Pt, type SandColor, type Symmetry } from './logic'
 
@@ -151,8 +151,9 @@ export default function SandMandala({ info, onExit }: GameProps) {
       details: [
         `Calm time: ${formatClock(ms)}`,
         `Strokes: ${strokes}`,
-        ...(completed ? [] : [`Stay at least ${MIN_CALM_MS / 1000} seconds to earn XP.`]),
       ],
+      scoreLabel: 'Calm seconds',
+      xpNote: `Stay at least ${MIN_CALM_MS / 1000} seconds to earn XP.`,
       extra: picture ? (
         <figure className="m-0 flex flex-col items-center gap-2">
           <img src={picture} alt="Your finished sand mandala" className="h-40 w-40 rounded-full border border-line object-cover shadow-sm" />
@@ -176,7 +177,7 @@ export default function SandMandala({ info, onExit }: GameProps) {
             role="application" aria-label="Sand mandala canvas" aria-describedby={helpId}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endStroke} onPointerCancel={endStroke}
             onKeyDown={onKeyDown}
-            style={{ touchAction: 'none' }}
+            style={{ ...ROUND, touchAction: 'none' }}
             className="peer h-full w-full cursor-crosshair rounded-full border-4 border-amber-200 shadow-inner focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/50" />
           {/* Keyboard brush position (shown while the canvas has focus) */}
           <span aria-hidden className={cn('pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-fg/70',
@@ -209,7 +210,7 @@ export default function SandMandala({ info, onExit }: GameProps) {
                 <button key={c.id} type="button" aria-pressed={color === c.id} aria-label={c.name} title={c.name} onClick={() => setColor(c.id)}
                   className={cn('grid h-9 w-9 cursor-pointer place-items-center rounded-full border-2 text-white',
                     color === c.id ? 'border-fg ring-2 ring-brand-400 ring-offset-2' : 'border-white')}
-                  style={{ backgroundColor: c.hex }}>
+                  style={{ ...ROUND, backgroundColor: c.hex }}>
                   {color === c.id && <Check className="h-4 w-4" aria-hidden />}
                 </button>
               ))}
