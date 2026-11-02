@@ -204,8 +204,8 @@ def test_llm_suggestion_failures_fall_back(client, admin, monkeypatch, fake):
     assert 2 <= len(r.json()["suggestions"]) <= 4
 
 
-def test_copilot_status_reports_offline_mode_without_key_material(client, admin, student):
-    for h in (admin, student):
+def test_copilot_status_reports_offline_mode_without_key_material(client, admin, teacher, student):
+    for h in (admin, teacher, student):
         r = client.get(f"{BASE}/status", headers=h)
         assert r.status_code == 200, r.text
         assert r.json() == {"mode": "mock", "ai_ready": False, "voice_transcription": False}
@@ -249,13 +249,89 @@ def test_transcribe_is_rate_limited(client, admin, voice, monkeypatch):
     assert codes == [501, 501, 429]
 
 
-def test_transcribe_with_a_provider(client, student, voice, monkeypatch):
+@pytest.mark.parametrize("who", ["student", "teacher", "admin"])
+def test_transcribe_with_a_provider(client, request, voice, monkeypatch, who):
     from app.services import copilot as svc
 
     fake = _FakeLLM()
     monkeypatch.setattr(svc, "ai_ready", lambda: True)
     monkeypatch.setattr(voice, "get_copilot_llm", lambda: fake)
-    r = client.post(f"{BASE}/transcribe", content=b"fake-webm", headers={**student, **AUDIO})
+    r = client.post(f"{BASE}/transcribe", content=b"fake-webm", headers={**request.getfixturevalue(who), **AUDIO})
     assert r.status_code == 200, r.text
     assert r.json() == {"text": "how is my attendance"}
     assert fake.calls[-1] == ("transcribe", 9, "voice.webm")
+
+
+# ── teachers: same panel features, their OWN classes (class-level), never another teacher's data
+def _user(email):
+    from app import db
+    from app.security import CurrentUser
+
+    return CurrentUser(db.fetch_one("SELECT user_code, org_code, user_role AS role FROM public.app_users WHERE email = %s", (email,)))
+
+
+def _names(role, exclude_email):
+    from app import db
+
+    return [r["full_name"] for r in db.fetch_all(
+        "SELECT full_name FROM public.app_users WHERE user_role = %s AND email <> %s", (role, exclude_email))]
+
+
+def test_teacher_snapshot_is_their_own_class_level_data():
+    from app.services import copilot as svc
+
+    me = _user("teacher@demo.edu")
+    snap = svc.build_teacher_snapshot(me.org_code, me)
+    mine = snap["my_teaching"]
+    assert mine["my_classes"] and "periods_today" in mine and "attendance_still_to_mark_today" in mine
+    assert "homework_submissions_to_review" in mine and "scripts_awaiting_evaluation" in mine
+    raw = json.dumps(snap, default=str)
+    other_teachers, students = _names("teacher", "teacher@demo.edu"), _names("student", "")
+    assert other_teachers and students
+    for name in other_teachers + students:
+        assert name not in raw  # no other teacher, no individual student
+    assert "EMP1002" not in raw and "teacher_code" not in raw
+    # only the subjects this teacher teaches
+    assert all(set(c["my_subjects"]) <= {"Physics", "Mathematics"} for c in mine["my_classes"])
+
+
+def test_teacher_answers_and_suggestions(client, teacher):
+    r = client.post(f"{BASE}/query", headers=teacher, json={"query": "What periods do I have today?", "stream": False})
+    assert r.status_code == 200, r.text
+    assert "period" in r.json()["answer"].lower()
+    sugg = r.json()["suggestions"]
+    assert 2 <= len(sugg) <= 4 and "What periods do I have today?" not in sugg
+    events = _events(client, teacher, "Which of today's periods still need attendance?")
+    assert [e for e, _ in events][-2:] == ["done", "suggestions"]
+    items = events[-1][1]["items"]
+    text = " ".join(items) + "".join(d["text"] for e, d in events if e == "token")
+    for name in _names("teacher", "teacher@demo.edu") + _names("student", ""):
+        assert name not in text
+    assert all(w not in " ".join(items).lower() for w in ("other teacher", "colleague"))
+    # teacher-appropriate follow-ups (own classes), not the admin console's
+    assert any(w in " ".join(items).lower() for w in ("homework", "assessment", "focus", "period", "attendance"))
+    assert not any("class teacher" in s.lower() or "applicant" in s.lower() for s in items)
+
+
+def test_teacher_advice_is_concrete_and_class_level(client, teacher):
+    r = client.post(f"{BASE}/query", headers=teacher, json={"query": "What should I focus on this week?", "stream": False})
+    assert r.status_code == 200, r.text
+    answer = r.json()["answer"]
+    assert "\n- " in answer and "attendance" in answer.lower()
+    for name in _names("student", ""):
+        assert name not in answer
+
+
+def test_teacher_llm_suggestions_get_teacher_privacy_rules(client, teacher, monkeypatch):
+    from app.services import copilot as svc
+
+    fake = _FakeLLM(json.dumps({"suggestions": ["What is my colleague's timetable?", "Which students failed?",
+                                                 "What homework is waiting for my review?"]}))
+    monkeypatch.setattr(svc, "ai_ready", lambda: True)
+    monkeypatch.setattr(svc, "get_copilot_llm", lambda: fake)
+    r = client.post(f"{BASE}/query", headers=teacher, json={"query": "What periods do I have today?", "stream": False})
+    sugg = r.json()["suggestions"]
+    assert sugg[0] == "What homework is waiting for my review?"
+    assert not any("colleague" in s.lower() or "students" in s.lower() for s in sugg)
+    system = fake.calls[-1][0]
+    assert "The user is a teacher." in system and "another teacher" in system
