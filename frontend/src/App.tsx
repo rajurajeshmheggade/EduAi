@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell'
 import { ExamLockGate } from '@/components/exam/ExamLockGate'
 import Landing from '@/pages/Landing'
 import Login from '@/pages/auth/Login'
+import LegacyLibraryRedirect from '@/pages/library/LegacyLibraryRedirect'
 // Every route's `lazy` retries a failed download and reloads once on a stale chunk (see lib/lazyWithRetry).
 import { lazyWithRetry as lazy } from '@/lib/lazyWithRetry'
 
@@ -115,7 +116,8 @@ export default function App() {
         <Route element={<RequireRole roles={['teacher', 'student', 'orgadmin', 'superadmin']} />}>
           <Route element={<AppShell />}>
             <Route path="/library/read/:bookId" element={<BookReader />} />
-            <Route path="/library/diksha/:sourceId" element={<DikshaReader />} />
+            <Route path="/library/explore/:sourceId" element={<DikshaReader />} />
+            <Route path="/library/diksha/:sourceId" element={<LegacyLibraryRedirect />} />
           </Route>
         </Route>
 

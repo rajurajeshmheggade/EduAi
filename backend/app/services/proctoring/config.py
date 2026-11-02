@@ -81,7 +81,7 @@ FLAGS: dict[str, Flag] = {
     "MIC_LOST": Flag("Microphone disconnected or permission removed", "Medium", "camera"),
     "NETWORK_OFFLINE": Flag("Connection dropped", "Info", "session", repeats=False),
     "SESSION_RESUMED": Flag("Session resumed", "Info", "session", repeats=False),
-    "SANCTIONED_AWAY": Flag("Opened the lab simulation on DIKSHA (allowed)", "Info", "session", repeats=False),
+    "SANCTIONED_AWAY": Flag("Left the page with permission (allowed)", "Info", "session", repeats=False),
     "PERF_DEGRADED": Flag("On-device detection slowed down", "Info", "session", repeats=False),
     "SESSION_LEFT": Flag("Left the exam page", "Medium", "session", server=True),
     "HEARTBEAT_MISSING": Flag("Proctoring stopped reporting (session interrupted)", "High", "session", server=True),

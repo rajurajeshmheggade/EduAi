@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { EXTERNAL_MS, IDLE_MS, LabClock } from './labClock'
+import { IDLE_MS, LabClock } from './labClock'
 
 const visible = { visibilityState: 'visible' as DocumentVisibilityState, activeElement: null }
 const hidden = { visibilityState: 'hidden' as DocumentVisibilityState, activeElement: null }
@@ -26,17 +26,26 @@ describe('LabClock', () => {
     expect(c.get()).toBe(20)
   })
 
-  it('counts time away only after the lab was opened on DIKSHA, for at most 20 minutes', () => {
+  it('never counts time in another tab, even after the simulation was opened', () => {
     const c = new LabClock(0, vi.fn(async () => ({ active_seconds: 0 })))
     const t0 = Date.now()
     c.tick(t0, hidden)
+    c.launch(t0)
     c.tick(t0 + 30_000, hidden)
-    expect(c.get()).toBe(0)                          // hidden tab, no launch
-    c.launch(false, t0 + 30_000)
-    c.tick(t0 + 60_000, hidden)
-    expect(c.get()).toBe(30)
-    c.tick(t0 + 30_000 + EXTERNAL_MS + 60_000, hidden) // beyond the launch window
-    expect(c.get()).toBe(30)
+    expect(c.get()).toBe(0)                          // everything runs in the app: away is away
+  })
+
+  it('counts time while a lab video plays, without input', () => {
+    const c = new LabClock(0, vi.fn(async () => ({ active_seconds: 0 })))
+    const t0 = Date.now()
+    c.input(t0 - IDLE_MS - 1000)                     // idle for longer than the idle window
+    const playing = { ...visible, querySelectorAll: () => [{ paused: false, ended: false }] } as unknown as Parameters<LabClock['tick']>[1]
+    const stopped = { ...visible, querySelectorAll: () => [{ paused: true, ended: false }] } as unknown as Parameters<LabClock['tick']>[1]
+    c.tick(t0, playing)
+    c.tick(t0 + 20_000, playing)
+    expect(c.get()).toBe(20)
+    c.tick(t0 + 40_000, stopped)
+    expect(c.get()).toBe(20)
   })
 
   it('reports whole seconds, adopts the server total and retries after a failure', async () => {
@@ -60,7 +69,7 @@ describe('LabClock', () => {
     c.input(t0)
     c.pause()
     c.tick(t0 + 10_000, visible)
-    c.launch(true, t0 + 10_000)
+    c.launch(t0 + 10_000)
     await c.flush()
     expect(c.get()).toBe(0)
     expect(report).not.toHaveBeenCalled()

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import type { DikshaItem } from '@/services/dikshaService'
 
 type CardItem = Pick<DikshaItem, 'source_id' | 'name' | 'cover_url' | 'subjects' | 'classes' | 'boards' | 'mediums' | 'license' | 'kind'
-  | 'resource_type' | 'primary_category' | 'leaf_count' | 'organisation'> & Partial<Pick<DikshaItem, 'access' | 'permissions' | 'published_to'>>
+  | 'resource_type' | 'primary_category' | 'organisation'> & Partial<Pick<DikshaItem, 'access' | 'permissions' | 'published_to'>>
 
 function Cover({ item }: { item: CardItem }) {
   const [broken, setBroken] = useState(false)
@@ -54,7 +54,7 @@ function Shell({ item, selectable, selected, onToggle, children, footer }: {
   )
 }
 
-/** DIKSHA Digital Textbook card. */
+/** Catalogue textbook card (opens as a chapter list inside the app). */
 export function TextbookCard(props: { item: CardItem; selectable?: boolean; selected?: boolean; onToggle?: () => void; footer?: ReactNode }) {
   const { item } = props
   return (
@@ -64,15 +64,12 @@ export function TextbookCard(props: { item: CardItem; selectable?: boolean; sele
         {item.mediums.slice(0, 2).map((m) => <Badge key={m} tone="neutral">{m}</Badge>)}
         <Badge tone="neutral"><BookOpen className="h-3 w-3" /> Textbook</Badge>
       </div>
-      <p className="text-xs text-ink-500">
-        {item.leaf_count ? `${item.leaf_count} linked resource${item.leaf_count === 1 ? '' : 's'}` : 'No linked resources listed'}
-        {item.license.name ? ` · ${item.license.name}` : ''}
-      </p>
+      <p className="text-xs text-ink-500">{['Chapters & resources', item.license.name].filter(Boolean).join(' · ')}</p>
     </Shell>
   )
 }
 
-/** DIKSHA learning resource card (video, PDF, interactive, …). */
+/** Catalogue resource card (video, PDF, interactive, …). */
 export function ResourceCard(props: { item: CardItem; selectable?: boolean; selected?: boolean; onToggle?: () => void; footer?: ReactNode }) {
   const { item } = props
   const v = item.access ? VIEWER_LABEL[item.access.viewer] : null

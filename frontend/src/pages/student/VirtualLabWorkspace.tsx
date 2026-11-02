@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, Bot, CheckCircle2, ChevronDown, CircleAlert, Clock, FlaskConical, Loader2, MessageCircleQuestion, Plus, RotateCcw, Send, Sparkles,
+  ArrowLeft, Bot, CheckCircle2, ChevronDown, CircleAlert, Clock, FlaskConical, Loader2, MessageCircleQuestion, PlayCircle, Plus, RotateCcw, Send, Sparkles,
 } from 'lucide-react'
-import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
+import { Credits } from '@/components/library/diksha/Credits'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -20,7 +20,7 @@ import { useProctor } from '@/components/proctoring/proctorContext'
 import { clock, duration, fmtDateTime, fmtMarks, STATUS_META, windowBadge } from '@/lib/virtualLabs'
 import { cn } from '@/lib/utils'
 import { errorMessage } from '@/services/apiClient'
-import { virtualLabService, type ChatMessage, type LabWork, type StudentLabView, type Worksheet } from '@/services/virtualLabService'
+import { virtualLabService, type ChatMessage, type Lab, type LabWork, type StudentLabView, type VideoProgress, type VideoReport, type Worksheet } from '@/services/virtualLabService'
 
 type Section = 'brief' | 'procedure' | 'observations' | 'viva' | 'submit'
 type SaveState = { state: 'idle' | 'pending' | 'saving' | 'saved' | 'error'; at?: string; error?: string }
@@ -40,7 +40,8 @@ function progressOf(ws: Worksheet, work: LabWork) {
   return { rows, answered, steps: work.steps_done.length, conclusion: !!work.conclusion?.trim() }
 }
 
-/** Student performs a DIKSHA virtual lab: simulation beside the lab worksheet, time in lab, autosave, AI lab assistant. */
+/** Student performs a virtual lab in the app: simulation beside the lab worksheet, time in lab, autosave, AI lab assistant.
+ * A lab with video(s) shows Submit only after every video was watched to the end (also enforced by the server). */
 export default function VirtualLabWorkspace() {
   const { id = '' } = useParams()
   const [view, setView] = useState<StudentLabView | null>(null)
@@ -80,7 +81,6 @@ export default function VirtualLabWorkspace() {
         // One gate for starting and resuming: Start opens the proctoring preparation window, then the lab begins.
         <ProctorGate key={id} module="VIRTUAL_LAB" refId={id} title={a.title} resume={!!attempt} startLabel={attempt ? 'Resume the lab' : 'Start the lab'}
           beginLabel={attempt ? 'Resume the lab' : 'Begin the lab'} intro={<LabIntro view={view} />}
-          beginNote="Opening the simulation on DIKSHA in another tab is allowed and is not counted as switching tabs."
           onBegin={attempt ? undefined : async () => { setView(await virtualLabService.start(id)) }}>
           {view.attempt && <Workspace key={`${view.attempt.started_at}-${view.attempt.returned_count}`} id={id} view={view} onSubmitted={setView} />}
         </ProctorGate>
@@ -104,7 +104,8 @@ function LabIntro({ view }: { view: StudentLabView }) {
       </div>
       {a.instructions && <p className="whitespace-pre-line rounded-xl bg-ink-800 p-3 text-sm text-ink-100">{a.instructions}</p>}
       <ul className="grid gap-2 text-sm text-ink-300 sm:grid-cols-3">
-        <li className="rounded-xl border border-line p-3"><Clock className="mb-1 h-4 w-4 text-brand-600" />Spend at least <b className="text-fg">{a.min_minutes} min</b> in the lab</li>
+        <li className="rounded-xl border border-line p-3"><Clock className="mb-1 h-4 w-4 text-brand-600" />Spend at least <b className="text-fg">{a.min_minutes} min</b> in the lab
+          {(view.lab.video_ids?.length ?? 0) > 0 && <> and watch the {view.lab.video_ids!.length === 1 ? 'video' : `${view.lab.video_ids!.length} videos`} to the end</>}</li>
         <li className="rounded-xl border border-line p-3"><CheckCircle2 className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{view.worksheet.steps.length}</b> procedure steps · <b className="text-fg">{view.worksheet.questions.length}</b> viva questions</li>
         <li className="rounded-xl border border-line p-3"><Sparkles className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{fmtMarks(a.max_marks)}</b> marks · your work saves automatically</li>
       </ul>
@@ -124,6 +125,19 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
   const [error, setError] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const latest = useRef<{ work: LabWork; dirty: boolean }>({ work, dirty: false })
+
+  // videos: watched to the end (server-recorded, so a reload keeps it) before Submit appears
+  const [videos, setVideos] = useState<Record<string, VideoProgress | null>>(() =>
+    Object.fromEntries((attempt.videos ?? []).map((v) => [v.resource_id, v.progress])))
+  const [stageTab, setStageTab] = useState<string | null>(null)
+  const reportVideo = useCallback(async (r: VideoReport) => {
+    const p = await virtualLabService.videoProgress(id, r)
+    setVideos((v) => ({ ...v, [p.resource_id]: p }))
+    return p
+  }, [id])
+  const tracking = useMemo(() => ({ progress: videos, report: reportVideo }), [videos, reportVideo])
+  const required = lab.video_ids ?? []
+  const videosLeft = required.filter((v) => !videos[v]?.completed)
 
   // time in the lab
   const labClock = useMemo(() => new LabClock(attempt.active_seconds, (s, l) => virtualLabService.activity(id, s, l)), [id, attempt.active_seconds])
@@ -156,6 +170,7 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
   const p = progressOf(ws, work)
   async function submit(e?: FormEvent) {
     e?.preventDefault()
+    if (videosLeft.length) return
     const missing = [
       ws.observation_columns.length && p.rows === 0 ? 'observations' : null,
       p.answered < ws.questions.length ? `${ws.questions.length - p.answered} question(s)` : null,
@@ -192,8 +207,8 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
             <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-warn" /><span><b>Your teacher sent this lab back:</b> {attempt.teacher_feedback}</span>
           </p>
         )}
-        <LabStage lab={lab} height="62vh" onLaunch={(_, inApp) => { labClock.launch(inApp); if (!inApp) proctor.allowAway('simulation') }} />
-        {lab.collection && <SourceAttribution item={lab.collection} compact className="px-1" />}
+        <LabStage lab={lab} height="62vh" onLaunch={() => labClock.launch()} tracking={tracking} selected={stageTab} onSelect={setStageTab} />
+        {lab.collection && <Credits item={lab.collection} compact className="px-1" />}
       </div>
 
       <div className="min-w-0 space-y-3 xl:sticky xl:top-4 xl:self-start">
@@ -209,6 +224,12 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
             </span>
           </div>
           {need > 0 && <Progress value={(seconds / need) * 100} tone={seconds >= need ? 'ok' : 'brand'} />}
+          {required.length > 0 && (
+            <p className="flex items-center gap-2 text-xs text-ink-300" data-testid="videos-status">
+              <PlayCircle className="h-3.5 w-3.5 text-brand-600" />
+              {videosLeft.length ? `Videos watched: ${required.length - videosLeft.length} of ${required.length}` : 'All videos watched'}
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -220,7 +241,8 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
               {ws.materials.length > 0 && <div><h3 className="font-semibold text-fg">Apparatus / materials</h3>
                 <ul className="mt-1 flex flex-wrap gap-1.5">{ws.materials.map((m) => <li key={m}><Badge>{m}</Badge></li>)}</ul></div>}
               <p className="rounded-xl bg-brand-500/5 p-3 text-ink-300">Open the <b className="text-fg">Simulation</b> on the left and follow the procedure. The <b className="text-fg">Theory</b>, <b className="text-fg">Procedure</b> and
-                <b className="text-fg"> Animation</b> tabs explain the experiment. Stuck? Ask the lab assistant below.</p>
+                <b className="text-fg"> Animation</b> tabs explain the experiment. Stuck? Ask the lab assistant below.
+                {required.length > 0 && <> Watch the {required.length === 1 ? 'video' : 'videos'} to the end — <b className="text-fg">Submit</b> unlocks after that.</>}</p>
             </div>
           )}
           {section === 'procedure' && (
@@ -303,6 +325,8 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
                 <Textarea id="lab-conclusion" rows={4} maxLength={4000} value={work.conclusion ?? ''} onChange={(e) => update({ conclusion: e.target.value })} /></div>
               <ul className="space-y-1 text-sm" aria-label="Checklist">
                 {[
+                  ...(required.length ? [[!videosLeft.length, required.length === 1 ? 'Video watched to the end'
+                    : `Videos watched to the end: ${required.length - videosLeft.length} of ${required.length}`] as const] : []),
                   [seconds >= need, need ? `At least ${a.min_minutes} min in the lab (${duration(seconds)} so far)` : `Time in the lab: ${duration(seconds)}`],
                   [p.steps === ws.steps.length, `Procedure: ${p.steps} of ${ws.steps.length} steps ticked`],
                   ...(ws.observation_columns.length ? [[p.rows >= ws.observation_rows, `Observations: ${p.rows} of ${ws.observation_rows} rows filled`] as const] : []),
@@ -315,10 +339,14 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
                 ))}
               </ul>
               {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-              <Button type="submit" size="lg" className="w-full" id="submit-lab" disabled={submitting || seconds < need}>
-                {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                {seconds < need ? `Keep experimenting — ${clock(need - seconds)} to go` : submitting ? 'Checking your answers…' : 'Submit lab'}
-              </Button>
+              {videosLeft.length > 0 ? (
+                <VideoGate lab={lab} left={videosLeft} total={required.length} progress={videos} onWatch={setStageTab} />
+              ) : (
+                <Button type="submit" size="lg" className="w-full" id="submit-lab" disabled={submitting || seconds < need}>
+                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                  {seconds < need ? `Keep experimenting — ${clock(need - seconds)} to go` : submitting ? 'Checking your answers…' : 'Submit lab'}
+                </Button>
+              )}
             </form>
           )}
           {section !== 'submit' && (
@@ -330,6 +358,33 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
 
         <LabAssistant id={id} locked={section === 'viva' && ws.questions.length > 0} />
       </div>
+    </div>
+  )
+}
+
+/** In place of Submit while a lab video has not been watched to the end. */
+function VideoGate({ lab, left, total, progress, onWatch }: {
+  lab: Lab; left: string[]; total: number; progress: Record<string, VideoProgress | null>; onWatch: (id: string) => void
+}) {
+  return (
+    <div className="space-y-2 rounded-xl border border-brand-400/30 bg-brand-500/5 p-3" data-testid="video-gate" role="status">
+      <p className="flex items-center gap-2 font-medium text-fg"><PlayCircle className="h-5 w-5 text-brand-600" />
+        {total === 1 ? 'Watch the full video to unlock Submit' : `Watch all ${total} videos to the end to unlock Submit`}</p>
+      <p className="text-xs text-ink-300">Skipping ahead doesn’t count — play it through. Your progress is saved, so you can come back to it.</p>
+      <ul className="space-y-1.5">
+        {left.map((vid) => {
+          const r = lab.resources.find((x) => x.source_id === vid)
+          const pct = Math.round((progress[vid]?.coverage ?? 0) * 100)
+          return (
+            <li key={vid} className="flex items-center gap-2 text-sm">
+              <span className="min-w-0 flex-1 truncate text-ink-100">{r?.name ?? 'Lab video'}</span>
+              <Progress value={pct} className="w-24" />
+              <span className="w-10 text-right text-xs tabular-nums text-ink-500">{pct}%</span>
+              <Button type="button" size="sm" variant="secondary" onClick={() => onWatch(vid)} aria-label={`Watch ${r?.name ?? 'the video'}`}>Watch</Button>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

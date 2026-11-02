@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import VirtualLabWorkspace from '@/pages/student/VirtualLabWorkspace'
-import { virtualLabService, type Lab, type LabAssignment, type LabResource, type StudentLabView, type Worksheet } from '@/services/virtualLabService'
+import { virtualLabService, type Lab, type LabAssignment, type LabResource, type StudentLabView, type VideoProgress, type VideoReport, type Worksheet } from '@/services/virtualLabService'
 import { AssignLabDialog } from './AssignLabDialog'
 import { LabStage } from './LabStage'
 
@@ -10,7 +10,7 @@ vi.mock('@/services/virtualLabService', () => ({
   virtualLabService: {
     myLab: vi.fn(), start: vi.fn(), activity: vi.fn(async () => ({ active_seconds: 700, launches: 1, min_seconds: 600 })),
     saveWork: vi.fn(async () => ({ saved_at: '2026-10-28T10:00:00Z' })), submit: vi.fn(), ask: vi.fn(),
-    draftWorksheet: vi.fn(), assign: vi.fn(), proctorFlag: vi.fn(async () => ({ flag_count: 1 })),
+    draftWorksheet: vi.fn(), assign: vi.fn(), proctorFlag: vi.fn(async () => ({ flag_count: 1 })), videoProgress: vi.fn(),
   },
 }))
 const svc = vi.mocked(virtualLabService)
@@ -47,18 +47,21 @@ function resource(over: Partial<LabResource>): LabResource {
     boards: ['NCERT'], classes: [10], class_labels: ['Class 10'], subjects: ['Science'], mediums: ['English'],
     license: { name: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode' }, author: 'C-DAC Mumbai', creator: null,
     attributions: [], copyright: 'NCERT', copyright_year: null, organisation: ['NCERT'], leaf_count: null, size_bytes: null, duration: null, version: null,
-    published_on: null, status: 'Live', official_url: 'https://diksha.gov.in/play/content/do_sim1',
-    permissions: { license: 'CC BY-NC-SA 4.0', discover: true, link: true, embed: true, download: false, store_copy: false, redistribute: false,
-      modify: true, review_required: false, eligible: true, notes: [] },
-    access: { viewer: 'html', src: SIM_SRC, official_url: 'https://diksha.gov.in/play/content/do_sim1' },
+    published_on: null, status: 'Live',
+    permissions: { license: 'CC BY-NC-SA 4.0', discover: true, embed: true, store_copy: false, redistribute: false,
+      modify: true, review_required: false, eligible: true, notes: ['NonCommercial licence — shown in-app because your institution has approved it.'] },
+    access: { viewer: 'html', src: SIM_SRC },
     role: 'simulation', role_label: 'Simulation',
     ...over,
   }
 }
 
+const MANUAL_SRC = 'https://obj.diksha.gov.in/ntp-content-production/content/assets/do_man1/experiment_3.pdf'
 const MANUAL = resource({ source_id: 'do_man1', name: 'Experiment_3', mime_type: 'application/pdf', resource_type: 'pdf', role: 'manual', role_label: 'Lab manual',
-  license: { name: 'CC BY-NC-ND 4.0', url: null }, official_url: 'https://diksha.gov.in/play/content/do_man1',
-  access: { viewer: 'official', src: null, official_url: 'https://diksha.gov.in/play/content/do_man1', reason: 'NonCommercial licence.' } })
+  license: { name: 'CC BY-NC-ND 4.0', url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode' }, access: { viewer: 'pdf', src: MANUAL_SRC } })
+const VIDEO_SRC = 'https://obj.diksha.gov.in/ntp-content-production/content/assets/do_vid1/olab17englishexperiment.mp4'
+const VIDEO = resource({ source_id: 'do_vid1', name: 'Video - Reactions of HCl', mime_type: 'video/mp4', resource_type: 'video', role: 'video',
+  role_label: 'Animation / video', access: { viewer: 'video', src: VIDEO_SRC } })
 
 const LAB: Lab = {
   lab_id: 'do_lab1', name: 'Change in temp. during reactions of exothermic or endothermic', position: 2, summary: 'To study exothermic and endothermic reactions.',
@@ -66,8 +69,10 @@ const LAB: Lab = {
   resources: [resource({}), MANUAL],
   collection: { source_id: 'do_3135614393797099521445', name: 'Science Lab Manual', description: null, cover_url: null, classes: [10], subjects: ['Science'],
     mediums: ['English'], license: { name: 'CC BY-SA 4.0', url: null }, author: 'Creator', creator: null, attributions: [], copyright: null, copyright_year: null,
-    organisation: ['NCERT'], official_url: 'https://diksha.gov.in/play/collection/do_3135614393797099521445', class_number: 10, medium: 'English', subject: 'Science', label: 'Science' },
+    organisation: ['NCERT'], class_number: 10, medium: 'English', subject: 'Science', label: 'Science' },
+  video_ids: [],
 }
+const LAB_V: Lab = { ...LAB, roles: { simulation: 1, manual: 1, video: 1 }, resources: [resource({}), MANUAL, VIDEO], video_ids: ['do_vid1'] }
 
 const WS: Worksheet = {
   aim: 'To study exothermic and endothermic reactions.', materials: ['Thermometer'], steps: ['Note the temperature', 'Add NaOH'],
@@ -110,32 +115,23 @@ describe('LabStage', () => {
     expect(frame).toHaveAttribute('src', SIM_SRC)
     expect(frame.getAttribute('sandbox')).toContain('allow-scripts')
     fireEvent.load(frame)
-    expect(onLaunch).toHaveBeenLastCalledWith(expect.objectContaining({ source_id: 'do_sim1' }), true)
+    expect(onLaunch).toHaveBeenLastCalledWith(expect.objectContaining({ source_id: 'do_sim1' }))
     // No redundant external-open control while the simulation already renders in-app.
     expect(screen.queryByRole('link', { name: /Open on DIKSHA/ })).not.toBeInTheDocument()
   })
 
-  it('has no DIKSHA branding and only one, necessary external link when a licence forces it', () => {
-    const onLaunch = vi.fn()
-    render(<LabStage lab={LAB} onLaunch={onLaunch} />)
+  it('opens every resource inside the app: no links elsewhere, no source-platform branding', () => {
+    const { container } = render(<LabStage lab={LAB_V} />)
     fireEvent.click(screen.getByRole('tab', { name: /Lab manual/ }))
-    // The functionality (a working link to the real source) is preserved — just not DIKSHA-branded, and not duplicated.
-    const fallback = screen.getByTestId('official-fallback')
-    expect(fallback).toBeInTheDocument()
-    expect(screen.getByText('NonCommercial licence.')).toBeInTheDocument()
-    // No DIKSHA branding in any discretionary copy: the fallback panel's own heading and button.
-    expect(screen.queryByText('Open this resource on DIKSHA')).not.toBeInTheDocument()
-    expect(screen.queryByText(/DIKSHA may ask you to sign in/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Open on DIKSHA/ })).not.toBeInTheDocument()
-    // The one line that still names DIKSHA is the mandatory source/licence attribution (kept everywhere,
-    // per DIKSHA's Terms of Use) — not platform branding, and not the external-navigation control.
-    expect(screen.getByText('Source:')).toBeInTheDocument()
-    const links = screen.getAllByRole('link', { name: /Open resource/ })
-    expect(links).toHaveLength(1)                                        // the old duplicate toolbar link is gone
-    expect(links[0]).toHaveAttribute('href', 'https://diksha.gov.in/play/content/do_man1')
-    expect(links[0]).toHaveAttribute('target', '_blank')
-    // The tab strip marks it as external without naming the platform.
-    expect(screen.getByText('· External')).toBeInTheDocument()
+    expect(container.querySelector('iframe')).toHaveAttribute('src', MANUAL_SRC)            // PDF in the in-app viewer
+    fireEvent.click(screen.getByRole('tab', { name: /Animation/ }))
+    const video = screen.getByLabelText('Reactions of HCl') as HTMLVideoElement
+    expect(video.tagName).toBe('VIDEO')
+    expect(video).toHaveAttribute('src', VIDEO_SRC)                                         // streamed into our own player
+    expect(screen.getByTestId('credits')).toHaveTextContent('CC BY-NC-SA 4.0')
+    const links = Array.from(container.querySelectorAll('a'))
+    expect(links.every((a) => a.getAttribute('href')?.startsWith('https://creativecommons.org/'))).toBe(true)   // licence legal code only
+    expect(container.textContent).not.toMatch(/diksha|external|open on|source:/i)
   })
 })
 
@@ -183,6 +179,117 @@ describe('Student workspace', () => {
     renderWorkspace()
     fireEvent.click(await screen.findByRole('tab', { name: /Conclude/ }))
     expect(screen.getByRole('button', { name: /Keep experimenting/ })).toBeDisabled()
+  })
+})
+
+function setMedia(el: HTMLElement, props: Record<string, unknown>) {
+  for (const [k, v] of Object.entries(props)) Object.defineProperty(el, k, { configurable: true, value: v })
+}
+
+/** Plays the <video> from `from` to `to` (seconds) with a `timeupdate` every 0.25 s. */
+function playVideo(video: HTMLElement, from: number, to: number) {
+  setMedia(video, { currentTime: from, paused: false, ended: false })
+  fireEvent.play(video)
+  for (let t = from + 0.25; t <= to + 1e-9; t += 0.25) { setMedia(video, { currentTime: Math.round(t * 100) / 100 }); fireEvent.timeUpdate(video) }
+}
+
+/** What the server would answer (coverage of the reported parts, complete = end reached and >= 90% played). */
+function serverProgress(r: VideoReport): VideoProgress & { videos_done: number; videos_required: number } {
+  const covered = r.segments.reduce((n, [a, b]) => n + b - a, 0)
+  const coverage = Math.min(1, covered / r.duration)
+  return { resource_id: r.resource_id, duration_seconds: r.duration, watched_seconds: covered, coverage, segments: r.segments, last_position: r.position,
+    reached_end: r.ended, completed: r.ended && coverage >= 0.9, completed_at: null, videos_done: 0, videos_required: 1 }
+}
+
+const videoView = (progress: VideoProgress | null = null) => ({
+  assignment: { ...ASSIGNMENT, videos_required: 1 }, lab: LAB_V, worksheet: WS,
+  attempt: attempt({ videos: [{ resource_id: 'do_vid1', name: VIDEO.name, progress }] }),
+}) as StudentLabView
+
+describe('Lab video unlocks Submit', () => {
+  beforeEach(() => { svc.videoProgress.mockImplementation(async (_id, r) => serverProgress(r)) })
+
+  it('shows Submit only after the video was watched to the end', async () => {
+    svc.myLab.mockResolvedValue(videoView())
+    renderWorkspace()
+    fireEvent.click(await screen.findByRole('tab', { name: /Conclude/ }))
+    expect(screen.queryByRole('button', { name: /Submit lab/ })).not.toBeInTheDocument()
+    expect(screen.getByTestId('video-gate')).toHaveTextContent('Watch the full video to unlock Submit')
+    expect(screen.getByText('Video watched to the end')).toBeInTheDocument()            // checklist item, not yet ticked
+
+    fireEvent.click(screen.getByRole('button', { name: 'Watch Video - Reactions of HCl' }))
+    const video = screen.getByLabelText('Reactions of HCl')
+    setMedia(video, { duration: 120 })
+    fireEvent.loadedMetadata(video)
+    playVideo(video, 0, 119.75)
+    expect(screen.queryByRole('button', { name: /Submit lab/ })).not.toBeInTheDocument()
+    setMedia(video, { currentTime: 120, ended: true, paused: true })
+    fireEvent.ended(video)
+
+    expect(await screen.findByRole('button', { name: /Submit lab/ })).toBeInTheDocument()
+    expect(screen.queryByTestId('video-gate')).not.toBeInTheDocument()
+    expect(screen.getByText('Watched to the end')).toBeInTheDocument()
+    const last = svc.videoProgress.mock.calls.at(-1)![1]
+    expect(last).toMatchObject({ resource_id: 'do_vid1', duration: 120, ended: true, segments: [[0, 120]] })
+    expect(svc.videoProgress.mock.calls[0][1].segments).toEqual([])                          // first report when playback starts
+  })
+
+  it('does not count seeking to the end', async () => {
+    svc.myLab.mockResolvedValue(videoView())
+    renderWorkspace()
+    fireEvent.click(await screen.findByRole('tab', { name: /Animation/ }))
+    const video = screen.getByLabelText('Reactions of HCl')
+    setMedia(video, { duration: 120 })
+    fireEvent.loadedMetadata(video)
+    playVideo(video, 0, 2)
+    fireEvent.seeking(video)
+    setMedia(video, { currentTime: 119 })
+    fireEvent.timeUpdate(video)
+    fireEvent.seeked(video)
+    playVideo(video, 119, 119.75)
+    setMedia(video, { currentTime: 120, ended: true, paused: true })
+    fireEvent.ended(video)
+    await waitFor(() => expect(svc.videoProgress.mock.calls.at(-1)![1].ended).toBe(true))
+    expect(svc.videoProgress.mock.calls.at(-1)![1].segments).toEqual([[0, 2], [119, 120]])
+    fireEvent.click(screen.getByRole('tab', { name: /Conclude/ }))
+    expect(screen.getByTestId('video-gate')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Submit lab/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps progress across a reload', async () => {
+    const half: VideoProgress = { resource_id: 'do_vid1', duration_seconds: 120, watched_seconds: 60, coverage: 0.5, segments: [[0, 60]],
+      last_position: 60, reached_end: false, completed: false, completed_at: null }
+    svc.myLab.mockResolvedValue(videoView(half))
+    const { unmount } = renderWorkspace()
+    fireEvent.click(await screen.findByRole('tab', { name: /Conclude/ }))
+    expect(within(screen.getByTestId('video-gate')).getByText('50%')).toBeInTheDocument()
+    // carrying on from where it stopped completes it: the saved half counts, it is not watched again
+    fireEvent.click(screen.getByRole('button', { name: 'Watch Video - Reactions of HCl' }))
+    const video = screen.getByLabelText('Reactions of HCl')
+    setMedia(video, { duration: 120 })
+    fireEvent.loadedMetadata(video)
+    playVideo(video, 60, 119.75)
+    setMedia(video, { currentTime: 120, ended: true, paused: true })
+    fireEvent.ended(video)
+    expect(await screen.findByRole('button', { name: /Submit lab/ })).toBeInTheDocument()
+    expect(svc.videoProgress.mock.calls.at(-1)![1].segments).toEqual([[0, 120]])
+    unmount()
+
+    // after a reload with the video completed, Submit is there straight away
+    svc.myLab.mockResolvedValue(videoView({ ...half, watched_seconds: 120, coverage: 1, segments: [[0, 120]], reached_end: true, completed: true }))
+    renderWorkspace()
+    fireEvent.click(await screen.findByRole('tab', { name: /Conclude/ }))
+    expect(screen.getByRole('button', { name: /Submit lab/ })).toBeInTheDocument()
+    expect(screen.getByTestId('videos-status')).toHaveTextContent('All videos watched')
+  })
+
+  it('shows no source-platform wording anywhere in the lab, viva included', async () => {
+    svc.myLab.mockResolvedValue(videoView())
+    renderWorkspace()
+    fireEvent.click(await screen.findByRole('tab', { name: /Viva/ }))
+    expect(screen.getByText(/Dissolving NaOH is/)).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/diksha|source:|open on|external/i)
+    expect(screen.getAllByTestId('credits').length).toBeGreaterThan(0)
   })
 })
 

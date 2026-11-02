@@ -3,9 +3,9 @@ import { ChevronDown, ChevronRight, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DikshaUnit } from '@/services/dikshaService'
 
-/** Chapter / unit hierarchy in DIKSHA's own order. Units without linked resources are shown as such. */
+/** Chapter / unit hierarchy in the source's own order. Units without resources to open here are shown as such. */
 export function ChapterTree({ units, selected, onSelect }: { units: DikshaUnit[]; selected: string | null; onSelect: (u: DikshaUnit) => void }) {
-  if (!units.length) return <p className="px-2 py-4 text-sm text-ink-500">This textbook has no chapter structure in the Catalogue.</p>
+  if (!units.length) return <p className="px-2 py-4 text-sm text-ink-500">This textbook has no chapter structure.</p>
   return (
     <ol className="space-y-0.5" aria-label="Chapters">
       {units.map((u, i) => <UnitNode key={u.id} u={u} number={i + 1} depth={0} selected={selected} onSelect={onSelect} />)}
@@ -31,7 +31,7 @@ function UnitNode({ u, number, depth, selected, onSelect }: { u: DikshaUnit; num
           {depth === 0 && <span className="w-5 shrink-0 pt-px text-xs tabular-nums text-ink-500">{number}</span>}
           {depth > 0 && <FolderOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-500" />}
           <span className="flex-1">{u.name}</span>
-          <span className={cn('shrink-0 text-xs tabular-nums', empty ? 'text-ink-500' : 'text-ink-300')} title={empty ? 'No linked resources' : `${u.resource_count} resources`}>
+          <span className={cn('shrink-0 text-xs tabular-nums', empty ? 'text-ink-500' : 'text-ink-300')} title={empty ? 'No resources' : `${u.resource_count} resources`}>
             {empty ? '—' : u.resource_count}
           </span>
         </button>

@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { PublishedExternal } from './dikshaService'
+import type { ContentType, FacetOption, PublishedExternal } from './dikshaService'
 
 export type Board = 'NCERT_CBSE' | 'KARNATAKA_STATE'
 export type Language = 'English' | 'Kannada' | 'Hindi'
@@ -67,9 +67,11 @@ export interface Publication {
   year_code: string; status: 'published' | 'unpublished'; published_at: string; unpublished_at: string | null
   teacher_code: string; teacher_name: string | null; unpublished_by: string | null
   title: string; board: string; class_number: number | null; language: string | null; subject_name: string | null; source_name: string
-  /** 'school' = school catalog book; 'diksha' = reference to DIKSHA content */
+  /** 'school' = school catalog book; 'diksha' = reference to catalogue (DIKSHA) content */
   source: 'school' | 'diksha'; source_id: string | null; source_kind: 'textbook' | 'resource' | null
   source_status: 'available' | 'unavailable' | null; source_context: { textbook_id: string; textbook_name: string; path: string[] } | null
+  /** Catalogue item students cannot currently see (e.g. a NonCommercial licence the institution has not approved). */
+  hidden_from_students?: boolean
   can_unpublish?: boolean
   events?: { action: 'published' | 'republished' | 'unpublished'; actor_code: string; actor_name: string | null; actor_role: string; created_at: string }[]
 }
@@ -107,11 +109,14 @@ export const libraryService = {
   unpublish: async (id: string) => (await api.post(`${B}/publications/${id}/unpublish`)).data,
 
   // student
-  studentBooks: async (f: { subject?: string; language?: string; q?: string }) =>
+  studentBooks: async (f: { subject?: string; language?: string; q?: string; content_type?: ContentType | '' }) =>
     (await api.get<{ class_code: string | null; class_name: string | null; year_code: string | null; books: StudentBook[]
-      /** DIKSHA textbooks / resources published to the class (references to source content) */
+      /** Catalogue textbooks / resources published to the class (references to source content, opened in-app) */
       external: PublishedExternal[]
-      subjects: { subject_code: string; subject_name: string }[]; languages: string[] }>(`${B}/student/books`, { params: clean(f) })).data,
+      /** Subjects that have content of the chosen content type. */
+      subjects: { subject_code: string; subject_name: string }[]; languages: string[]
+      /** Content types of the whole library, with counts. */
+      types: FacetOption<ContentType>[] }>(`${B}/student/books`, { params: clean(f) })).data,
 
   // admin
   createBook: async (body: BookBody, org?: string | null) => (await api.post<Book>(`${B}/books`, body, withOrg(org))).data,

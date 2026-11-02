@@ -15,7 +15,7 @@ import { libraryService, type Publication, type PublishTarget } from '@/services
 
 const key = (t: PublishTarget) => `${t.class_code}|${t.subject_code}`
 
-/** Teacher Digital Library: browse the Catalogue (DIKSHA) and publish textbooks/resources to a class subject. */
+/** Teacher Digital Library: browse the Catalogue and publish textbooks/resources to a class subject (all open in-app). */
 export default function TeacherLibrary() {
   const [tab, setTab] = useState<'diksha' | 'published'>('diksha')
   const [targets, setTargets] = useState<PublishTarget[] | null>(null)
@@ -107,6 +107,9 @@ function PublishedList({ pubs, onChanged, onError }: { pubs: Publication[] | nul
                       <div className="flex items-center gap-1.5 font-medium text-fg">{p.title}
                         {p.source === 'diksha' && <Badge tone="aqua">Catalogue</Badge>}
                         {p.source_status === 'unavailable' && <Badge tone="warn">No longer in the Catalogue</Badge>}
+                        {p.status === 'published' && p.hidden_from_students && (
+                          <Badge tone="warn" title="Its licence is not approved for display inside EduAI, so students do not see it">Hidden from students</Badge>
+                        )}
                       </div>
                       <div className="text-xs text-ink-500">{[p.class_number ? `Class ${p.class_number}` : null, p.subject_name, p.language,
                         p.source_context ? `from ${p.source_context.textbook_name}` : null].filter(Boolean).join(' · ')}</div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Globe2 } from 'lucide-react'
+import { ArrowLeft, Library } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorState, LoadingState } from '@/components/library/diksha/LibraryStates'
 import { ResourceViewer } from '@/components/library/diksha/ResourceViewer'
@@ -13,8 +13,9 @@ import type { Role } from '@/types'
 const HOME: Partial<Record<Role, string>> = { student: '/student/library', teacher: '/teacher/library', orgadmin: '/admin-dashboard?tab=library', superadmin: '/admin-dashboard?tab=library' }
 
 /**
- * DIKSHA textbook / resource reader inside the LMS. The server checks that a student may open the item (published to
- * their class, or part of a published textbook) and decides the permitted viewer for every resource.
+ * Catalogue textbook / resource reader inside the LMS (route /library/explore/:sourceId). The server checks that a
+ * student may open the item (published to their class, or part of a published textbook) and decides the in-app viewer
+ * for every resource; nothing opens outside the app.
  */
 export default function DikshaReader() {
   const { sourceId = '' } = useParams()
@@ -38,7 +39,7 @@ export default function DikshaReader() {
     <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-8">
       <div className="flex flex-wrap items-center gap-3">
         <Link to={back}><Button size="sm" variant="secondary"><ArrowLeft className="h-4 w-4" /> Back to library</Button></Link>
-        <span className="inline-flex items-center gap-1.5 text-sm text-ink-500"><Globe2 className="h-4 w-4" /> Catalogue</span>
+        <span className="inline-flex items-center gap-1.5 text-sm text-ink-500"><Library className="h-4 w-4" /> Digital Library</span>
       </div>
       {error ? (
         <ErrorState message={error} onRetry={load} />

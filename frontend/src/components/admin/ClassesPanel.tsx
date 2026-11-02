@@ -240,7 +240,7 @@ function ClassDetail({ c, classes, teachers, run, org, boards }: {
                 <CardDescription><span className="font-mono">{c.class_code}</span>{c.grade_number ? ` · Class ${c.grade_number}` : ''} · {c.year_code} {c.cycle_code}{c.room_number ? ` · ${c.room_number}` : ''}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {c.board ? <Badge tone="brand">{c.board}</Badge> : <Badge tone="warn" title="Set the board so the Digital Library's DIKSHA catalog is scoped automatically for this class">Board not set</Badge>}
+                {c.board ? <Badge tone="brand">{c.board}</Badge> : <Badge tone="warn" title="Set the board so the Digital Library catalogue is scoped automatically for this class">Board not set</Badge>}
                 <Badge tone="aqua"><Users className="h-3 w-3" /> {c.student_count} students</Badge>
                 <Button size="sm" variant="secondary" onClick={() => { setInfo({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '', board: c.board ?? '' }); setEditing(true) }}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
                 <Button size="sm" variant="secondary" onClick={() => save({ is_active: !c.is_active })}>

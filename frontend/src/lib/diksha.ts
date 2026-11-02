@@ -1,19 +1,20 @@
-import type { DikshaItem, DikshaUnit, DikshaViewer } from '@/services/dikshaService'
+import { DEFAULT_CONTENT_TYPE, dikshaService, type DikshaFilterOptions, type DikshaItem, type DikshaQuery, type DikshaUnit, type DikshaViewer } from '@/services/dikshaService'
 
 type Tone = 'brand' | 'ok' | 'warn' | 'bad' | 'aqua' | 'neutral'
 
 export const RESOURCE_LABEL: Record<DikshaItem['resource_type'], string> = {
-  pdf: 'PDF', video: 'Video', youtube: 'YouTube video', audio: 'Audio', epub: 'eBook', interactive: 'Interactive',
+  pdf: 'PDF', video: 'Video', youtube: 'Video', audio: 'Audio', epub: 'eBook', interactive: 'Interactive',
   collection: 'Collection', other: 'Resource',
 }
 
+/** Everything opens inside the app; `none` only appears if a file fails to load. */
 export const VIEWER_LABEL: Record<DikshaViewer, { label: string; tone: Tone }> = {
   pdf: { label: 'Read in app', tone: 'ok' },
   video: { label: 'Watch in app', tone: 'ok' },
   audio: { label: 'Listen in app', tone: 'ok' },
   youtube: { label: 'Watch in app', tone: 'ok' },
   html: { label: 'Runs in app', tone: 'ok' },
-  official: { label: 'Opens on DIKSHA', tone: 'aqua' },
+  none: { label: 'Not available', tone: 'neutral' },
 }
 
 /** "Class 9", "Classes 9–10" or null when the source gives no class. */
@@ -46,4 +47,26 @@ export function unitResources(u: DikshaUnit): { group: string | null; items: Dik
   }
   u.units.forEach((c) => walk(c, ''))
   return out
+}
+
+/** Filter options (facets) for a catalogue selection. */
+export const optionsFor = (q: DikshaQuery, withSubject = true) => dikshaService.filters({
+  board: q.board, class_number: q.class_number, content_type: q.content_type ?? DEFAULT_CONTENT_TYPE, ...(withSubject && q.subject ? { subject: q.subject } : {}),
+})
+
+/**
+ * A new selection with its dependent choices checked against the filter options for it: a subject is kept only while
+ * it has content of the chosen type, a language only while it has content of the chosen type (and subject). One
+ * options request answers both (the subject list does not depend on the chosen subject); a second one is needed only
+ * when the subject had to be dropped, to get the languages for the type as a whole.
+ */
+export async function resolveFilters(next: DikshaQuery): Promise<{ query: DikshaQuery; options: DikshaFilterOptions }> {
+  let options = await optionsFor(next)
+  let query = next
+  if (query.subject && !options.subjects.some((x) => x.value === query.subject && x.count !== 0)) {
+    query = { ...query, subject: '' }
+    options = await optionsFor(query, false)
+  }
+  if (query.medium && !options.mediums.some((x) => x.value === query.medium && x.count !== 0)) query = { ...query, medium: '' }
+  return { query, options }
 }
