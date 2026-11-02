@@ -3,6 +3,7 @@ import { Columns, Empty, Kpi } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
 import { shortDate } from '@/lib/datetime'
 import type { AdmissionOverview, Applicant } from '@/services/admissionService'
+import { gradeLabel } from '@/lib/admissionForm'
 
 /** KPI row for admissions staff. `withBreaches` adds the principal-only breach tile. */
 export function AdmissionsKpis({ o, withBreaches, links }: { o: AdmissionOverview | null; withBreaches?: boolean; links?: { requests?: string; breaches?: string } }) {
@@ -27,7 +28,9 @@ export function AdmissionsKpis({ o, withBreaches, links }: { o: AdmissionOvervie
 }
 
 export function ApplicantsByClass({ o }: { o: AdmissionOverview }) {
-  const data = [6, 7, 8, 9, 10, 11, 12].map((g) => ({ key: String(g), label: `Class ${g}`, value: o.applicants.by_grade.find((x) => x.grade === g)?.count ?? 0 }))
+  // Classes 6–12 always; other classes (e.g. pre-primary from admission forms) when they have applicants.
+  const grades = [...new Set([6, 7, 8, 9, 10, 11, 12, ...o.applicants.by_grade.map((x) => x.grade)])].sort((a, b) => a - b)
+  const data = grades.map((g) => ({ key: String(g), label: gradeLabel(g), value: o.applicants.by_grade.find((x) => x.grade === g)?.count ?? 0 }))
   const max = Math.max(1, ...data.map((d) => d.value))
   return <Columns data={data} max={max} unit="" caption="Applicants by class applied for" />
 }

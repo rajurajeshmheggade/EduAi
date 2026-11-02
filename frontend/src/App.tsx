@@ -40,6 +40,9 @@ const VirtualLabWorkspace = lazy(() => import('@/pages/student/VirtualLabWorkspa
 const TeacherAdmissions = lazy(() => import('@/pages/teacher/TeacherAdmissions'))
 const AdmissionTestEditor = lazy(() => import('@/pages/teacher/AdmissionTestEditor'))
 const AdmissionReport = lazy(() => import('@/pages/admissions/AdmissionReport'))
+const AdmissionForms = lazy(() => import('@/pages/teacher/AdmissionForms'))
+// The standalone admission application: its own layout, login and API client (no AppShell, no LMS session).
+const ApplyApp = lazy(() => import('@/pages/apply/ApplyApp'))
 // The exam view renders without AppShell (no portal chrome or teacher data) and carries the proctoring code.
 const ExamView = lazy(() => import('@/pages/exam/ExamView'))
 
@@ -69,6 +72,7 @@ export default function App() {
             <Route path="/teacher/admissions" element={<TeacherAdmissions />} />
             <Route path="/teacher/admissions/tests/:testId" element={<AdmissionTestEditor />} />
             <Route path="/teacher/admissions/reports/:sessionId" element={<AdmissionReport />} />
+            <Route path="/teacher/admission-forms" element={<AdmissionForms />} />
             <Route path="/teacher/lesson-plans" element={<LessonPlans />} />
             <Route path="/teacher/wellbeing" element={<Wellbeing />} />
             <Route path="/teacher/mindset" element={<Navigate to="/teacher/wellbeing" replace />} />
@@ -107,6 +111,7 @@ export default function App() {
         <Route element={<RequireRole roles={['counsellor']} />}>
           <Route element={<AppShell />}>
             <Route path="/admissions/counsellor" element={<CounsellorHome />} />
+            <Route path="/admissions/applications" element={<AdmissionForms />} />
           </Route>
         </Route>
         <Route element={<RequireRole roles={['reviewer']} />}>
@@ -134,6 +139,7 @@ export default function App() {
         <Route path="/admin/assessment-scores" element={<Navigate to="/admin-dashboard?tab=evaluation" replace />} />
         {/* Own Suspense boundary: navigating here unmounts the portal tree at once (Launch then clears the user). */}
         <Route path="/admission/exam/:sessionId" element={<Suspense fallback={<FullPageSpinner />}><ExamView /></Suspense>} />
+        <Route path="/apply/:slug/*" element={<Suspense fallback={<FullPageSpinner />}><ApplyApp /></Suspense>} />
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
       </ExamLockGate>

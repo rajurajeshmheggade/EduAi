@@ -25,7 +25,9 @@ export function ExamLockGate({ children }: { children: ReactNode }) {
     window.addEventListener('storage', on)
     return () => window.removeEventListener('storage', on)
   }, [])
-  const blocked = !!lock && !pathname.startsWith('/admission/exam/')
+  // The standalone admission application (/apply) is not part of the portal (no portal session or data), so an
+  // applicant who closed the exam tab on their own device can return there and re-open the test.
+  const blocked = !!lock && !pathname.startsWith('/admission/exam/') && !pathname.startsWith('/apply/')
   useEffect(() => {
     if (!blocked) return
     const c = examChannel(() => {})

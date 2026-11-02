@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Lock, Maximize, MonitorX } from 'lucide-react'
+import { ApplicantReturn } from '@/components/exam/ApplicantReturn'
 import { ConfirmStep, ConsentStep, IdPhotoStep, ReadyStep, StepCard } from '@/components/exam/ExamSteps'
 import { HandBack } from '@/components/exam/HandBack'
 import { Runner } from '@/components/exam/Runner'
@@ -48,6 +49,8 @@ export default function ExamView() {
   const [refused, setRefused] = useState(false)
   const [full, setFull] = useState(() => !!document.fullscreenElement)
   const [ended, setEnded] = useState<string | null | undefined>(undefined)
+  // Started from the standalone admission application: the end screen returns there instead of the teacher hand-back.
+  const [origin, setOrigin] = useState<string | undefined>(undefined)
   const [proctorReady, setProctorReady] = useState(false)
   const [media] = useState(() => new ProctorMedia())
   const [reference, setReference] = useState<number[] | null>(null)
@@ -74,6 +77,7 @@ export default function ExamView() {
   const load = useCallback(async () => {
     try {
       const st = await exam.claim()
+      setOrigin(st.origin)
       if (st.ended) { setEnded(st.submit_reason); return }
       setView(await exam.view())
     } catch (e) {
@@ -88,10 +92,12 @@ export default function ExamView() {
   if (refused) {
     return <Shell><StepCard icon={MonitorX} title="This test is open in another tab or window"><p className="text-ink-300">Only one page can run the test. Close this tab and continue in the other one.</p></StepCard></Shell>
   }
-  if (ended !== undefined) return <Shell><HandBack reason={ended} /></Shell>
+  const applicant = origin === 'applicant' || view?.origin === 'applicant'
+  if (ended !== undefined) return <Shell>{applicant ? <ApplicantReturn reason={ended} /> : <HandBack reason={ended} />}</Shell>
   if (error) return <Shell><StepCard icon={Lock} title="The test could not be opened"><p role="alert" className="text-bad">{error}</p></StepCard></Shell>
   if (!view) return <Shell><div className="grid h-full place-items-center text-ink-300">Opening the test…</div></Shell>
-  if (view.ended) return <Shell><HandBack reason={view.submit_reason} /></Shell>
+  if (view.ended) return <Shell>{applicant ? <ApplicantReturn reason={view.submit_reason} /> : <HandBack reason={view.submit_reason} />}</Shell>
+  if (view.status === 'LOCKED' && applicant) return <Shell><ApplicantReturn locked /></Shell>
   if (view.status === 'LOCKED') {
     return <Shell><StepCard icon={Lock} title="Please ask your teacher"><p className="text-ink-300">The date of birth did not match three times, so the test is locked. Your teacher can launch it again.</p></StepCard>
       <HandBack title="Teacher: sign in to continue" /></Shell>

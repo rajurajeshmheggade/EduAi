@@ -210,7 +210,7 @@ def _status(s: dict) -> dict:
     e = sessions.eff(s)
     return {"status": s["status"], "submit_reason": s["submit_reason"], "warnings_count": s["warnings_count"],
             "max_warnings": e["max_warnings"], "deadline_at": s["deadline_at"], "server_time": now(),
-            "ended": s["status"] in sessions.DONE, "locked": s["status"] == "LOCKED"}
+            "ended": s["status"] in sessions.DONE, "locked": s["status"] == "LOCKED", "origin": s.get("origin") or "teacher"}
 
 
 def _view(s: dict) -> dict:
