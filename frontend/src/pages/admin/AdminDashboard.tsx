@@ -15,6 +15,7 @@ import { InstitutionsPanel } from '@/components/admin/InstitutionsPanel'
 import { LibraryCatalogPanel } from '@/components/admin/LibraryCatalogPanel'
 import { OverviewPanel } from '@/components/admin/OverviewPanel'
 import { PlatformOverview } from '@/components/admin/PlatformOverview'
+import { ProctoringSettingsPanel } from '@/components/admin/ProctoringSettingsPanel'
 import { StudentsPanel } from '@/components/admin/StudentsPanel'
 import { TeachersPanel } from '@/components/admin/TeachersPanel'
 import { TimetablePanel } from '@/components/admin/TimetablePanel'
@@ -108,6 +109,7 @@ export default function AdminDashboard() {
           {tab === 'privacy' && <PrivacyPanel org={scope} />}
           {tab === 'admission-tests' && <AdmissionTestsPanel org={scope} />}
           {tab === 'admission-forms' && <AdmissionFormsPanel org={scope} />}
+          {tab === 'proctoring' && <ProctoringSettingsPanel org={scope} />}
         </div>}
         {!platformPage && isSuper && orgs?.length === 0 && (
           <p className="rounded-xl border border-line bg-ink-900 p-6 text-center text-sm text-ink-300">Onboard an institution first from <b>Institutions</b> in the sidebar.</p>

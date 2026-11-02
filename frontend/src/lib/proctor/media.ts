@@ -32,6 +32,7 @@ export class ProctorMedia {
   readonly camVideo = hiddenVideo()
   readonly screenVideo = hiddenVideo()
   cameraLabel: string | null = null
+  micLabel: string | null = null
   screenSurface: string | null = null
   floorDb = -100
   backend = 'none'
@@ -43,9 +44,13 @@ export class ProctorMedia {
   private busy = false
 
   // ---------------------------------------------------------------- devices
-  async startCamera(): Promise<MediaStream> {
-    if (this.camera?.getVideoTracks()[0]?.readyState === 'live') return this.camera
-    this.camera = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } }, audio: false })
+  /** `deviceId` picks a specific camera (student device picker); without it the current / default camera is used. */
+  async startCamera(deviceId?: string): Promise<MediaStream> {
+    const live = this.camera?.getVideoTracks()[0]
+    if (live?.readyState === 'live' && (!deviceId || live.getSettings?.().deviceId === deviceId)) return this.camera!
+    this.camera?.getTracks().forEach((t) => t.stop())
+    this.camera = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 },
+      ...(deviceId ? { deviceId: { exact: deviceId } } : {}) }, audio: false })
     this.cameraLabel = this.camera.getVideoTracks()[0]?.label ?? null
     this.camVideo.srcObject = this.camera
     await this.camVideo.play().catch(() => {})
@@ -53,9 +58,14 @@ export class ProctorMedia {
     return this.camera
   }
 
-  async startMic(): Promise<void> {
-    if (this.mic?.getAudioTracks()[0]?.readyState === 'live') return
-    this.mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+  async startMic(deviceId?: string): Promise<void> {
+    const live = this.mic?.getAudioTracks()[0]
+    if (live?.readyState === 'live' && (!deviceId || live.getSettings?.().deviceId === deviceId)) return
+    this.mic?.getTracks().forEach((t) => t.stop())
+    void this.audio?.ctx.close().catch(() => {})
+    this.audio = null
+    this.mic = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true, video: false })
+    this.micLabel = this.mic.getAudioTracks()[0]?.label ?? null
     const ctx = new AudioContext()
     const analyser = ctx.createAnalyser()
     analyser.fftSize = 2048
@@ -109,6 +119,8 @@ export class ProctorMedia {
   cameraLive = () => { const t = this.camera?.getVideoTracks()[0]; return t?.readyState === 'live' && !t.muted }
   screenLive = () => this.screen?.getVideoTracks()[0]?.readyState === 'live'
   micLive = () => this.mic?.getAudioTracks()[0]?.readyState === 'live'
+  cameraDeviceId = () => this.camera?.getVideoTracks()[0]?.getSettings?.().deviceId ?? null
+  micDeviceId = () => this.mic?.getAudioTracks()[0]?.getSettings?.().deviceId ?? null
 
   // ---------------------------------------------------------------- models
   loadModels(opts: { embed: boolean; objects: boolean }, timeoutMs = 90_000): Promise<string> {

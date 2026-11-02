@@ -8,6 +8,8 @@ export type FlagCode =
   | 'VOICE_DETECTED' | 'COPY_PASTE' | 'PASTE_BURST' | 'BLOCKED_SHORTCUT' | 'CONTEXT_MENU' | 'PRINT_ATTEMPT' | 'DEVTOOLS_SUSPECTED'
   | 'WINDOW_RESIZED' | 'EXTENSION_INJECTION' | 'NETWORK_OFFLINE' | 'SECOND_SESSION' | 'PORTAL_ACCESS_ATTEMPT' | 'PAGE_RELOAD'
   | 'PERF_DEGRADED'
+  // student proctoring (lib/proctor/student)
+  | 'MIC_LOST' | 'SANCTIONED_AWAY'
 
 export interface FlagEvent {
   code: FlagCode

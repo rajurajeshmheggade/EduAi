@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { BookOpen, Library } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ProctorGate } from '@/components/proctoring/ProctorGate'
 import { SubjectPicker } from '@/components/SubjectPicker'
 import { AvatarTutor } from '@/components/pdf-avatar/AvatarTutor'
 import { SplitScreenPDFReader } from '@/components/pdf-avatar/SplitScreenPDFReader'
@@ -14,9 +15,22 @@ import { errorMessage } from '@/services/apiClient'
 import type { Textbook } from '@/types'
 
 /** Student classroom: split-screen textbook PDF (left) + AI avatar tutor that explains the open page aloud
- * (top-right) + k=3 RAG chat (bottom-right). */
+ * (top-right) + k=3 RAG chat (bottom-right). A proctored AI Classroom session per subject (unified proctoring gate);
+ * switching subject or leaving the page closes it. */
 export default function AvatarSubjectClassroom() {
   const { subject } = useAuth()
+  if (!subject) return <Empty title="No subjects assigned" body="Ask your teacher to enrol you in a subject." />
+  return (
+    <ProctorGate key={subject} module="AI_CLASSROOM" refId={`textbook/${subject}`} title={`${subject} textbook classroom`}
+      startLabel="Start classroom session" beginLabel="Begin session"
+      intro={<div className="flex items-center gap-3"><BookOpen className="h-6 w-6 text-brand-600" /><div><h1 className="font-display text-xl font-bold text-fg">Textbook classroom</h1>
+        <p className="text-sm text-ink-300">Your {subject} textbook with the AI avatar tutor and page-aware chat.</p></div><SubjectPicker className="ml-auto w-44" /></div>}>
+      <TextbookClassroom subject={subject} />
+    </ProctorGate>
+  )
+}
+
+function TextbookClassroom({ subject }: { subject: string }) {
   const [books, setBooks] = useState<Textbook[] | null>(null)
   const [bookId, setBookId] = useState<string>('')
   const [page, setPage] = useState(1)
@@ -44,7 +58,6 @@ export default function AvatarSubjectClassroom() {
     ? (reader.mode === 'explain' ? reader.segment?.quote : reader.text) ?? null
     : null
 
-  if (!subject) return <Empty title="No subjects assigned" body="Ask your teacher to enrol you in a subject." />
   if (error) return <Empty title="Couldn't load your library" body={error} />
   if (!books) return <div className="p-8"><div className="skeleton h-[70vh]" /></div>
   if (!book) return <Empty title={`No textbook published for ${subject} yet`} body="Your teacher hasn't published a chapter for this subject. Check back soon." action={<SubjectPicker className="mx-auto mt-4 w-48" />} />

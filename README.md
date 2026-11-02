@@ -340,6 +340,54 @@ events, reports, audit). API under `/ICMELive/api/v1/admission`: `tests`, `quest
 `launches`, `sessions/{id}/end`, `live`, `results(.csv)`, `reports/{id}` (+ `/regenerate`, `/evidence/{event}`) and the
 exam-token routes `session/*`.
 
+## Student proctoring — Online tests, Virtual Labs, AI Classroom (Teacher → Live proctoring)
+
+One proctoring flow for the three student modules. **Flags only** (product decision): detection runs on the student's
+device (the admission test's MediaPipe worker, `npm run models:proctor` once); no video, photo, snapshot or audio ever
+leaves it. An event is a code, timing, a server-decided severity and a few small numbers (e.g. `faces: 2`).
+
+* **What "Start" means:** *Online test* — Start test (the timer starts only after the preparation window); *Virtual
+  lab* — Start / resume the lab (opening the simulation on DIKSHA's player in a new tab is allowed and logged as
+  *SANCTIONED_AWAY*, max 20 min); *AI Classroom* — Start classroom session on a chapter (`nlp/<class>/<subject>/<chapter>`)
+  or on the textbook classroom (`textbook/<subject>`); leaving the reader closes it.
+* **Student:** Start opens a full-screen preparation window: every rule + what is / is never recorded → the exact
+  acknowledgement *"I have read and understood all examination rules and instructions."* → camera / microphone
+  permission (only what the module requires), camera and microphone pickers (`enumerateDevices`, `devicechange`), live
+  preview (never sent), mic level, connection status, on-device face + lighting check, help for blocked permissions.
+  Begin stays disabled until every mandatory check passes (the server re-checks on `/start`) and enters full screen
+  when required. During the exam a small panel shows status, the flags recorded so far and a hide-preview switch;
+  teacher warnings must be acknowledged; leaving full screen or losing the camera is prompted. A reload or leaving
+  the page *interrupts* the session; coming back resumes it after a new acknowledgement.
+* **Detected (thresholds per module):** face not visible, more than one person, phone / other screen, looking away
+  (off by default), camera covered / dark, camera or microphone disconnected or permission removed, tab switch,
+  focus moved to another app, full-screen exit, copy / paste, sustained talking (loudness only), connection drops;
+  the server raises *HEARTBEAT_MISSING* (session interrupted) and *SESSION_LEFT*. Long or repeated episodes escalate
+  one severity level (`services/proctoring/config.py`).
+* **Assigned teachers** (notified, may monitor and act): online test — the teacher who created it + the class's
+  subject teacher; virtual lab — the assigning teacher + the subject teacher; AI Classroom — the class's teacher for
+  that subject, else the class teacher. Other teachers and students get 404.
+* **Teacher → Live proctoring:** ongoing exams with live totals (enrolled, writing, yet to start / in pre-check,
+  submitted, interrupted, with active alerts, camera issues, suspicious-activity signals); per exam a student grid,
+  the alert feed and each student's record (timeline, device status, Dismiss / Noted / Concern review, private
+  remarks, warnings the student sees within ~10 s, End session — hands in what was saved). Updates arrive over
+  Server-Sent Events (in-process hub; set `REDIS_URL` to fan out across API processes), with 10 s polling while the
+  stream reconnects. The bell gets "student started" (not for AI Classroom) and alerts from `notify_min_severity`
+  (default High; Critical for AI Classroom), with all required fields in the text and a structured `payload`.
+  Indicators are worded as signals for review, never as proof.
+* **Admin console → Proctoring:** per-module switches and thresholds (enable, camera / microphone / full screen
+  required, detectors, hold times, escalation, interruption timeout, notifications, teacher may end, retention),
+  with a change history. Teachers see them read-only.
+* **Audit & privacy:** events and staff actions (remarks, warnings with delivered / acknowledged times, reviews, ends,
+  record views) are append-only (database trigger). Students can read every flag stored about them. Run
+  `python -m scripts.proctoring_retention` daily: finished sessions older than `retention_days` (default 180) are
+  deleted with their flags. The old count-only `proctor_flag_count` columns (migrations 023 / 024) are still kept up
+  to date; per-flag detail is now stored, which supersedes their "count only" note.
+
+Migration `026_student_proctoring.sql` (settings, sessions, events, actions, notification severity + payload). API
+under `/ICMELive/api/v1/proctoring`: `student/config`, `student/sessions` (+ `/{id}`, `/start`, `/events`,
+`/heartbeat`, `/warnings/{action}/ack`, `/finish`), `teacher/exams`, `teacher/exam`, `teacher/sessions/{id}`
+(+ `/remarks`, `/warnings`, `/end`), `teacher/events/{id}/review`, `teacher/stream` (SSE), `settings` (+ `/{module}`).
+
 ## Admissions — Pravesh (Milestone 1: foundation)
 
 Admin console → **Admissions home / Admissions team / Privacy & consent**, counsellor home `/admissions/counsellor`,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, Bot, CheckCircle2, ChevronDown, CircleAlert, Clock, FlaskConical, Loader2, MessageCircleQuestion, Play, Plus, RotateCcw, Send, Sparkles,
+  ArrowLeft, Bot, CheckCircle2, ChevronDown, CircleAlert, Clock, FlaskConical, Loader2, MessageCircleQuestion, Plus, RotateCcw, Send, Sparkles,
 } from 'lucide-react'
 import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +14,8 @@ import { toast } from '@/components/ui/toast'
 import { LabClock } from '@/components/virtual-labs/labClock'
 import { LabRecord } from '@/components/virtual-labs/LabRecord'
 import { LabStage } from '@/components/virtual-labs/LabStage'
-import { LiveCameraCheck } from '@/components/proctor/LiveCameraCheck'
+import { ProctorGate } from '@/components/proctoring/ProctorGate'
+import { useProctor } from '@/components/proctoring/proctorContext'
 import { clock, duration, fmtDateTime, fmtMarks, STATUS_META, windowBadge } from '@/lib/virtualLabs'
 import { cn } from '@/lib/utils'
 import { errorMessage } from '@/services/apiClient'
@@ -43,14 +44,8 @@ export default function VirtualLabWorkspace() {
   const { id = '' } = useParams()
   const [view, setView] = useState<StudentLabView | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
   const load = useCallback(() => virtualLabService.myLab(id).then(setView).catch((e) => setError(errorMessage(e))), [id])
   useEffect(() => { void load() }, [load])
-
-  async function start() {
-    setBusy(true); setError(null)
-    try { setView(await virtualLabService.start(id)) } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
-  }
 
   if (!view) {
     return <div className="mx-auto max-w-7xl p-4 md:p-8">{error ? <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p> : <div className="skeleton h-96" />}</div>
@@ -75,30 +70,43 @@ export default function VirtualLabWorkspace() {
       </header>
       {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {!attempt ? (
+      {!attempt && !a.window.can_work ? (
         <Card className="mx-auto max-w-3xl space-y-4 p-6">
-          <div className="flex items-start gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/10"><FlaskConical className="h-6 w-6 text-brand-600" /></div>
-            <div>
-              <h2 className="font-display text-lg font-semibold text-fg">Aim</h2>
-              <p className="text-ink-100">{view.worksheet.aim}</p>
-            </div>
-          </div>
-          {a.instructions && <p className="whitespace-pre-line rounded-xl bg-ink-800 p-3 text-sm text-ink-100">{a.instructions}</p>}
-          <ul className="grid gap-2 text-sm text-ink-300 sm:grid-cols-3">
-            <li className="rounded-xl border border-line p-3"><Clock className="mb-1 h-4 w-4 text-brand-600" />Spend at least <b className="text-fg">{a.min_minutes} min</b> in the lab</li>
-            <li className="rounded-xl border border-line p-3"><CheckCircle2 className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{view.worksheet.steps.length}</b> procedure steps · <b className="text-fg">{view.worksheet.questions.length}</b> viva questions</li>
-            <li className="rounded-xl border border-line p-3"><Sparkles className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{fmtMarks(a.max_marks)}</b> marks · your work saves automatically</li>
-          </ul>
-          {a.window.can_work ? (
-            <Button size="lg" onClick={start} disabled={busy} id="start-lab" className="w-full">{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />} Start the lab</Button>
-          ) : <p className="rounded-xl bg-ink-800 p-3 text-center text-sm text-ink-300">{a.window.state === 'scheduled' ? 'This lab has not opened yet.' : 'This lab is no longer open.'}</p>}
+          <LabIntro view={view} />
+          <p className="rounded-xl bg-ink-800 p-3 text-center text-sm text-ink-300">{a.window.state === 'scheduled' ? 'This lab has not opened yet.' : 'This lab is no longer open.'}</p>
         </Card>
-      ) : status === 'in_progress' ? (
-        <Workspace key={`${attempt.started_at}-${attempt.returned_count}`} id={id} view={view} onSubmitted={setView} />
+      ) : status === 'not_started' || status === 'in_progress' ? (
+        // One gate for starting and resuming: Start opens the proctoring preparation window, then the lab begins.
+        <ProctorGate key={id} module="VIRTUAL_LAB" refId={id} title={a.title} resume={!!attempt} startLabel={attempt ? 'Resume the lab' : 'Start the lab'}
+          beginLabel={attempt ? 'Resume the lab' : 'Begin the lab'} intro={<LabIntro view={view} />}
+          beginNote="Opening the simulation on DIKSHA in another tab is allowed and is not counted as switching tabs."
+          onBegin={attempt ? undefined : async () => { setView(await virtualLabService.start(id)) }}>
+          {view.attempt && <Workspace key={`${view.attempt.started_at}-${view.attempt.returned_count}`} id={id} view={view} onSubmitted={setView} />}
+        </ProctorGate>
       ) : (
         <Results view={view} />
       )}
+    </div>
+  )
+}
+
+function LabIntro({ view }: { view: StudentLabView }) {
+  const a = view.assignment
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/10"><FlaskConical className="h-6 w-6 text-brand-600" /></div>
+        <div>
+          <h2 className="font-display text-lg font-semibold text-fg">Aim</h2>
+          <p className="text-ink-100">{view.worksheet.aim}</p>
+        </div>
+      </div>
+      {a.instructions && <p className="whitespace-pre-line rounded-xl bg-ink-800 p-3 text-sm text-ink-100">{a.instructions}</p>}
+      <ul className="grid gap-2 text-sm text-ink-300 sm:grid-cols-3">
+        <li className="rounded-xl border border-line p-3"><Clock className="mb-1 h-4 w-4 text-brand-600" />Spend at least <b className="text-fg">{a.min_minutes} min</b> in the lab</li>
+        <li className="rounded-xl border border-line p-3"><CheckCircle2 className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{view.worksheet.steps.length}</b> procedure steps · <b className="text-fg">{view.worksheet.questions.length}</b> viva questions</li>
+        <li className="rounded-xl border border-line p-3"><Sparkles className="mb-1 h-4 w-4 text-brand-600" /><b className="text-fg">{fmtMarks(a.max_marks)}</b> marks · your work saves automatically</li>
+      </ul>
     </div>
   )
 }
@@ -111,8 +119,7 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
   const [section, setSection] = useState<Section>('brief')
   const [save, setSave] = useState<SaveState>({ state: 'idle' })
   const [submitting, setSubmitting] = useState(false)
-  // Gates Submit (see LiveCameraCheck): no viva questions = nothing to check, so ready from the start.
-  const [vivaReady, setVivaReady] = useState(ws.questions.length === 0)
+  const proctor = useProctor()
   const [error, setError] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const latest = useRef<{ work: LabWork; dirty: boolean }>({ work, dirty: false })
@@ -161,6 +168,7 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
       labClock.pause()                                  // no time reports after the lab is submitted
       const v = await virtualLabService.submit(id, work)
       latest.current.dirty = false
+      await proctor.finish('submitted')                  // before the workspace unmounts (that would count as leaving)
       toast('✓ Lab submitted')
       onSubmitted(v)
     } catch (err) { labClock.resume(); setError(errorMessage(err)) } finally { setSubmitting(false) }
@@ -183,7 +191,7 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
             <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-warn" /><span><b>Your teacher sent this lab back:</b> {attempt.teacher_feedback}</span>
           </p>
         )}
-        <LabStage lab={lab} height="62vh" onLaunch={(_, inApp) => labClock.launch(inApp)} />
+        <LabStage lab={lab} height="62vh" onLaunch={(_, inApp) => { labClock.launch(inApp); if (!inApp) proctor.allowAway('simulation') }} />
         {lab.collection && <SourceAttribution item={lab.collection} compact className="px-1" />}
       </div>
 
@@ -201,11 +209,6 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
           </div>
           {need > 0 && <Progress value={(seconds / need) * 100} tone={seconds >= need ? 'ok' : 'brand'} />}
         </Card>
-
-        {ws.questions.length > 0 && (
-          <LiveCameraCheck title="Lab camera check" totalQuestions={ws.questions.length} answered={p.answered}
-            reportFlag={() => virtualLabService.proctorFlag(id)} onReady={setVivaReady} />
-        )}
 
         <Card className="p-4">
           <Tabs items={sections} value={section} onChange={setSection} className="mb-4 flex-wrap" />
@@ -303,7 +306,6 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
                   [p.steps === ws.steps.length, `Procedure: ${p.steps} of ${ws.steps.length} steps ticked`],
                   ...(ws.observation_columns.length ? [[p.rows >= ws.observation_rows, `Observations: ${p.rows} of ${ws.observation_rows} rows filled`] as const] : []),
                   [p.answered === ws.questions.length, `Viva: ${p.answered} of ${ws.questions.length} answered`],
-                  ...(ws.questions.length ? [[vivaReady, 'Viva camera check complete'] as const] : []),
                   [p.conclusion, 'Conclusion written'],
                 ].map(([ok, text]) => (
                   <li key={String(text)} className={cn('flex items-center gap-2', ok ? 'text-ok' : 'text-ink-300')}>
@@ -312,10 +314,9 @@ function Workspace({ id, view, onSubmitted }: { id: string; view: StudentLabView
                 ))}
               </ul>
               {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-              <Button type="submit" size="lg" className="w-full" id="submit-lab" disabled={submitting || seconds < need || !vivaReady}>
+              <Button type="submit" size="lg" className="w-full" id="submit-lab" disabled={submitting || seconds < need}>
                 {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                {seconds < need ? `Keep experimenting — ${clock(need - seconds)} to go` : !vivaReady ? 'Complete the viva camera check first'
-                  : submitting ? 'Checking your answers…' : 'Submit lab'}
+                {seconds < need ? `Keep experimenting — ${clock(need - seconds)} to go` : submitting ? 'Checking your answers…' : 'Submit lab'}
               </Button>
             </form>
           )}
