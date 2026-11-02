@@ -13,7 +13,7 @@ from psycopg import errors as pg_errors
 
 from . import db
 from .config import get_settings
-from .routers import admin, admission, admission_exam, admission_reports, admission_tests, ai_classroom, assessments, auth, classroom, copilot, curriculum, dashboards, diksha, evaluation, lessonplan, library, nlp_catalog, notifications, public, rag, read_aloud, syllabus, virtual_labs, wellness
+from .routers import admin, admission, admission_exam, admission_reports, admission_tests, ai_classroom, assessments, auth, classroom, copilot, curriculum, dashboards, diksha, evaluation, lessonplan, library, nlp_catalog, notifications, public, question_generator, rag, read_aloud, syllabus, virtual_labs, wellness
 from .services.storage import LocalStorage, get_storage
 
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +59,8 @@ app.include_router(public.admin_router)
 app.include_router(copilot.router)
 app.include_router(notifications.router)
 app.include_router(nlp_catalog.router)
+app.include_router(question_generator.router)
+app.include_router(question_generator.admin_router)
 app.include_router(ai_classroom.router)
 # Session routes are registered first: their prefix is nested under the lesson-plan prefix.
 app.include_router(lessonplan.sessions_router)

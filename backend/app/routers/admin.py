@@ -25,9 +25,9 @@ router = APIRouter(prefix="/ICMELive/api/v1/admin", tags=["admin"])
 superadmin_only = require_role("superadmin")
 admins = require_role("orgadmin", "superadmin")
 Level = Literal["school", "college", "coaching"]
-AIModule = Literal["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis"]
+AIModule = Literal["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis", "question_generator"]
 Gender = Literal["female", "male", "other", "undisclosed"]   # set by the admin; drives the avatar tutor's voice
-ALL_MODULES: list[str] = ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis"]
+ALL_MODULES: list[str] = ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis", "question_generator"]
 
 
 def org_scope(user: CurrentUser, org_code: str | None) -> str:

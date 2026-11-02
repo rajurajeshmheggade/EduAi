@@ -122,7 +122,8 @@ def test_rbac_and_module_gate(client, student, admin):
         assert client.post(f"{E}/tests", headers=teacher, json=body).status_code == 403
     finally:
         client.put(f"{A}/settings", headers=sa, params={"org_code": "DEMO-SCHOOL"},
-                   json={"ai_modules": ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis"]})
+                   json={"ai_modules": ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis",
+                                        "question_generator"]})
 
 
 def test_parse_masters_preview(client, teacher, test_id):
