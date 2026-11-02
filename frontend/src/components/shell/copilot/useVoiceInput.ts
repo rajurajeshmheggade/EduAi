@@ -62,7 +62,8 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
   const recorder = useRef<MediaRecorder | null>(null)
   const stream = useRef<MediaStream | null>(null)
   const timer = useRef<number | null>(null)
-  const cancelled = useRef(false)
+  const cancelled = useRef(false) // unmounted
+  const discard = useRef(false) // this session was cancelled (question sent / panel closed): drop its text
   // The browser's speech service failed (network / blocked): use the recording fallback from now on.
   const [speechBroken, setSpeechBroken] = useState(false)
   const cb = useRef({ onText, onComplete })
@@ -87,9 +88,18 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
     }, 1000)
   }
 
+  /** Finish the session and keep its text (second click on the mic). */
   const stop = useCallback(() => {
     if (recognizer.current) recognizer.current.stop()
     else if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop()
+  }, [])
+
+  /** End the session and throw its text away (the question was sent, or the panel closed). */
+  const cancel = useCallback(() => {
+    if (!recognizer.current && !(recorder.current && recorder.current.state !== 'inactive')) return
+    discard.current = true
+    if (recognizer.current) recognizer.current.abort()
+    else recorder.current?.stop()
   }, [])
 
   // Unmount: drop any live session without transcribing it.
@@ -112,7 +122,9 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
     rec.interimResults = true
     rec.continuous = false // ends by itself after a pause in speech
     let finalText = ''
+    discard.current = false
     rec.onresult = (e: RecognitionResultEvent) => {
+      if (discard.current) return
       let fin = ''
       let interim = ''
       for (let i = 0; i < e.results.length; i++) {
@@ -137,7 +149,7 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
       recognizer.current = null
       clearTimer()
       setState('idle')
-      if (finalText && !cancelled.current) cb.current.onComplete?.(finalText)
+      if (finalText && !cancelled.current && !discard.current) cb.current.onComplete?.(finalText)
     }
     try {
       rec.start()
@@ -163,6 +175,7 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
       return
     }
     if (cancelled.current) { media.getTracks().forEach((t) => t.stop()); return }
+    discard.current = false
     stream.current = media
     const mr = new MediaRecorder(media)
     const chunks: Blob[] = []
@@ -172,6 +185,7 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
       clearTimer()
       releaseMic()
       if (cancelled.current) return
+      if (discard.current) { setState('idle'); return }
       const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' })
       if (!blob.size) { setState('idle'); setError("Didn't catch anything — tap the mic and try again."); return }
       setState('transcribing')
@@ -203,5 +217,5 @@ export function useVoiceInput({ lang, serverTranscription, onText, onComplete }:
     else setError("Voice input isn't supported in this browser — please type your question.")
   }
 
-  return { state, error, elapsed, mode, toggle, stop, clearError: () => setError(null) }
+  return { state, error, elapsed, mode, toggle, stop, cancel, clearError: () => setError(null) }
 }

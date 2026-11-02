@@ -215,8 +215,8 @@ class MockLLM:
         if t["periods_today"] and len(tips) < 2:
             tips.append(f"You have {len(t['periods_today'])} period(s) today — check the lesson plan for "
                         f"{t['periods_today'][0]['subject']} ({t['periods_today'][0]['class']}) before it starts.")
-        if not tips:
-            tips.append("You're all caught up — a good moment to prepare next week's lesson plans and a quick revision quiz.")
+        if len(tips) < 3:
+            tips.append("Prepare next week's lesson plans and a quick revision quiz (Lesson Plans / AI Question Generator).")
         return "Here's what I'd suggest for your classes:\n\n" + "\n".join(f"- {x}" for x in tips[:5])
 
     def _copilot_staff_advice(self, snap: dict) -> str:
@@ -241,11 +241,10 @@ class MockLLM:
                             "and share the monthly attendance report with parents.")
         if adm and adm["consent_pending"]:
             tips.append(f"Follow up with the families of the {adm['consent_pending']} applicant(s) whose consent is still pending.")
-        if not tips:
-            if not inst and not adm:
-                return "I don't have an aggregated snapshot to base suggestions on yet — make sure an institution is selected."
-            tips.append("Nothing in the snapshot needs urgent attention — keep marking attendance daily and review "
-                        "the admissions pipeline weekly.")
+        if not inst and not adm:
+            return "I don't have an aggregated snapshot to base suggestions on yet — make sure an institution is selected."
+        if len(tips) < 3:
+            tips.append("Review the attendance report and the admissions pipeline weekly, so issues surface early.")
         return "Here are some suggestions based on your institution's current figures:\n\n" + "\n".join(f"- {t}" for t in tips[:5])
 
     def _copilot_student_advice(self, snap: dict) -> str:
@@ -280,7 +279,9 @@ class MockLLM:
             tips.append(f"You have {len(snap['todays_periods'])} period(s) today — skim your notes for "
                         f"{snap['todays_periods'][0]['subject']} before it starts.")
         if not tips:
-            tips.append("You're all caught up — use the AI Classroom to review a chapter, and plan 30 minutes of revision a day.")
+            tips.append("You're all caught up — nothing is overdue in your own data right now.")
+        if len(tips) < 3:
+            tips.append("Plan 30 minutes of revision a day, and use the AI Classroom to ask doubts about a chapter.")
         return "Here's what I'd suggest, based on your own data:\n\n" + "\n".join(f"- {t}" for t in tips[:5])
 
     def _copilot_staff(self, snap: dict, q: str) -> str:

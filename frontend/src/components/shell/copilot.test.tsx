@@ -311,6 +311,24 @@ describe('Copilot voice input: browser speech recognition', () => {
     expect(screen.getByRole('button', { name: 'Ask by voice' })).toBeInTheDocument()
   })
 
+  it('sending mid-dictation stops listening without refilling the box or sending twice', async () => {
+    const fetch = sseFetch('Done.', ['A?', 'B?'])
+    vi.stubGlobal('fetch', fetch)
+    await renderPanel()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Send voice questions automatically/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ask by voice' }))
+    const rec = FakeRecognizer.last!
+    rec.abort.mockImplementation(() => rec.onend?.())
+    act(() => rec.onresult!({ results: [result('what homework is waiting', true)] }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(rec.abort).toHaveBeenCalled()
+    act(() => rec.onresult?.({ results: [result('late words', true)] }))
+    await screen.findByText('Done.')
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetch.mock.calls[0][1].body).query).toBe('what homework is waiting')
+    expect(screen.getByRole('textbox', { name: 'Ask Copilot' })).toHaveValue('')
+  })
+
   it('explains a blocked microphone', async () => {
     await renderPanel()
     fireEvent.click(screen.getByRole('button', { name: 'Ask by voice' }))

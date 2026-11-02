@@ -387,6 +387,25 @@ deploy reloads the page once. Otherwise "Try again" on the error boundary really
 pages use the shared kit (`components/ui/loading.tsx`, `lib/useAsync.ts`): shaped skeletons, `PageLoader` with a
 "taking longer than usual" note, and `ErrorState` with retry. Requests time out after 30 s instead of spinning.
 
+## Copilot (header → Copilot, or `Ctrl/⌘-J`; staff, teachers and students)
+
+* **Docked beside the page** — on screens ≥ 1024 px Copilot opens below the header and the page shrinks to make room
+  (drag its left edge to resize); on narrow screens it slides over the content. Open/closed and width are remembered
+  per user. Fixed bottom-right widgets use `right-[calc(1rem+var(--copilot-offset,0px))]` to stay clear of it.
+* **Grounded, privacy-scoped answers** — staff: aggregated institution figures; teachers: their own classes, today's
+  periods, attendance to mark, homework to review and assessments at class level (no other teacher's data); students:
+  only their own attendance, homework, timetable and results. Asking for suggestions ("suggest…", "how can I
+  improve…", "what should I…") returns concrete steps tied to those figures, and every answer ends with 2–4 follow-up
+  chips (LLM-written and validated when a provider is set, deterministic otherwise).
+* **Voice** — the mic dictates live with the browser's speech recognition (stops when you pause); browsers without it
+  record a voice message for `POST /copilot/transcribe` (needs AI keys). The text lands in the box to review first,
+  unless "Send voice questions automatically" is ticked.
+* **Offline note** — in `PROVIDER_MODE=mock` (or without keys) the panel says it is giving offline demo answers.
+
+API (`/ICMELive/api/v1/copilot`): `query` (SSE `token`* → `done` → `suggestions`; `stream:false` returns
+`{answer, suggestions}`) · `status` (`mode`, `ai_ready`, `voice_transcription` — never key material) · `transcribe`
+(raw `audio/*` body, ≤ 4 MB, 20 per user per 10 min).
+
 ## Admission tests with AI proctoring (Teacher → Assessments → Admissions)
 
 A teacher builds an admission test from the questions of their **own Assignments and Online tests** (copied as
@@ -619,7 +638,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 366 tests incl. AI question generator, lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS + admission forms, wellness, dated timetable, student proctoring, avatar page pipeline
+cd backend ; .venv\Scripts\python -m pytest        # 390 tests incl. Copilot (suggestions, voice, privacy), AI question generator, lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS + admission forms, wellness, dated timetable, student proctoring, avatar page pipeline
 cd frontend ; npm test ; npm run build
 ```
 

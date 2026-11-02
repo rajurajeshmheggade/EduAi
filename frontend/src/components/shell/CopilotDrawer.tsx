@@ -122,12 +122,13 @@ export function CopilotDrawer({ open, onClose, docked = false, width = COPILOT_D
     const el = inputRef.current
     if (!el) return
     el.style.height = 'auto'
-    if (el.scrollHeight) el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+    // scrollHeight excludes the borders (border-box sizing): add them back so no scrollbar appears until the cap.
+    if (el.scrollHeight) el.style.height = `${Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, 160)}px`
   }, [input])
 
   function close() {
     const hadFocus = !!rootRef.current?.contains(document.activeElement)
-    voice.stop()
+    voice.cancel()
     onClose()
     if (hadFocus) document.getElementById('open-copilot')?.focus()
   }
@@ -167,7 +168,7 @@ export function CopilotDrawer({ open, onClose, docked = false, width = COPILOT_D
 
   function submit(e?: FormEvent) {
     e?.preventDefault()
-    if (voiceActive) voice.stop()
+    voice.cancel() // sending now: a still-running dictation must not refill the box or auto-send again
     void ask(input)
   }
 
@@ -347,9 +348,9 @@ export function CopilotDrawer({ open, onClose, docked = false, width = COPILOT_D
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
-        <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-[11px] text-ink-500">
+        <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-[11px] text-ink-500" title="Off: your spoken question stays in the box so you can check it before sending">
           <input type="checkbox" checked={autoSend} onChange={(e) => setAuto(e.target.checked)} className="h-3 w-3 accent-brand-500" />
-          Send voice questions automatically (otherwise review the text first)
+          Send voice questions automatically
         </label>
       </form>
     </>
