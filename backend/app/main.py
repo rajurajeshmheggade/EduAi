@@ -13,7 +13,7 @@ from psycopg import errors as pg_errors
 
 from . import db
 from .config import get_settings
-from .routers import admin, admission, admission_exam, admission_reports, admission_tests, ai_classroom, assessments, auth, classroom, copilot, curriculum, dashboards, diksha, evaluation, lessonplan, library, nlp_catalog, notifications, public, rag, read_aloud, syllabus, virtual_labs, wellness
+from .routers import admin, admission, admission_exam, admission_reports, admission_tests, ai_classroom, assessments, auth, classroom, copilot, curriculum, dashboards, diksha, evaluation, lessonplan, library, nlp_catalog, notifications, proctoring, public, rag, read_aloud, syllabus, virtual_labs, wellness
 from .services.storage import LocalStorage, get_storage
 
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +64,7 @@ app.include_router(ai_classroom.router)
 app.include_router(lessonplan.sessions_router)
 app.include_router(lessonplan.router)
 app.include_router(wellness.router)
+app.include_router(proctoring.router)
 
 
 @app.exception_handler(pg_errors.UniqueViolation)
