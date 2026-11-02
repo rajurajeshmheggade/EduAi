@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { shortDate, shortDateTime } from '@/lib/datetime'
 import { ACCESS_LABEL, LICENSE_LABEL, VERIFY_LABEL } from '@/lib/library'
@@ -85,9 +86,9 @@ function Catalog({ org }: { org?: string | null }) {
         </CardContent>
       </Card>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && data && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {!data ? <div className="skeleton h-64" /> : data.books.length === 0 ? (
+      {!data ? (error ? <ErrorState title="Couldn’t load the catalog" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-64" />) : data.books.length === 0 ? (
         <LibraryEmpty title="No catalog records">Add verified books from official sources (for example the NCERT or Karnataka textbook portals) with <b>Add book</b> or <b>Import CSV</b>.</LibraryEmpty>
       ) : (
         <Card>
@@ -328,7 +329,8 @@ function PublishLog({ org }: { org?: string | null }) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [refresh, setRefresh] = useState<{ busy: boolean; msg?: string }>({ busy: false })
-  useEffect(() => { libraryService.publications(org, status).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, status])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { libraryService.publications(org, status).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, status, reload])
 
   async function refreshDiksha() {
     setRefresh({ busy: true })
@@ -354,8 +356,8 @@ function PublishLog({ org }: { org?: string | null }) {
           </div>
         </div>
         {refresh.msg && <p role="status" className="rounded-lg bg-ink-800 px-3 py-2 text-sm text-ink-100">{refresh.msg}</p>}
-        {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-        {!rows ? <div className="skeleton h-40" /> : rows.length === 0 ? <LibraryEmpty title="No publishing activity yet" /> : (
+        {error && rows && <p role="alert" className="text-sm text-bad">{error}</p>}
+        {!rows ? (error ? <ErrorState title="Couldn’t load the publishing log" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-40" />) : rows.length === 0 ? <LibraryEmpty title="No publishing activity yet" /> : (
           <ul className="divide-y divide-line">
             {rows.map((p) => (
               <li key={p.publication_id} className="flex flex-wrap items-start gap-3 py-3">

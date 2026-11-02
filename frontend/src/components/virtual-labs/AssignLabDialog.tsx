@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { PageLoader } from '@/components/ui/loading'
 import { toast } from '@/components/ui/toast'
 import { WorksheetEditor } from '@/components/virtual-labs/WorksheetEditor'
 import { cleanWorksheet, localInput, subjectFit, worksheetMarks } from '@/lib/virtualLabs'
@@ -102,7 +103,7 @@ export function AssignLabDialog({ lab, collection, targets, onClose, onAssigned 
             </Button>
           </div>
           {drafting && !ws ? (
-            <div className="flex items-center gap-2 py-10 text-sm text-ink-300" role="status"><Loader2 className="h-4 w-4 animate-spin" /> Preparing the aim, procedure and viva questions…</div>
+            <PageLoader className="min-h-0 py-10" message="Drafting the lab worksheet with AI…" detail="Preparing the aim, procedure and viva questions." slowAfterMs={15_000} />
           ) : ws && <WorksheetEditor value={ws} onChange={setWs} />}
         </section>
 

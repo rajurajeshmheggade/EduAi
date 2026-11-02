@@ -4,6 +4,7 @@ import { Download, FileText, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Select } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { toast } from '@/components/ui/toast'
 import { errorMessage } from '@/services/apiClient'
 import { admissionTestService as svc, type AdmTest, type ResultRow } from '@/services/admissionTestService'
@@ -43,8 +44,8 @@ export function ResultsTab({ tests, org, reportBase = '/teacher/admissions/repor
           <option value="">All tests</option>{(tests ?? []).map((t) => <option key={t.test_id} value={t.test_id}>{t.title}</option>)}</Select>
         <Button variant="secondary" className="ml-auto" onClick={csv}><Download className="h-4 w-4" /> Export CSV</Button>
       </div>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-      {!rows ? <div className="skeleton h-48" /> : rows.length === 0 ? <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-ink-300">No completed sessions yet.</p> : (
+      {error && <ErrorState title="Couldn’t load results" message={error} onRetry={() => { setError(null); void load() }} />}
+      {!rows ? !error && <div className="skeleton h-48" /> : rows.length === 0 ? <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-ink-300">No completed sessions yet.</p> : (
         <div className="overflow-x-auto rounded-2xl border border-line">
           <table className="w-full text-sm">
             <caption className="sr-only">Results</caption>

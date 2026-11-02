@@ -3,6 +3,7 @@ import { Eye, Keyboard, ShieldCheck, UserCheck } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { AdmissionsKpis } from '@/components/admissions/AdmissionsWidgets'
 import { HeroBanner, Panel } from '@/components/dashboard/Widgets'
+import { ErrorState } from '@/components/ui/loading'
 import { longDate } from '@/lib/datetime'
 import { errorMessage } from '@/services/apiClient'
 import { admissionService, type AdmissionOverview } from '@/services/admissionService'
@@ -19,13 +20,14 @@ export default function ReviewerHome() {
   const { user } = useAuth()
   const [o, setO] = useState<AdmissionOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { admissionService.overview().then(setO).catch((e) => setError(errorMessage(e))) }, [])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { admissionService.overview().then(setO).catch((e) => setError(errorMessage(e))) }, [reload])
   if (!user) return null
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
       <HeroBanner eyebrow={`${longDate()} · ${user.org_name ?? ''}`} title="Integrity desk"
         subtitle="Review flagged admission-test sessions fairly. The review queue opens when online tests and proctoring go live (Milestone 5)." />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load admission counts" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />}
       <AdmissionsKpis o={o} />
       <Panel icon={ShieldCheck} title="How review works">
         <ul className="grid gap-4 sm:grid-cols-2">

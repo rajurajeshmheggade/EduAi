@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
 import { DAY_NAMES, defaultPeriodTimes } from '@/lib/timetable'
@@ -17,6 +18,7 @@ interface Editing { day: number; period: number; slot?: TimetableSlot }
 /** FR-AD-07: weekly timetable per class. The server rejects teacher double-booking and overlapping periods. */
 export function TimetablePanel({ org }: { org?: string | null }) {
   const [classes, setClasses] = useState<SchoolClass[]>([])
+  const [classesLoaded, setClassesLoaded] = useState(false)
   const [teachers, setTeachers] = useState<Member[]>([])
   const [klass, setKlass] = useState('')
   const [view, setView] = useState<'class' | 'teacher'>('class')
@@ -25,11 +27,12 @@ export function TimetablePanel({ org }: { org?: string | null }) {
   const [editing, setEditing] = useState<Editing | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [publishBusy, setPublishBusy] = useState(false)
+  const [reload, setReload] = useState(0)
   const [today] = useState(() => new Date().getDay() || 7)  // ISO weekday
 
   const loadClasses = useCallback(() => adminService.classes(org).then((c) => {
     const active = c.filter((x) => x.is_active)
-    setClasses(active)
+    setClasses(active); setClassesLoaded(true)
     setKlass((k) => k || active[0]?.class_code || '')
   }).catch((e) => setError(errorMessage(e))), [org])
 
@@ -39,14 +42,14 @@ export function TimetablePanel({ org }: { org?: string | null }) {
       setTeachers(t.filter((x) => x.is_active))
       setTeacher((x) => x || t[0]?.user_code || '')
     }).catch((e) => setError(errorMessage(e)))
-  }, [org, loadClasses])
+  }, [org, loadClasses, reload])
 
   const load = useCallback(async () => {
     const filter = view === 'class' ? { class_code: klass } : { teacher_code: teacher }
     if (!Object.values(filter)[0]) return
     try { setSlots(await adminService.timetable(filter, org)) } catch (e) { setError(errorMessage(e)) }
   }, [view, klass, teacher, org])
-  useEffect(() => { setSlots(null); void load() }, [load])
+  useEffect(() => { setSlots(null); void load() }, [load, reload])
 
   const cls = classes.find((c) => c.class_code === klass)
   const published = (cls?.timetable_status ?? 'PUBLISHED') === 'PUBLISHED'
@@ -96,9 +99,11 @@ export function TimetablePanel({ org }: { org?: string | null }) {
           </div>
         </CardHeader>
         <CardContent>
-          {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-          {classes.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">Create classes and subjects first.</p>
-            : !slots ? <div className="skeleton h-80" />
+          {error && (classesLoaded && slots ? <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>
+            : <ErrorState className="mb-3" title="Couldn’t load the timetable" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />)}
+          {!classesLoaded ? !error && <div className="skeleton h-80" />
+            : classes.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">Create classes and subjects first.</p>
+            : !slots ? !error && <div className="skeleton h-80" />
               : <WeeklyGrid slots={slots} secondary={view === 'class' ? 'teacher' : 'class'} today={today}
                   onCell={view === 'class' ? (day, period, slot) => setEditing({ day, period, slot }) : undefined} />}
           {view === 'teacher' && <p className="mt-2 text-xs text-ink-500">Switch to “By class” to edit periods.</p>}
@@ -145,8 +150,8 @@ function HolidaysPanel({ classes, org }: { classes: SchoolClass[]; org?: string 
         <Button size="sm" onClick={() => setEditing('new')} id="add-holiday">Add holiday</Button>
       </CardHeader>
       <CardContent>
-        {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-        {!rows ? <div className="skeleton h-24" /> : rows.length === 0 ? (
+        {error && rows && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+        {!rows ? (error ? <ErrorState title="Couldn’t load holidays" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-24" />) : rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-300">No upcoming holidays. Add one to let students and teachers know in advance.</p>
         ) : (
           <ul className="space-y-2">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Award, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, Hourglass,
@@ -10,10 +10,11 @@ import { Empty, HeroBanner, Kpi, Panel, Ring } from '@/components/dashboard/Widg
 import { TodayList } from '@/components/timetable/WeeklyGrid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
-import { errorMessage } from '@/services/apiClient'
-import { dashboardService, type StudentDash } from '@/services/dashboardService'
+import { dashboardService } from '@/services/dashboardService'
 import { greeting, longDate, shortDate, shortDateTime } from '@/lib/datetime'
+import { useAsync } from '@/lib/useAsync'
 import { num } from '@/types'
 
 const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLINE_EXAM: 'Exam' } as const
@@ -22,11 +23,9 @@ const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLI
 export default function StudentDashboard() {
   const { user, setSubject } = useAuth()
   const nav = useNavigate()
-  const [d, setD] = useState<StudentDash | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: d, error, retry } = useAsync(() => dashboardService.student(), [])
   const [hello] = useState(() => greeting())
 
-  useEffect(() => { dashboardService.student().then(setD).catch((e) => setError(errorMessage(e))) }, [])
   if (!user) return null
   const first = user.full_name.split(' ')[0]
   const k = d?.kpis
@@ -57,7 +56,7 @@ export default function StudentDashboard() {
         )}
       />
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
       <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {!k ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { adminService, type OrgCreateBody } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
 import type { AIModule, CreatedMember, Member, Organization } from '@/types'
@@ -78,7 +79,7 @@ export function InstitutionsPanel({ selected, onSelect }: { selected: string | n
               <div><Label htmlFor="a-code">Username / code</Label><Input id="a-code" required value={form.admin.user_code} onChange={(e) => setForm({ ...form, admin: { ...form.admin, user_code: e.target.value } })} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" /></div>
             </div>
             <div><Label htmlFor="a-mail">Admin email</Label><Input id="a-mail" type="email" required value={form.admin.email} onChange={(e) => setForm({ ...form, admin: { ...form.admin, email: e.target.value } })} /></div>
-            {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+            {error && orgs && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create institution</Button>
           </form>
           {created && <div className="mt-4"><CredentialNotice member={created} onDismiss={() => setCreated(null)} /></div>}
@@ -88,7 +89,7 @@ export function InstitutionsPanel({ selected, onSelect }: { selected: string | n
       <Card className="min-w-0">
         <CardHeader><CardTitle>Institutions {orgs && <span className="text-ink-500">({orgs.length})</span>}</CardTitle><CardDescription>Select one to manage it with the tabs above.</CardDescription></CardHeader>
         <CardContent className="space-y-2">
-          {!orgs ? <div className="skeleton h-40" /> : orgs.length === 0 ? <p className="py-8 text-center text-sm text-ink-300">No institutions yet.</p> : orgs.map((o) => (
+          {!orgs ? (error ? <ErrorState title="Couldn’t load institutions" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-40" />) : orgs.length === 0 ? <p className="py-8 text-center text-sm text-ink-300">No institutions yet.</p> : orgs.map((o) => (
             <div key={o.org_code} className={`rounded-xl border p-3 transition-all ${selected === o.org_code ? 'border-brand-400 bg-brand-500/8 ring-1 ring-brand-400/40' : 'border-line'}`}>
               <div className="flex items-center gap-3">
                 <button onClick={() => onSelect(o.org_code)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left">
@@ -137,7 +138,7 @@ function AdminsDialog({ org, onClose }: { org: Organization; onClose: () => void
     <Dialog open onClose={onClose} title={`Admins · ${org.org_name}`} description="Institution admins manage teachers, classes, timetable and settings.">
       <div className="space-y-4">
         <ul className="divide-y divide-line rounded-xl border border-line">
-          {!admins ? <li className="p-3"><div className="skeleton h-8" /></li> : admins.map((a) => (
+          {!admins ? <li className="p-3">{error ? <ErrorState title="Couldn’t load admins" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-8" />}</li> : admins.map((a) => (
             <li key={a.user_code} className="flex items-center justify-between p-2.5 text-sm">
               <div><div className="font-medium text-fg">{a.full_name}</div><div className="text-xs text-ink-500">{a.user_code} · {a.email}</div></div>
               <Badge tone={a.is_active ? 'ok' : 'neutral'}>{a.is_active ? 'Active' : 'Inactive'}</Badge>
@@ -148,7 +149,7 @@ function AdminsDialog({ org, onClose }: { org: Organization; onClose: () => void
           <Input aria-label="Full name" required minLength={2} placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           <Input aria-label="Username / code" required placeholder="Username / code" value={form.user_code} onChange={(e) => setForm({ ...form, user_code: e.target.value })} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" />
           <Input aria-label="Email" type="email" required placeholder="Email" className="sm:col-span-2" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          {error && <p role="alert" className="text-sm text-bad sm:col-span-2">{error}</p>}
+          {error && admins && <p role="alert" className="text-sm text-bad sm:col-span-2">{error}</p>}
           <Button type="submit" disabled={busy} className="sm:col-span-2">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Add admin</Button>
         </form>
         {created && <CredentialNotice member={created} onDismiss={() => setCreated(null)} />}

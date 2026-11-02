@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Label, Textarea } from '@/components/ui/field'
+import { ErrorState, SkeletonPage } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/toast'
@@ -53,7 +54,7 @@ export default function VirtualLabWorkspace() {
   }
 
   if (!view) {
-    return <div className="mx-auto max-w-7xl p-4 md:p-8">{error ? <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p> : <div className="skeleton h-96" />}</div>
+    return <div className="mx-auto max-w-7xl p-4 md:p-8">{error ? <ErrorState title="Couldn’t open this lab" message={error} onRetry={() => { setError(null); void load() }} /> : <SkeletonPage variant="detail" />}</div>
   }
   const { assignment: a, attempt } = view
   const badge = windowBadge(a.window.state, a.due_at, a.available_from)

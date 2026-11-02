@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { errorMessage } from '@/services/apiClient'
 import { LEAD_STATUS as STATUS, leadsService, type Lead, type LeadStatus } from '@/services/leadsService'
 
@@ -43,8 +44,8 @@ export function DemoRequestsPanel() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-        {!leads ? <div className="skeleton h-40" /> : leads.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">No demo requests yet.</p> : leads.map((l) => (
+        {error && leads && <p role="alert" className="text-sm text-bad">{error}</p>}
+        {!leads ? (error ? <ErrorState title="Couldn’t load demo requests" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-40" />) : leads.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">No demo requests yet.</p> : leads.map((l) => (
           <div key={l.request_id} className="rounded-xl border border-line p-4">
             <div className="flex flex-wrap items-start gap-3">
               <div className="min-w-0 flex-1">

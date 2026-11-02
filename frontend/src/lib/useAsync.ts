@@ -12,15 +12,15 @@ export function useAsync<T>(fn: (signal: AbortSignal) => Promise<T>, deps: unkno
   fnRef.current = fn
   useEffect(() => {
     const ctl = new AbortController()
-    let timedOut = false
-    const t = window.setTimeout(() => { timedOut = true; ctl.abort() }, timeoutMs)
+    // Report the timeout from the timer itself: a request that ignores the signal must not spin forever.
+    const t = window.setTimeout(() => {
+      ctl.abort()
+      setState((s) => ({ data: s.data, loading: false, error: 'The server took too long to respond.' }))
+    }, timeoutMs)
     setState((s) => ({ data: s.data, loading: true }))
     fnRef.current(ctl.signal)
       .then((data) => { if (!ctl.signal.aborted) setState({ data, loading: false }) })
-      .catch((e) => {
-        if (ctl.signal.aborted && !timedOut) return
-        setState({ loading: false, error: timedOut ? 'The server took too long to respond.' : errorMessage(e) })
-      })
+      .catch((e) => { if (!ctl.signal.aborted) setState({ loading: false, error: errorMessage(e) }) })
       .finally(() => window.clearTimeout(t))
     return () => { window.clearTimeout(t); ctl.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps

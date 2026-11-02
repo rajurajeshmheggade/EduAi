@@ -5,10 +5,12 @@ import { ReportSkeleton, ReportView } from '@/components/evaluation/ReportView'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { Tabs } from '@/components/ui/tabs'
 import { errorMessage } from '@/services/apiClient'
 import { assessmentService, fmtDateTime, relTime } from '@/services/assessmentService'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 import { num, type EvalReport, type MyAssessmentStatus, type StudentAssessment } from '@/types'
 
@@ -26,10 +28,9 @@ export default function StudentAssessments({ kind }: { kind: Kind }) {
 }
 
 function AssessmentList({ kind }: { kind: Kind }) {
-  const [items, setItems] = useState<StudentAssessment[] | null>(null)
+  const { data, error, retry } = useAsync(() => assessmentService.list(kind), [kind])
+  const items = data?.assessments
   const [tab, setTab] = useState<'todo' | 'done'>('todo')
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => { assessmentService.list(kind).then((r) => setItems(r.assessments)).catch((e) => setError(errorMessage(e))) }, [kind])
 
   const isDone = (a: StudentAssessment) => ['EVALUATING', 'EVALUATED', 'FAILED'].includes(a.my.status) || (!a.window.open && a.my.status === 'NOT_STARTED' && !a.window.opens_at)
   const shown = items?.filter((a) => (tab === 'done' ? isDone(a) : !isDone(a)))
@@ -42,8 +43,8 @@ function AssessmentList({ kind }: { kind: Kind }) {
         <p className="mt-1 text-sm text-ink-300">{kind === 'ONLINE_TEST' ? 'Timed online tests from your teachers — answered here, marked by AI with feedback for every question.' : 'Write your answers on paper, upload one PDF, and get AI marks with feedback for every question.'}</p>
       </header>
       <Tabs items={[{ id: 'todo', label: 'To do', count: items?.filter((a) => !isDone(a)).length }, { id: 'done', label: 'Submitted & closed', count: items?.filter(isDone).length }]} value={tab} onChange={setTab} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!shown ? !error && <div className="skeleton h-48" /> : shown.length === 0 ? (
+      {error && <ErrorState title={`Couldn’t load your ${kind === 'ONLINE_TEST' ? 'tests' : 'assignments'}`} message={error} onRetry={retry} />}
+      {!shown ? !error && <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-40" />)}</div> : shown.length === 0 ? (
         <Card className="p-10 text-center text-sm text-ink-300"><Icon className="mx-auto mb-2 h-8 w-8 text-ink-500" />{tab === 'todo' ? 'Nothing to do right now.' : 'Nothing here yet.'}</Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -123,7 +124,7 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
     try { setA(await assessmentService.upload(id, file, setPct)) } catch (e) { setError(errorMessage(e)) } finally { setPct(null) }
   }
 
-  if (!a) return <div className="mx-auto max-w-4xl p-4 md:p-8">{error ? <p className="text-sm text-bad">{error}</p> : <ReportSkeleton />}</div>
+  if (!a) return <div className="mx-auto max-w-4xl p-4 md:p-8">{error ? <ErrorState title="Couldn’t open this assessment" message={error} onRetry={() => { setError(null); void load() }} /> : <ReportSkeleton />}</div>
   const st = STATUS[a.my.status]
   const canUpload = kind === 'ASSIGNMENT' && a.window.open && a.my.status !== 'EVALUATING'
 

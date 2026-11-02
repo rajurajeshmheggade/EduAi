@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Clock, FlaskConical, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { buttonVariants } from '@/components/ui/button'
+import { useAsync } from '@/lib/useAsync'
 import { duration, fmtMarks, STATUS_META, windowBadge } from '@/lib/virtualLabs'
-import { errorMessage } from '@/services/apiClient'
 import { virtualLabService, type MyLab } from '@/services/virtualLabService'
 
 type Filter = 'todo' | 'submitted' | 'reviewed'
@@ -15,10 +16,9 @@ const inFilter = (l: MyLab, f: Filter) =>
 
 /** Student: virtual labs assigned to my class, with progress and marks. */
 export default function StudentVirtualLabs() {
-  const [labs, setLabs] = useState<MyLab[] | null>(null)
+  const { data, error, retry } = useAsync(() => virtualLabService.myLabs(), [])
+  const labs = data?.labs
   const [filter, setFilter] = useState<Filter>('todo')
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => { virtualLabService.myLabs().then((d) => setLabs(d.labs)).catch((e) => setError(errorMessage(e))) }, [])
 
   const count = (f: Filter) => labs?.filter((l) => inFilter(l, f)).length ?? 0
   const shown = labs?.filter((l) => inFilter(l, filter))
@@ -30,8 +30,8 @@ export default function StudentVirtualLabs() {
       </header>
       <Tabs items={[{ id: 'todo', label: 'To do', count: count('todo') }, { id: 'submitted', label: 'Submitted', count: count('submitted') },
         { id: 'reviewed', label: 'Marked', count: count('reviewed') }]} value={filter} onChange={setFilter} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!shown ? !error && <div className="skeleton h-48" /> : shown.length === 0 ? (
+      {error && <ErrorState title="Couldn’t load your labs" message={error} onRetry={retry} />}
+      {!shown ? !error && <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24" />)}</div> : shown.length === 0 ? (
         <Card className="p-10 text-center text-sm text-ink-300">
           <FlaskConical className="mx-auto mb-2 h-8 w-8 text-ink-500" />{filter === 'todo' ? 'No labs to do right now.' : 'Nothing here yet.'}
         </Card>

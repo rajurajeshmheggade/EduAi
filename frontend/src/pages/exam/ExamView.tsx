@@ -7,6 +7,7 @@ import { Runner } from '@/components/exam/Runner'
 import { SystemCheck } from '@/components/exam/SystemCheck'
 import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
+import { ErrorState, PageLoader } from '@/components/ui/loading'
 import { Toaster } from '@/components/ui/toast'
 import { exam, examStore, PAGE_ID, type ExamView as View } from '@/lib/proctor/examApi'
 import { examChannel, setExamLock } from '@/lib/proctor/examLock'
@@ -89,8 +90,8 @@ export default function ExamView() {
     return <Shell><StepCard icon={MonitorX} title="This test is open in another tab or window"><p className="text-ink-300">Only one page can run the test. Close this tab and continue in the other one.</p></StepCard></Shell>
   }
   if (ended !== undefined) return <Shell><HandBack reason={ended} /></Shell>
-  if (error) return <Shell><StepCard icon={Lock} title="The test could not be opened"><p role="alert" className="text-bad">{error}</p></StepCard></Shell>
-  if (!view) return <Shell><div className="grid h-full place-items-center text-ink-300">Opening the test…</div></Shell>
+  if (error) return <Shell><StepCard icon={Lock} title="The test could not be opened"><ErrorState message={error} onRetry={() => { setError(null); void load() }} /></StepCard></Shell>
+  if (!view) return <Shell><PageLoader className="h-full" message="Opening the test…" detail="Checking this exam session." /></Shell>
   if (view.ended) return <Shell><HandBack reason={view.submit_reason} /></Shell>
   if (view.status === 'LOCKED') {
     return <Shell><StepCard icon={Lock} title="Please ask your teacher"><p className="text-ink-300">The date of birth did not match three times, so the test is locked. Your teacher can launch it again.</p></StepCard>

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { adminTabLink } from '@/lib/adminTabs'
 import { cn } from '@/lib/utils'
 import { adminService } from '@/services/adminService'
@@ -104,7 +105,8 @@ export function ClassesPanel({ org }: { org?: string | null }) {
         })}
       </ol>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && (classes ? <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>
+        : <ErrorState title="Couldn’t load classes" message={error} onRetry={() => { setError(null); void load() }} />)}
 
       {showNew && (
         <Card>
@@ -176,7 +178,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
           )}
         </Card>
 
-        {!classes ? <div className="skeleton h-96" /> : !current ? (
+        {!classes ? <div className="space-y-6"><Skeleton className="h-28" /><Skeleton className="h-72" /></div> : !current ? (
           <Card className="grid place-items-center p-10 text-center text-sm text-ink-300">
             <div><School className="mx-auto mb-2 h-8 w-8 text-ink-500" />Create a class to add its subjects, chapters and sub-topics.
               <div className="mt-3"><Button size="sm" onClick={() => setShowNew(true)}><Plus className="h-3.5 w-3.5" /> New class</Button></div></div>

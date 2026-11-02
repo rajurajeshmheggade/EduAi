@@ -4,6 +4,7 @@ import { Empty, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { shortDate, shortDateTime } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
@@ -79,7 +80,7 @@ function ConsentTab({ org }: { org?: string | null }) {
 
   return (
     <div className="space-y-4">
-      <Err text={error} />
+      <Err text={versions && error} />
       {msg && <p role="status" className="flex items-center gap-2 rounded-lg border border-ok/30 bg-ok/10 px-3 py-2 text-sm text-ok"><CheckCircle2 className="h-4 w-4" />{msg}</p>}
       {draft ? (
         <Panel icon={FileCheck2} title="New consent notice version">
@@ -108,7 +109,7 @@ function ConsentTab({ org }: { org?: string | null }) {
         </Panel>
       ) : (
         <Panel icon={FileCheck2} title="Consent notice" action={undefined}>
-          {!versions ? <div className="skeleton h-40" /> : (
+          {!versions ? (error ? <ErrorState title="Couldn’t load consent notices" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-40" />) : (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="max-w-2xl text-sm text-ink-300">Parents read this plain-language notice in their language and tick to consent before any admission test.
@@ -150,7 +151,8 @@ function RetentionTab({ org }: { org?: string | null }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  useEffect(() => { admissionService.retention(org).then(setRows).catch((e) => setError(errorMessage(e))) }, [org])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { admissionService.retention(org).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, reload])
 
   async function save() {
     setBusy(true); setError(null); setSaved(false)
@@ -159,8 +161,8 @@ function RetentionTab({ org }: { org?: string | null }) {
   return (
     <Panel icon={Timer} title="Retention timers">
       <div className="space-y-4">
-        <Err text={error} />
-        {!rows ? <div className="skeleton h-40" /> : (
+        <Err text={rows && error} />
+        {!rows ? (error ? <ErrorState title="Couldn’t load retention timers" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-40" />) : (
           <ul className="divide-y divide-line">
             {rows.map((r) => (
               <li key={r.data_class} className="flex flex-wrap items-center gap-3 py-3">
@@ -207,8 +209,8 @@ function RequestsTab({ org }: { org?: string | null }) {
             <option value="">All</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="rejected">Rejected</option>
           </Select>
         </div>
-        <Err text={error} />
-        {!rows ? <div className="skeleton h-32" /> : rows.length === 0 ? <Empty icon={ClipboardList}>No requests.</Empty> : (
+        <Err text={rows && error} />
+        {!rows ? (error ? <ErrorState title="Couldn’t load requests" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-32" />) : rows.length === 0 ? <Empty icon={ClipboardList}>No requests.</Empty> : (
           <ul className="divide-y divide-line">
             {rows.map((r) => {
               const overdue = (r.status === 'open' || r.status === 'in_progress') && new Date(r.due_at).getTime() < now
@@ -270,7 +272,7 @@ function BreachesTab({ org }: { org?: string | null }) {
   }
   return (
     <div className="space-y-4">
-      <Err text={error} />
+      <Err text={rows && error} />
       <Panel icon={ShieldAlert} title="Log a personal-data breach">
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label htmlFor="b-when">Became aware at</Label><Input id="b-when" type="datetime-local" value={form.detected_at} onChange={(e) => setForm({ ...form, detected_at: e.target.value })} /></div>
@@ -285,7 +287,7 @@ function BreachesTab({ org }: { org?: string | null }) {
         </div>
       </Panel>
       <Panel icon={ScrollText} title="Breach records">
-        {!rows ? <div className="skeleton h-32" /> : rows.length === 0 ? <Empty icon={ShieldAlert}>No breaches recorded.</Empty> : (
+        {!rows ? (error ? <ErrorState title="Couldn’t load breach records" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-32" />) : rows.length === 0 ? <Empty icon={ShieldAlert}>No breaches recorded.</Empty> : (
           <ul className="divide-y divide-line">
             {rows.map((b) => {
               const late = !b.board_notified_at && new Date(b.board_report_due_at).getTime() < now
@@ -322,7 +324,8 @@ function AuditTab({ org }: { org?: string | null }) {
   const [rows, setRows] = useState<AuditEntry[] | null>(null)
   const [entity, setEntity] = useState('')
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { admissionService.audit(org, { entity: entity || undefined }).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, entity])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { admissionService.audit(org, { entity: entity || undefined }).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, entity, reload])
   return (
     <Panel icon={History} title="Audit log">
       <div className="space-y-3">
@@ -333,8 +336,8 @@ function AuditTab({ org }: { org?: string | null }) {
             <option value="data_request">Requests</option><option value="breach">Breaches</option><option value="retention_policy">Retention</option><option value="app_user">Team</option>
           </Select>
         </div>
-        <Err text={error} />
-        {!rows ? <div className="skeleton h-32" /> : rows.length === 0 ? <Empty icon={History}>No entries yet.</Empty> : (
+        <Err text={rows && error} />
+        {!rows ? (error ? <ErrorState title="Couldn’t load the audit log" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-32" />) : rows.length === 0 ? <Empty icon={History}>No entries yet.</Empty> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">
