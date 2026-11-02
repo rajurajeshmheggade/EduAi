@@ -19,11 +19,16 @@ XP_RULES: dict[str, tuple[int, int]] = {
     "pomodoro": (50, 12),
     "balloon_pop": (10, 100),
     "stress_quest": (50, 10),
+    "game_complete": (25, 12),
     "quiz_correct": (25, 1),
     "quiz_participation": (10, 1),
 }
 # Activities the browser may report directly (the rest are awarded by their own endpoints).
-CLIENT_ACTIVITIES = {"breathing_cycle", "pomodoro", "balloon_pop", "stress_quest"}
+CLIENT_ACTIVITIES = {"breathing_cycle", "pomodoro", "balloon_pop", "stress_quest", "game_complete"}
+# Game Zone games whose finish earns `game_complete` XP — the game id travels in `details` and must be one of these
+# (the balloon game keeps its own balloon_pop / stress_quest awards). Mirrors frontend components/wellness/games/catalog.ts.
+GAME_IDS = frozenset({"concept-pairs", "breath-bloom", "number-sprint", "word-forge", "lantern-trail", "sort-studio",
+                      "steady-signal", "sand-mandala"})
 LEVEL_TITLES = {1: "Mindful Rookie", 2: "Zen Scholar", 3: "Focus Guru", 4: "Calm Conqueror"}
 
 

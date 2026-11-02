@@ -22,7 +22,7 @@ from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from .. import db
 from ..providers import get_llm
@@ -284,8 +284,15 @@ def delete_memory(memory_id: int, u: CurrentUser = Depends(student_only)):
 
 # ════════════════════════════════════════════════════════════ student: activity XP + voice
 class ActivityBody(BaseModel):
-    activity: Literal["breathing_cycle", "pomodoro", "balloon_pop", "stress_quest"]
+    activity: Literal["breathing_cycle", "pomodoro", "balloon_pop", "stress_quest", "game_complete"]
     details: Annotated[str, StringConstraints(max_length=200)] | None = None
+
+    @model_validator(mode="after")
+    def _known_game(self) -> "ActivityBody":
+        # A finished Game Zone game must name a real game (its id is what the XP event records)
+        if self.activity == "game_complete" and self.details not in xp.GAME_IDS:
+            raise ValueError("Unknown game")
+        return self
 
 
 @router.post("/me/activity")

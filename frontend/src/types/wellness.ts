@@ -103,7 +103,7 @@ export interface ChatReply {
 }
 export interface AuraMemory { id: number; category: string; text: string; source: string; updatedAt: string }
 
-export type ClientActivity = 'breathing_cycle' | 'pomodoro' | 'balloon_pop' | 'stress_quest'
+export type ClientActivity = 'breathing_cycle' | 'pomodoro' | 'balloon_pop' | 'stress_quest' | 'game_complete'
 
 // ───────────────────────────── teacher: Wellbeing & Mindset
 export type RiskLevel = 'high' | 'watch' | 'ok' | 'inactive'

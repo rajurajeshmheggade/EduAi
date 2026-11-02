@@ -286,8 +286,20 @@ exam date, whichever is sooner. Only the first name goes to the AI.
 * **Aura Chat / Aura Live** — empathetic companion grounded in the student's journal entries and long-term memory, with
   quick worry chips, "discuss this entry", a memory panel; Aura Live adds webcam preview, hands-free speech-to-text
   (browser STT, server Whisper fallback) and spoken replies with captions.
-* **Breathing** (Box 4-4-4-4, 4-7-8, voice guide in sync), **Stress Buster** balloon game, **XP & levels**
+* **Breathing** (Box 4-4-4-4, 4-7-8, voice guide in sync), **XP & levels**
   (Mindful Rookie → Zen Scholar → Focus Guru → Calm Conqueror → Ascended Sage).
+* **Game Zone** (`?tab=games`; old `?tab=stress-buster` links open the balloon game) — a picker of 1–5 minute brain
+  breaks, each tagged with what it trains (calm / focus / memory / recall): the **Stress Buster** balloon game plus
+  **Concept Pairs** (match terms from the student's own subjects with their meanings), **Breath Bloom** (hold to breathe
+  in, let go to breathe out, grow a flower), **Number Sprint** (60 s mental maths pitched at their maths knowledge level,
+  adapting ±1 level), **Word Forge** (unscramble subject words from their meanings), **Lantern Trail** (watch-and-repeat
+  sequences with shapes and pentatonic notes), **Sort Studio** (drag items into groups — states of matter, primes, parts
+  of speech, …), **Steady Signal** (respond only to the target shape) and **Sand Mandala** (symmetric sand drawing, no
+  fail state). Subject vocabulary and sorting sets are built in (`components/wellness/games/vocab.ts`, `sort/logic.ts`;
+  no AI call). Every game works with mouse, touch and keyboard, pauses when the browser tab is hidden, has optional
+  synthesised sound with a remembered mute, honours `prefers-reduced-motion`, and is its own lazily-loaded chunk.
+  Finishing a round reports `game_complete` (+25 XP, 12 a day; the server only accepts a known game id); personal
+  bests are kept per student in the browser.
 * **Teacher ▸ Wellbeing & Mindset** — per class: onboarding / participation, average stress, trigger distribution, each
   student's mood sparkline, knowledge level, risk (high / watch / ok / inactive), activity, and safety alerts to acknowledge. Teachers
   never see journal or chat text — students are told this on the first screen.
