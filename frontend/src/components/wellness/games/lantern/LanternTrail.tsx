@@ -30,9 +30,12 @@ export default function LanternTrail({ info, onExit }: GameProps) {
   // Bumped to replay the same trail after a slip
   const [replay, setReplay] = useState(0)
   const glowTimer = useRef(0)
+  // What to say before the next "Watch: …" (a cleared trail or a slip), so one announcement carries both
+  const noteRef = useRef('')
   useEffect(() => () => window.clearTimeout(glowTimer.current), [])
 
   const start = () => {
+    noteRef.current = ''
     setSeq(startSequence())
     setInputs([])
     setSparks(SPARKS)
@@ -47,7 +50,8 @@ export default function LanternTrail({ info, onExit }: GameProps) {
     if (stage !== 'watch' || !active || !seq.length) return
     const timers: number[] = []
     const { onMs, gapMs } = playbackTiming(seq.length)
-    announce(`Watch: ${seq.map((i) => LANTERN_FACES[i].name).join(', ')}`)
+    announce(`${noteRef.current}Watch: ${seq.map((i) => LANTERN_FACES[i].name).join(', ')}`)
+    noteRef.current = ''
     let t = LEAD_MS
     for (const lantern of seq) {
       timers.push(window.setTimeout(() => { setLit(lantern); play(noteTone(PENTATONIC_HZ[lantern])) }, t))
@@ -96,7 +100,7 @@ export default function LanternTrail({ info, onExit }: GameProps) {
         finishRound(clearedNow, 'You walked the whole trail!')
         return
       }
-      announce(`Trail of ${seq.length} cleared! One more lantern joins.`)
+      noteRef.current = `Trail of ${seq.length} cleared! One more lantern joins. `
       setSeq(extendSequence(seq))
       setInputs([])
       setStage('watch')
@@ -110,7 +114,7 @@ export default function LanternTrail({ info, onExit }: GameProps) {
       finishRound(cleared, cleared.length ? 'Lovely memory work!' : 'A good warm-up!')
       return
     }
-    announce(`Not quite. ${left} ${left === 1 ? 'spark' : 'sparks'} left — watch again.`)
+    noteRef.current = `Not quite. ${left} ${left === 1 ? 'spark' : 'sparks'} left. `
     setStage('watch')
     setReplay((r) => r + 1)
   }
