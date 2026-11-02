@@ -1,23 +1,20 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Building2, GraduationCap, Inbox, Mail, MapPin, Phone, Sparkles, Users } from 'lucide-react'
 import { Empty, Kpi, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
+import { ErrorState } from '@/components/ui/loading'
 import { shortDate } from '@/lib/datetime'
 import { adminTabLink } from '@/lib/adminTabs'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
-import { errorMessage } from '@/services/apiClient'
-import { LEAD_STATUS, leadsService, type Lead, type LeadStatus } from '@/services/leadsService'
+import { LEAD_STATUS, leadsService, type LeadStatus } from '@/services/leadsService'
 import type { Organization } from '@/types'
 
 /** Super-admin only: platform-wide totals, the latest demo requests and every institution at a glance. */
 export function PlatformOverview({ orgs, selected, onSelect }: { orgs: Organization[]; selected: string | null; onSelect: (org: string) => void }) {
-  const [leads, setLeads] = useState<Lead[] | null>(null)
-  const [counts, setCounts] = useState<Partial<Record<LeadStatus, number>>>({})
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    leadsService.list().then((d) => { setLeads(d.requests); setCounts(d.counts) }).catch((e) => setError(errorMessage(e)))
-  }, [])
+  const { data, error, retry } = useAsync(() => leadsService.list(), [])
+  const leads = data?.requests
+  const counts: Partial<Record<LeadStatus, number>> = data?.counts ?? {}
 
   const teachers = orgs.reduce((n, o) => n + (o.teachers ?? 0), 0)
   const students = orgs.reduce((n, o) => n + (o.students ?? 0), 0)
@@ -37,7 +34,7 @@ export function PlatformOverview({ orgs, selected, onSelect }: { orgs: Organizat
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <Panel icon={Inbox} title="Latest demo requests" action={{ to: adminTabLink('leads'), label: 'All requests' }}>
-          {error ? <p role="alert" className="text-sm text-bad">{error}</p> : !leads ? <div className="skeleton h-40" /> : leads.length === 0 ? (
+          {error ? <ErrorState title="Couldn’t load demo requests" message={error} onRetry={retry} /> : !leads ? <div className="skeleton h-40" /> : leads.length === 0 ? (
             <Empty icon={Inbox}>No demo requests yet. They arrive from the “Book a free demo” form on the website.</Empty>
           ) : (
             <ul className="divide-y divide-line">

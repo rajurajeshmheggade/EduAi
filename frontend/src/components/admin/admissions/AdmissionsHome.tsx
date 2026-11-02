@@ -4,6 +4,7 @@ import { BarChart3, FileCheck2, Languages, Map as RoadmapIcon, Users } from 'luc
 import { AdmissionsKpis, ApplicantsByClass, ApplicantsTable } from '@/components/admissions/AdmissionsWidgets'
 import { Empty, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
+import { ErrorState } from '@/components/ui/loading'
 import { adminTabLink } from '@/lib/adminTabs'
 import { errorMessage } from '@/services/apiClient'
 import { admissionService, type AdmissionOverview, type Applicant } from '@/services/admissionService'
@@ -21,14 +22,15 @@ export function AdmissionsHome({ org }: { org?: string | null }) {
   const [o, setO] = useState<AdmissionOverview | null>(null)
   const [rows, setRows] = useState<Applicant[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     admissionService.overview(org).then(setO).catch((e) => setError(errorMessage(e)))
     admissionService.applicants(org).then(setRows).catch((e) => setError(errorMessage(e)))
-  }, [org])
+  }, [org, reload])
 
   return (
     <div className="space-y-6">
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load admissions" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />}
       <AdmissionsKpis o={o} withBreaches links={{ requests: adminTabLink('privacy'), breaches: adminTabLink('privacy') }} />
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <Panel icon={BarChart3} title="Applicants by class">{o ? <ApplicantsByClass o={o} /> : <div className="skeleton h-44" />}</Panel>

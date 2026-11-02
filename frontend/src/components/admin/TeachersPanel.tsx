@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, Label, PasswordInput, Select } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
 import type { CreatedMember, Gender, Member } from '@/types'
@@ -81,8 +82,8 @@ export function TeachersPanel({ org }: { org?: string | null }) {
           <div className="relative w-56"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-ink-500" /><Input aria-label="Search teachers" className="pl-9" placeholder="Search…" value={filter} onChange={(e) => setFilter(e.target.value)} /></div>
         </CardHeader>
         <CardContent>
-          {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-          {!rows ? <div className="skeleton h-40" /> : rows.length === 0 ? (
+          {error && rows && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+          {!rows ? (error ? <ErrorState title="Couldn’t load teachers" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-40" />) : rows.length === 0 ? (
             <p className="py-10 text-center text-sm text-ink-300">No teachers yet. Add your first teacher on the left.</p>
           ) : (
             <div className="overflow-x-auto">

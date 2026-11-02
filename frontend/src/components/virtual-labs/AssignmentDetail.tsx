@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { toast } from '@/components/ui/toast'
 import { LabRecord } from '@/components/virtual-labs/LabRecord'
@@ -31,8 +32,8 @@ export function AssignmentDetail({ assignmentId, onClose, onChanged }: { assignm
   return (
     <Dialog open onClose={onClose} title={data?.title ?? 'Virtual lab'} description={data ? `${data.class_name} · ${data.subject_name} · ${data.max_marks} marks` : undefined}
       className="w-[min(64rem,calc(100vw-2rem))]">
-      {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!data || !s ? <div className="skeleton h-64" /> : student ? (
+      {error && data && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {!data || !s ? (error ? <ErrorState title="Couldn’t load this lab" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-64" />) : student ? (
         <Review assignmentId={assignmentId} studentCode={student} onBack={() => { setStudent(null); void load(); onChanged() }} />
       ) : (
         <div className="max-h-[72vh] space-y-4 overflow-y-auto pr-1">
@@ -115,6 +116,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
   const [feedback, setFeedback] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     virtualLabService.attempt(assignmentId, studentCode).then((x) => {
       setD(x)
@@ -123,7 +125,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
       setMarks(suggested == null ? '' : String(suggested))
       setFeedback(x.attempt.teacher_feedback ?? '')
     }).catch((e) => setError(errorMessage(e)))
-  }, [assignmentId, studentCode])
+  }, [assignmentId, studentCode, reload])
 
   async function send(redo: boolean) {
     setBusy(true); setError(null)
@@ -134,7 +136,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
     } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
   }
 
-  if (!d) return error ? <p role="alert" className="text-sm text-bad">{error}</p> : <div className="skeleton h-64" />
+  if (!d) return error ? <ErrorState title="Couldn’t load this student’s record" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-64" />
   const a = d.attempt
   const fb = a.result.feedback
   const submitted = a.status === 'submitted' || a.status === 'reviewed'

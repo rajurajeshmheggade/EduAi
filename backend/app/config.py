@@ -97,6 +97,12 @@ class Settings(BaseSettings):
     tts_voice_female: str = "nova"
     tts_segment_chars: int = 260         # sentences are grouped into segments of about this many characters
     read_aloud_prewarm: bool = True      # voice the rest of the page + prepare the next page in the background
+    read_aloud_lookahead_pages: int = 2  # pages after the open one each reader's pipeline prepares (script + first part)
+    read_aloud_workers: int = 3          # background worker threads shared by all readers
+    read_aloud_retries: int = 1          # extra attempts for a failed AI lesson / background step (exponential backoff)
+    read_aloud_retry_backoff: float = 0.5        # seconds before the first retry; doubles each time
+    read_aloud_fallback_retry_seconds: int = 300  # a cached offline-fallback lesson is re-tried with the AI after this
+    avatar_teacher_cache_seconds: int = 60        # which teacher's avatar / voice a reader gets (admin edits clear it)
 
     # --- AI evaluation (answer scripts) ---
     eval_ocr_dpi: int = 300            # FRD: pages rendered at 300 DPI for vision OCR

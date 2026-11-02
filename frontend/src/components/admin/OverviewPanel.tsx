@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, GraduationCap, PencilRuler, ScanText, School,
   TriangleAlert, UserPlus, Users,
@@ -6,25 +5,22 @@ import {
 import { Columns, Empty, Kpi, Panel, Ring } from '@/components/dashboard/Widgets'
 import { BarList } from '@/components/evaluation/BarList'
 import { Badge } from '@/components/ui/badge'
+import { ErrorState } from '@/components/ui/loading'
 import { fmtPct } from '@/components/ui/stat'
 import { adminService } from '@/services/adminService'
-import { errorMessage } from '@/services/apiClient'
-import { dashboardService, type AdminDash } from '@/services/dashboardService'
+import { dashboardService } from '@/services/dashboardService'
 import { shortDate } from '@/lib/datetime'
-import { num, type AdminOverview } from '@/types'
+import { useAsync } from '@/lib/useAsync'
+import { num } from '@/types'
 
 type Go = 'teachers' | 'classes' | 'timetable' | 'students' | 'attendance' | 'evaluation'
 
 export function OverviewPanel({ org, onGo }: { org?: string | null; onGo: (tab: Go) => void }) {
-  const [data, setData] = useState<AdminOverview | null>(null)
-  const [dash, setDash] = useState<AdminDash | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    adminService.overview(org).then(setData).catch((e) => setError(errorMessage(e)))
-    dashboardService.admin(org).then(setDash).catch((e) => setError(errorMessage(e)))
-  }, [org])
+  const { data, error, retry } = useAsync(() => adminService.overview(org), [org])
+  const { data: dash, error: dashError, retry: retryDash } = useAsync(() => dashboardService.admin(org), [org])
 
-  if (error) return <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>
+  const failed = error ?? dashError
+  if (failed) return <ErrorState title="Couldn’t load the overview" message={failed} onRetry={() => { if (error) retry(); if (dashError) retryDash() }} />
   if (!data) return <div className="grid gap-4 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-32" />)}</div>
   const th = Number(data.organization.attendance_threshold ?? 75)
   const today = data.attendance_today.percentage

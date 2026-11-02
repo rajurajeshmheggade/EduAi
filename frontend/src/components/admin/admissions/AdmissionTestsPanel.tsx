@@ -3,6 +3,7 @@ import { BarChart3, ClipboardList, Users } from 'lucide-react'
 import { CandidatesTab } from '@/components/admission-test/CandidatesTab'
 import { ResultsTab } from '@/components/admission-test/ResultsTab'
 import { TestsTab } from '@/components/admission-test/TestsTab'
+import { ErrorState } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { errorMessage } from '@/services/apiClient'
 import { admissionTestService as svc, type AdmTest, type Candidate } from '@/services/admissionTestService'
@@ -16,18 +17,19 @@ export function AdmissionTestsPanel({ org }: { org: string | null }) {
   const [tests, setTests] = useState<AdmTest[] | null>(null)
   const [candidates, setCandidates] = useState<Candidate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const loadCandidates = useCallback(() => svc.candidates(scope).then(setCandidates).catch((e) => setError(errorMessage(e))), [scope])
   useEffect(() => {
     svc.tests(scope).then(setTests).catch((e) => setError(errorMessage(e)))
     void loadCandidates()
-  }, [scope, loadCandidates])
+  }, [scope, loadCandidates, reload])
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-300">Admission tests that teachers build, launch and score. Read only: teachers run the tests; you can open every report and delete a
         candidate's data on request.</p>
       <Tabs items={[{ id: 'results', label: 'Results', icon: BarChart3 }, { id: 'tests', label: 'Tests', icon: ClipboardList, count: tests?.length },
         { id: 'candidates', label: 'Candidates', icon: Users, count: candidates?.length }]} value={tab} onChange={setTab} />
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load admission tests" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />}
       {tab === 'results' && <ResultsTab tests={tests} org={scope} reportBase="/admin/admission-reports" readOnly />}
       {tab === 'tests' && <TestsTab tests={tests} readOnly />}
       {tab === 'candidates' && <CandidatesTab candidates={candidates} reload={() => void loadCandidates()} readOnly />}

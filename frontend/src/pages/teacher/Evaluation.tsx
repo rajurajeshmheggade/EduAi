@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { errorMessage } from '@/services/apiClient'
 import { fmtDateTime } from '@/services/assessmentService'
@@ -63,8 +64,9 @@ export default function Evaluation({ kind }: { kind: AssessmentType }) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
-  useEffect(() => { classroomService.myClasses().then(setClasses).catch((e) => setError(errorMessage(e))) }, [])
+  useEffect(() => { classroomService.myClasses().then(setClasses).catch((e) => setError(errorMessage(e))) }, [reload])
 
   const loadTests = useCallback(async () => {
     try {
@@ -116,11 +118,14 @@ export default function Evaluation({ kind }: { kind: AssessmentType }) {
         </div>
       </header>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {/* A failed load (classes, list or the selected test) gets a retry; a failed action keeps the plain banner. */}
+      {error && (!classes || !tests || (tests.length > 0 && !detail)
+        ? <ErrorState title="Couldn’t load your assessments" message={error} onRetry={() => { setError(null); setReload((n) => n + 1); void loadTests(); void loadDetail(false) }} />
+        : <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>)}
 
       <div className="grid gap-6 xl:grid-cols-[21rem_1fr]">
         <nav aria-label="Tests and assignments" className="space-y-2">
-          {!tests ? <div className="skeleton h-48" /> : tests.length === 0 ? (
+          {!tests ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-24" />) : tests.length === 0 ? (
             <Card className="p-6 text-center text-sm text-ink-300"><ScanText className="mx-auto mb-2 h-8 w-8 text-ink-500" />{PAGE[kind].empty}</Card>
           ) : tests.map((t) => {
             const Icon = TYPE[t.assessment_type].icon
@@ -147,7 +152,7 @@ export default function Evaluation({ kind }: { kind: AssessmentType }) {
         </nav>
 
         <section className="min-w-0 space-y-5">
-          {!detail ? (tests?.length ? <div className="skeleton h-96" /> : null) : (
+          {!detail ? (tests?.length ? <><Skeleton className="h-28" /><Skeleton className="h-80" /></> : null) : (
             <>
               <Card className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center gap-3">

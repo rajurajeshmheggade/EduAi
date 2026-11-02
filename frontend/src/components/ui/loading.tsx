@@ -54,7 +54,8 @@ export function PageLoader({
   }, [slowAfterMs])
   return (
     <div role="status" aria-live="polite" className={cn('grid min-h-[40vh] place-items-center p-6', className)}>
-      <div className="flex max-w-sm flex-col items-center text-center animate-fade-up">
+      {/* No fade-in: loaders often replace one another (route -> page -> step), and each would start invisible. */}
+      <div className="flex max-w-sm flex-col items-center text-center">
         <div className="relative mb-4 h-12 w-12">
           <span className="absolute inset-0 rounded-full bg-brand-500/20 animate-pulse-ring" />
           <span className="absolute inset-0 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />

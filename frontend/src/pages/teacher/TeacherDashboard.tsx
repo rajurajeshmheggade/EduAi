@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileCheck2,
@@ -9,11 +9,12 @@ import { BarList } from '@/components/evaluation/BarList'
 import { Empty, HeroBanner, Kpi, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
-import { errorMessage } from '@/services/apiClient'
-import { dashboardService, type TeacherDash } from '@/services/dashboardService'
+import { dashboardService } from '@/services/dashboardService'
 import { greeting, longDate, shortDateTime } from '@/lib/datetime'
 import { markAttendanceLink } from '@/lib/timetable'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 import { num } from '@/types'
 
@@ -23,12 +24,10 @@ const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLI
 /** Teacher home: today's periods with attendance status, work needing attention, open assessments and class signals. */
 export default function TeacherDashboard() {
   const { user } = useAuth()
-  const [d, setD] = useState<TeacherDash | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: d, error, retry } = useAsync(() => dashboardService.teacher(), [])
   const [hello] = useState(() => greeting())
   const [hhmm] = useState(() => new Date().toTimeString().slice(0, 5))
 
-  useEffect(() => { dashboardService.teacher().then(setD).catch((e) => setError(errorMessage(e))) }, [])
   if (!user) return null
   const first = user.full_name.split(' ')[0]
   const k = d?.kpis
@@ -48,7 +47,7 @@ export default function TeacherDashboard() {
         ]}
       />
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
       <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {!k ? Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>

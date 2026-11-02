@@ -1,14 +1,11 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { PageLoader } from '@/components/ui/loading'
 import { examLock } from '@/lib/proctor/examLock'
 import { useAuth } from './AuthContext'
 import type { Role } from '@/types'
 
 export function FullPageSpinner() {
-  return (
-    <div className="grid h-full place-items-center" role="status" aria-label="Loading">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
-    </div>
-  )
+  return <PageLoader message="Loading EduAI…" className="h-full" />
 }
 
 /** Role-guarded route wrapper (FR-AUTH-03). Unauthenticated -> /login; wrong role -> own home. */

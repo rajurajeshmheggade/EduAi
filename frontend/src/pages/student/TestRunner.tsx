@@ -76,6 +76,7 @@ function Runner({ id }: { id: string }) {
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const latest = useRef({ answers, flagged })  // read by autosave / submit without re-subscribing timers
   useEffect(() => { latest.current = { answers, flagged } }, [answers, flagged])
   const done = useRef(false)
@@ -86,7 +87,7 @@ function Runner({ id }: { id: string }) {
       if (t.my.status !== 'IN_PROGRESS' || !t.questions) { nav(`/student/tests/${id}`, { replace: true }); return }
       setTest(t); setAnswers(t.answers ?? {}); setFlagged(t.flagged ?? []); setLeft(t.my.seconds_left ?? 0)
     }).catch((e) => setError(errorMessage(e)))
-  }, [id, nav])
+  }, [id, nav, reload])
 
   const submit = useCallback(async (auto = false) => {
     if (done.current) return
@@ -132,7 +133,11 @@ function Runner({ id }: { id: string }) {
     return () => window.removeEventListener('beforeunload', h)
   }, [saveState])
 
-  if (!test?.questions) return <div className="grid h-full place-items-center p-8">{error ? <p className="text-sm text-bad">{error}</p> : <Loader2 className="h-6 w-6 animate-spin text-brand-600" />}</div>
+  if (!test?.questions) {
+    return error
+      ? <div className="mx-auto max-w-xl p-8"><ErrorState title="Couldn’t open your test" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /></div>
+      : <PageLoader message="Opening your test…" detail="Restoring your saved answers and the time left." />
+  }
 
   const qs = test.questions
   const q = qs[idx]

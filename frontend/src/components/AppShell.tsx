@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronsLeft, ChevronsRight, CalendarCheck, FlaskConical, CalendarClock, ClipboardCheck, ClipboardList, DoorOpen, FileSignature, HeartPulse, House, KanbanSquare, KeyRound, Library, LayoutDashboard, ListChecks, MessageSquareText, NotebookPen, PencilRuler, ScanEye, ScanText, School, Search, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
@@ -8,6 +8,8 @@ import { ChangePasswordDialog, ProfileMenu } from '@/components/ProfileMenu'
 import { CommandPalette, type Command } from '@/components/shell/CommandPalette'
 import { CopilotDrawer } from '@/components/shell/CopilotDrawer'
 import { NotificationBell } from '@/components/shell/NotificationBell'
+import { RouteFallback } from '@/components/shell/RouteFallback'
+import { TopProgress } from '@/components/shell/TopProgress'
 import { Badge } from '@/components/ui/badge'
 import { adminTabLink, adminTabsFor, type AdminTab } from '@/lib/adminTabs'
 import { Toaster } from '@/components/ui/toast'
@@ -196,6 +198,7 @@ export function AppShell() {
             <NotificationBell />
             <ProfileMenu />
           </div>
+          <TopProgress />
         </header>
         <nav aria-label="Primary (mobile)" className="flex gap-1 overflow-x-auto border-b border-line bg-ink-900 px-2 py-1.5 md:hidden print:hidden">
           {items.filter((i) => !i.soon).map((item) => (
@@ -210,7 +213,8 @@ export function AppShell() {
             <button onClick={() => setPwOpen(true)} id="banner-change-password" className="cursor-pointer rounded-lg bg-warn px-3 py-1 text-xs font-semibold text-white hover:brightness-110">Change password</button>
           </div>
         )}
-        <main className="min-h-0 flex-1 overflow-y-auto"><ErrorBoundary key={pathname}><Outlet /></ErrorBoundary></main>
+        {/* Pages load inside the shell: the sidebar and header stay while a page's code downloads. */}
+        <main className="min-h-0 flex-1 overflow-y-auto"><ErrorBoundary key={pathname}><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></ErrorBoundary></main>
         <footer className="flex shrink-0 flex-wrap print:hidden items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-ink-900 px-4 py-2.5 text-xs text-ink-500 md:px-8">
           <span>© {YEAR} EduAI Platform · Teach · Learn · Grow</span>
           <span className="truncate">{user.org_name ?? user.org_code} · Signed in as {user.full_name} ({roleLabel(user.role)})</span>

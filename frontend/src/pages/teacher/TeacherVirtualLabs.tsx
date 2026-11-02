@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { Tabs } from '@/components/ui/tabs'
 import { AssignLabDialog } from '@/components/virtual-labs/AssignLabDialog'
@@ -25,12 +26,13 @@ export default function TeacherVirtualLabs() {
   const [assigned, setAssigned] = useState<TeacherLabAssignment[] | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
   const loadAssigned = useCallback(() => virtualLabService.assignments().then(setAssigned).catch((e) => setError(errorMessage(e))), [])
   useEffect(() => {
     virtualLabService.catalog().then(setCat).catch((e) => setError(errorMessage(e)))
     void loadAssigned()
-  }, [loadAssigned])
+  }, [loadAssigned, reload])
 
   const toReview = assigned?.reduce((n, a) => n + a.submitted - a.reviewed, 0) ?? 0
   return (
@@ -44,8 +46,11 @@ export default function TeacherVirtualLabs() {
       </header>
       <Tabs items={[{ id: 'explore', label: 'Explore labs', icon: FlaskConical }, { id: 'assigned', label: 'Assigned', icon: Users, count: assigned?.length }]}
         value={tab} onChange={setTab} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {tab === 'explore' ? (cat ? <Explore cat={cat} onAssigned={() => { void loadAssigned(); setTab('assigned') }} /> : !error && <div className="skeleton h-96" />) : (
+      {error && <ErrorState title="Couldn’t load virtual labs" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />}
+      {tab === 'explore' ? (cat ? <Explore cat={cat} onAssigned={() => { void loadAssigned(); setTab('assigned') }} /> : !error && (
+        <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>
+          <div className="grid gap-4 lg:grid-cols-[22rem_1fr]"><Skeleton className="h-[60vh]" /><Skeleton className="h-[60vh]" /></div></div>
+      )) : (
         <Assigned items={assigned} toReview={toReview} onOpen={setOpen} />
       )}
       {open && <AssignmentDetail assignmentId={open} onClose={() => setOpen(null)} onChanged={() => void loadAssigned()} />}
@@ -66,6 +71,7 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
   const [detail, setDetail] = useState<LabDetail | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
   const cid = current?.collection_id
   useEffect(() => {
@@ -74,7 +80,7 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
     virtualLabService.collection(cid, medium).then((d) => { if (live) { setLabsOf({ id: cid, ...d }); setError(null) } })
       .catch((e) => { if (live) setError(errorMessage(e)) })
     return () => { live = false }
-  }, [cid, medium])
+  }, [cid, medium, reload])
   const list = labsOf?.id === cid ? labsOf : null
   const shown = list?.labs.filter((l) => !query.trim() || `${l.name} ${l.keywords.join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()))
   const selected = list?.labs.find((l) => l.lab_id === labId) ?? null
@@ -114,7 +120,8 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
           Your administrator can let them run inside EduAI after reviewing the licence. Time in the lab is tracked either way.
         </p>
       )}
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load the experiments" message={error}
+        onRetry={() => { setError(null); if (!list) setReload((n) => n + 1); if (labId && !view) loadDetail(labId) }} />}
 
       <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <Card className="flex max-h-[78vh] min-h-0 flex-col p-3">

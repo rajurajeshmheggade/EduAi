@@ -38,6 +38,32 @@ export interface ReadAloudPage {
   segments: ReadAloudSegment[]
   lesson: PageLesson | null
   engine: string
+  /** Version of this script: audio parts are requested for it, so a lesson replaced meanwhile never mixes parts. */
+  version?: string | null
+  /** The AI was unavailable: this is the offline lesson, replaced by the AI's once it answers again. */
+  fallback?: boolean
+}
+
+/** Server-side preparation of a page (script + first spoken part) in the reader's background pipeline. */
+export type Readiness = 'ready' | 'preparing' | 'queued' | 'failed' | 'idle'
+
+export interface PageReadiness {
+  page: number
+  status: Readiness
+  script: Readiness
+  audio: Readiness
+  engine: string | null
+  fallback: boolean
+}
+
+export interface PipelineStatus {
+  page: number
+  mode: ReadMode
+  pages: PageReadiness[]
+}
+
+export interface RequestOpts {
+  signal?: AbortSignal
 }
 
 export const readAloudService = {
@@ -45,19 +71,34 @@ export const readAloudService = {
     return (await api.get<ReadAloudVoice>(`${B}/${textbookId}/voice`)).data
   },
 
-  async page(textbookId: string, page: number, mode: ReadMode = 'explain'): Promise<ReadAloudPage> {
-    return (await api.get<ReadAloudPage>(`${B}/${textbookId}/pages/${page}`, { params: { mode } })).data
+  /** `prefetch`: fetched ahead of the reader (doesn't move their background pipeline to this page). */
+  async page(textbookId: string, page: number, mode: ReadMode = 'explain', { signal, prefetch }: RequestOpts & { prefetch?: boolean } = {}): Promise<ReadAloudPage> {
+    return (await api.get<ReadAloudPage>(`${B}/${textbookId}/pages/${page}`, { params: { mode, ...(prefetch ? { prefetch } : {}) }, signal })).data
+  },
+
+  /** The reader opened `page`: the server prepares it and the next pages in the background (queued work for pages
+   * they left is cancelled). Returns how ready each one is. */
+  async prepare(textbookId: string, page: number, mode: ReadMode = 'explain', { signal }: RequestOpts = {}): Promise<PipelineStatus> {
+    return (await api.post<PipelineStatus>(`${B}/${textbookId}/pages/${page}/prepare`, null, { params: { mode }, signal })).data
+  },
+
+  /** Cheap readiness of `page` and the next ones (no AI call). */
+  async status(textbookId: string, page: number, mode: ReadMode = 'explain', { signal }: RequestOpts = {}): Promise<PipelineStatus> {
+    return (await api.get<PipelineStatus>(`${B}/${textbookId}/pages/${page}/status`, { params: { mode }, signal })).data
   },
 
   /** Audio of one part, voiced by the subject teacher's avatar voice (chosen by the server). */
-  async audio(textbookId: string, page: number, index: number, mode: ReadMode = 'explain'): Promise<Blob> {
+  async audio(textbookId: string, page: number, index: number, mode: ReadMode = 'explain',
+    { signal, version }: RequestOpts & { version?: string | null } = {}): Promise<Blob> {
     try {
-      return (await api.get<Blob>(`${B}/${textbookId}/pages/${page}/segments/${index}/audio`, { params: { mode }, responseType: 'blob' })).data
+      return (await api.get<Blob>(`${B}/${textbookId}/pages/${page}/segments/${index}/audio`, {
+        params: { mode, ...(version ? { v: version } : {}) }, responseType: 'blob', signal })).data
     } catch (e) {
       // Error bodies arrive as a Blob too: surface the server's message (e.g. "This page is not in English…").
+      // 409 = the page's lesson was replaced since this version was fetched: the reader reloads the page.
       if (axios.isAxiosError(e) && e.response?.data instanceof Blob) {
         const detail = await e.response.data.text().then((t) => (JSON.parse(t) as { detail?: string }).detail).catch(() => undefined)
-        if (detail) throw new Error(detail)
+        if (detail) throw Object.assign(new Error(detail), { status: e.response.status })
       }
       throw e
     }

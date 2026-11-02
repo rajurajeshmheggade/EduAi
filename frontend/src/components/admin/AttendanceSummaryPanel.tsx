@@ -5,6 +5,7 @@ import { MonthPicker, RegisterGrid } from '@/components/attendance/RegisterGrid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/loading'
 import { fmtPct, pctTone } from '@/components/ui/stat'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
@@ -20,15 +21,16 @@ export function AttendanceSummaryPanel({ org }: { org?: string | null }) {
   const [open, setOpen] = useState<{ class_code: string; subject_code: string } | null>(null)
   const [reg, setReg] = useState<AttendanceRegister | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const [classes, setClasses] = useState<SchoolClass[] | null>(null)
   const [exporting, setExporting] = useState<{ class_code?: string; subject_code?: string } | null>(null)
 
   useEffect(() => { adminService.classes(org).then(setClasses).catch(() => setClasses([])) }, [org])
 
   useEffect(() => {
-    setData(null); setOpen(null)
+    setData(null); setOpen(null); setError(null)
     adminService.attendanceSummary(month, org).then(setData).catch((e) => setError(errorMessage(e)))
-  }, [month, org])
+  }, [month, org, reload])
 
   useEffect(() => {
     setReg(null)
@@ -47,8 +49,9 @@ export function AttendanceSummaryPanel({ org }: { org?: string | null }) {
           </div>
         </CardHeader>
         <CardContent>
-          {error && <p role="alert" className="mb-3 text-sm text-bad">{error}</p>}
-          {!data ? <div className="skeleton h-32" /> : data.rows.length === 0 ? <p className="py-8 text-center text-sm text-ink-300">No attendance recorded this month.</p> : (
+          {/* Retry whichever load failed: the summary, or (once it is in) the open register. */}
+          {error && <ErrorState className="mb-3" title="Couldn’t load attendance" message={error} onRetry={() => { setError(null); if (data) setOpen((o) => o && { ...o }); else setReload((n) => n + 1) }} />}
+          {!data ? !error && <div className="skeleton h-32" /> : data.rows.length === 0 ? <p className="py-8 text-center text-sm text-ink-300">No attendance recorded this month.</p> : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">

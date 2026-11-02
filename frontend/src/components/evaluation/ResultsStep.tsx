@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { StatCard } from '@/components/ui/stat'
 import { toast } from '@/components/ui/toast'
@@ -70,7 +71,7 @@ export function ResultsStep({ test, onChanged, readOnly = false, org }: { test: 
     downloadBlob(blob, `scores-${test.class_code}-${test.subject_code}-${test.test_title.replace(/\W+/g, '_')}.csv`)
   }
 
-  if (error && !dash) return <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>
+  if (error && !dash) return <ErrorState title="Couldn’t load the results" message={error} onRetry={() => { setError(null); void load() }} />
   if (!dash || !rows) return <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-28" />)}</div><div className="skeleton h-64" /></div>
   const o = dash.overview
 
@@ -278,12 +279,13 @@ export function RegisterTable({ rows, onOpen, editable = false }: { rows: Regist
 function ReportDialog({ test, scriptId, readOnly, org, onClose, onChanged }: { test: EvalTest; scriptId: string; readOnly: boolean; org?: string | null; onClose: () => void; onChanged: () => void }) {
   const [rep, setRep] = useState<EvalReport | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { evaluationService.report(test.eval_test_id, scriptId, org).then(setRep).catch((e) => setError(errorMessage(e))) }, [test.eval_test_id, scriptId, org])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { evaluationService.report(test.eval_test_id, scriptId, org).then(setRep).catch((e) => setError(errorMessage(e))) }, [test.eval_test_id, scriptId, org, reload])
 
   return (
     <Dialog open onClose={onClose} title={rep?.summary.student_name ?? 'Evaluation report'} description={test.test_title} className="w-[min(56rem,calc(100vw-2rem))]">
       <div className="max-h-[75vh] overflow-y-auto pr-1">
-        {error ? <p className="text-sm text-bad">{error}</p> : !rep ? <ReportSkeleton /> : (
+        {error ? <ErrorState title="Couldn’t load this report" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : !rep ? <ReportSkeleton /> : (
           <ReportView report={rep} onOverride={readOnly ? undefined : async (r, marks, comment, reset) => {
             try {
               setRep(await evaluationService.override(test.eval_test_id, r.slno_result_id,

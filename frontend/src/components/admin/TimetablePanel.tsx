@@ -201,8 +201,8 @@ function HolidaysPanel({ classes, org }: { classes: SchoolClass[]; org?: string 
         <Button size="sm" onClick={() => setEditing('new')} id="add-holiday">Add holiday</Button>
       </CardHeader>
       <CardContent>
-        {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-        {!rows ? <div className="skeleton h-24" /> : rows.length === 0 ? (
+        {error && rows && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+        {!rows ? (error ? <ErrorState title="Couldn’t load holidays" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-24" />) : rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-300">No upcoming holidays. Add one to let students and teachers know in advance.</p>
         ) : (
           <ul className="space-y-2">

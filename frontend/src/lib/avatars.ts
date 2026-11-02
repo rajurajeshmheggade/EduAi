@@ -17,3 +17,6 @@ export function hasWebGL(): boolean {
     return false
   }
 }
+
+/** The 3D avatar's code (three.js + renderer), split out of the classroom's first paint; also used to preload it. */
+export const loadAvatar3D = () => import('@/components/pdf-avatar/TeacherAvatar3D')
