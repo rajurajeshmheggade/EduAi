@@ -53,7 +53,7 @@ export function PageLoader({
     return () => window.clearTimeout(t)
   }, [slowAfterMs])
   return (
-    <div role="status" aria-live="polite" className={cn('grid min-h-[40vh] place-items-center p-6', className)}>
+    <div role="status" aria-live="polite" className={cn('loader-reveal grid min-h-[40vh] place-items-center p-6', className)}>
       {/* No fade-in: loaders often replace one another (route -> page -> step), and each would start invisible. */}
       <div className="flex max-w-sm flex-col items-center text-center">
         <div className="relative mb-4 h-12 w-12">
