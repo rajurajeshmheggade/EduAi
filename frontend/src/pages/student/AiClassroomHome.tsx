@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpenText, FileText, MessageSquareText, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Label, Select } from '@/components/ui/field'
-import { aiClassroomService, type NlpChapter, type NlpClass } from '@/services/aiClassroomService'
-import { errorMessage } from '@/services/apiClient'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
+import { useAsync } from '@/lib/useAsync'
+import { aiClassroomService } from '@/services/aiClassroomService'
 
 /**
  * AI Classroom landing: either continue with your assigned subject's textbook (unchanged, existing reader),
@@ -13,26 +14,16 @@ import { errorMessage } from '@/services/apiClient'
  * each one that has a PDF opening the AI reader (chat + auto-explanation grounded in the page, camera check).
  */
 export default function AiClassroomHome() {
-  const [classes, setClasses] = useState<NlpClass[] | null>(null)
-  const [classLabel, setClassLabel] = useState('')
-  const [bySubject, setBySubject] = useState<Record<string, NlpChapter[]> | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    aiClassroomService.classes().then((cs) => {
-      setClasses(cs)
-      if (cs[0]) setClassLabel(cs[0].class_label)
-    }).catch((e) => setError(errorMessage(e)))
-  }, [])
-
-  useEffect(() => {
-    if (!classLabel) return
-    setBySubject(null)
-    aiClassroomService.subjects(classLabel).then(async (subjects) => {
-      const pairs = await Promise.all(subjects.map(async (s) => [s, await aiClassroomService.chapters(classLabel, s)] as const))
-      setBySubject(Object.fromEntries(pairs))
-    }).catch((e) => setError(errorMessage(e)))
+  const [picked, setPicked] = useState('')
+  const { data: classes, error: classesError, retry: retryClasses } = useAsync(() => aiClassroomService.classes(), [])
+  const classLabel = picked || classes?.[0]?.class_label || ''
+  const { data: bySubject, error: chaptersError, retry: retryChapters, loading } = useAsync(async () => {
+    if (!classLabel) return {}
+    const subjects = await aiClassroomService.subjects(classLabel)
+    const pairs = await Promise.all(subjects.map(async (s) => [s, await aiClassroomService.chapters(classLabel, s)] as const))
+    return Object.fromEntries(pairs)
   }, [classLabel])
+  const error = classesError ?? chaptersError
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
@@ -52,25 +43,25 @@ export default function AiClassroomHome() {
         </Card>
       </Link>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn't load the chapter library" message={error} onRetry={classesError ? retryClasses : retryChapters} />}
 
       <Card className="space-y-4 p-5">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-brand-600" />
           <h2 className="font-display text-lg font-semibold text-fg">Chapter library</h2>
         </div>
-        {!classes ? <div className="skeleton h-24" /> : classes.length === 0 ? (
+        {!classes ? !classesError && <Skeleton className="h-24" /> : classes.length === 0 ? (
           <p className="text-sm text-ink-300">No chapters are available yet.</p>
         ) : (
           <>
             <div className="max-w-xs">
               <Label htmlFor="ac-class">Class</Label>
-              <Select id="ac-class" value={classLabel} onChange={(e) => setClassLabel(e.target.value)}>
+              <Select id="ac-class" value={classLabel} onChange={(e) => setPicked(e.target.value)}>
                 {classes.map((c) => <option key={c.class_label} value={c.class_label}>{c.grade ? `Class ${c.grade}` : c.class_label}</option>)}
               </Select>
             </div>
 
-            {!bySubject ? <div className="skeleton h-40" /> : Object.keys(bySubject).length === 0 ? (
+            {!bySubject || loading ? !chaptersError && <Skeleton className="h-40" /> : Object.keys(bySubject).length === 0 ? (
               <p className="text-sm text-ink-300">No chapters for this class yet.</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
