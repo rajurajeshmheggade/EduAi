@@ -279,8 +279,8 @@ exam date, whichever is sooner. Only the first name goes to the AI.
 
 * **Dashboard** — AI focus tip, stress-reliever and affirmation; avg stress, journal logs, mindful cycles; 7-entry mood
   trend; daily mood check-in (+15 XP); Zen Brain quiz on a class subject at the student's level (+25 / +10 XP); learning profile (class, subjects,
-  knowledge level per subject, what is due); Focus Mode (countdown to the next test,
-  Pomodoro, synthesised ocean waves / 10 Hz binaural beats, +50 XP); evidence-based coping toolkit.
+  knowledge level per subject, what is due); Focus Mode (countdown to the next test, and the student's floating
+  Focus Timer — see *Study flow* below — +50 XP); evidence-based coping toolkit.
 * **Journal** — AI analysis: calm gauge (1-100), emotions, hidden stress triggers, coping checklist (+20 XP each),
   encouragement for upcoming school assessments (+40 XP per entry); history; crisis language surfaces helplines.
 * **Aura Chat / Aura Live** — empathetic companion grounded in the student's journal entries and long-term memory, with
@@ -319,6 +319,14 @@ me/journals/{id}/coping, me/chat, me/memories, me/activity, me/transcribe}` (stu
 ## AI avatar tutor (Student → AI Classroom)
 
 The subject teacher's avatar explains the open textbook page aloud, like a teacher in class, with lip-sync.
+
+* **AI Classroom home** (`/student/classroom`): no class picker (the student's own class is implied) — a **Subject**
+  dropdown (the student's subjects with a published, indexed textbook), a **Chapter** dropdown (that textbook's detected
+  chapters, grouped by book when a subject has several; "Start from page 1" for a book without chapters), a short guide
+  to how the avatar teaches, and **OK**, which opens the avatar classroom at the chapter's first page via the deep link
+  `/student/classroom/textbook?subject=&textbook=&page=` (still one proctored session per subject). No textbook yet →
+  a friendly "your teacher hasn't published one" notice. The chapter-library reader (`/student/classroom/nlp/…`) stays
+  available but is no longer linked from the home page.
 
 * **Teacher explains** (default): the page text goes to the tutor LLM, which returns an NCERT-style lesson. It has an
   introduction, every key point explained in classroom language, important words, a recap and a check question. The
@@ -377,6 +385,26 @@ preparing / queued / failed / idle for page n and the lookahead, no AI call) · 
 opened page n: aim their pipeline there). The chapter-library reader's page explanations are cached on the server
 by page text too. Migrations `016_read_aloud_avatar.sql` (teacher gender), `027_textbook_content_version.sql`
 (textbook checksum).
+
+## Study flow — Focus Timer & study breaks (Student, every page)
+
+* **Focus Timer** — a sticky floating button (bottom-right, left of a docked Copilot via `--copilot-offset`) on every
+  student page. Its popup: 25-minute default, 15 / 25 / 45 / custom lengths, start / pause / resume / reset, an end
+  chime, and sounds synthesised with Web Audio (ocean waves, rain, white noise, brown noise, 10 Hz binaural beats) with
+  volume and mute; the sound plays while the timer runs. The button shows the time left. State survives navigation
+  and reloads (per-student `localStorage`, other tabs follow). A finished 25+ minute session earns the Wellness
+  "pomodoro" XP (server-side amount and daily cap); the Wellness Focus Mode card drives the same timer.
+* **Study breaks** — active time on study pages (AI Classroom incl. the avatar classroom and chapter reader, Digital
+  Library and readers, Virtual Labs, Homework) is counted; idle time (no input for 2 min, unless the avatar tutor is
+  speaking) and hidden tabs are not. After **25 minutes** an OK-only reminder sends the student to the Wellness Game
+  Zone (`/student/wellness?tab=games`) for a **5-minute** break (countdown on the floating button), then a short
+  notice takes them back to the AI Classroom and the next block starts. Progress is kept per student per day.
+* **Never during an exam** — nothing shows on the online-test runner, the admission exam, or while a ProctorGate exam
+  / virtual-lab attempt runs (reminders wait until it ends; `lib/studyFlow/quiet.ts`). During an AI Classroom session
+  the floating timer steps aside (it would cover the chat) but the break reminder may appear; leaving closes the
+  session normally. A due break also waits for a running manual focus session to finish. Teachers and admins get none
+  of this. All numbers live in `src/lib/studyFlow/config.ts`; tests `src/components/study/*.test.tsx`,
+  `src/lib/studyFlow/*.test.ts`.
 
 ## Loading experience (all portals)
 
@@ -591,6 +619,9 @@ The weekly pattern stays the recurring timetable; on top of it admins schedule *
 * **Bell schedule** — numbered periods and named breaks, a default bell plus optional per-weekday bells (e.g. a half
   Saturday). Without one the built-in bell applies (8 × 45 min from 09:00, break after period 3). New sessions take
   their times from it, the calendars draw it, and attendance offers its periods (marking the teacher's own).
+* **Opens on today** — teacher and student timetables open on today's day view (date picker on today, the running
+  period marked, Join online / Mark attendance on today's periods); week and month are one click away. Both dashboards
+  show today's classes first, right under the greeting.
 * **Consistency** — one resolver (`usp_resolve_timetable`: weekly pattern within its effective range on working days +
   dated entries + published full-day holidays; drafts hidden from teachers / students) feeds the admin calendar,
   teacher and student timetables, both dashboards' "today", Copilot's student snapshot and attendance. A teacher

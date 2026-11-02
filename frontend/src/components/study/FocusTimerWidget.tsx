@@ -44,7 +44,8 @@ export function FocusTimerWidget({ focus, cycle }: { focus: FocusTimerApi; cycle
   }
 
   return (
-    <div className="fixed bottom-4 z-[35] print:hidden md:bottom-6" style={{ right: 'calc(var(--study-fab-right-offset, 0px) + 1rem)' }} data-study-fab="">
+    // Left of the docked Copilot panel (it sets --copilot-offset on <html>), and below its overlay (z-40) on narrow screens.
+    <div className="fixed bottom-4 right-[calc(1rem+var(--copilot-offset,0px))] z-[35] print:hidden md:bottom-6" data-study-fab="">
       {panelOpen && <FocusTimerPanel id={panelId} focus={focus} cycle={cycle} breakLeft={breakLeft} onClose={close} fab={fab} />}
       <button ref={fab} type="button" onClick={focus.togglePanel} aria-label={label} aria-haspopup="dialog" aria-expanded={panelOpen}
         aria-controls={panelOpen ? panelId : undefined} title="Focus timer"

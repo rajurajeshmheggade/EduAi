@@ -5,9 +5,10 @@
  * the server); the Wellness page listens for the result to update its XP bar.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { FocusSoundId } from '@/components/wellness/audio/ambientAudio'
 import { toast } from '@/components/ui/toast'
-import { FOCUS_XP_MIN_MINUTES } from '@/lib/studyFlow/config'
+import { FOCUS_XP_MIN_MINUTES, isExamPath } from '@/lib/studyFlow/config'
 import {
   focusRemaining, initialFocus, pauseFocus, resetFocus, restoreFocus, setFocusMinutes, startFocus, tickFocus, type FocusTimerState,
 } from '@/lib/studyFlow/focusTimer'
@@ -92,6 +93,9 @@ export function FocusTimerProvider({ scope, children }: { scope: string | null; 
   const [unlocked, setUnlocked] = useState(false)
   const [engine] = useState(() => new FocusSoundEngine())
   const quiet = useQuiet()
+  const examRoute = isExamPath(useLocation().pathname)
+  const examRouteRef = useRef(examRoute)
+  useEffect(() => { examRouteRef.current = examRoute }, [examRoute])
   const key = scope ? storageKey('focusTimer', scope) : null
   const timerRef = useRef(timer)
   useEffect(() => { timerRef.current = timer }, [timer])
@@ -107,7 +111,7 @@ export function FocusTimerProvider({ scope, children }: { scope: string | null; 
       if (readStored<number>(doneKey) === endedAt) return     // another tab already announced this one
       writeStored(doneKey, endedAt)
     }
-    const quietExam = quietNow().exam
+    const quietExam = quietNow().exam || examRouteRef.current
     if (!quietExam) engine.chime()
     const say = (text: string, tone: 'success' | 'info' | 'error' = 'success') => { if (!quietExam) toast(text, tone) }
     if (done.minutes < FOCUS_XP_MIN_MINUTES) { say('Focus session complete — nice work!'); return }
@@ -158,7 +162,7 @@ export function FocusTimerProvider({ scope, children }: { scope: string | null; 
   }, [key])
 
   // Ambient sound: only while the timer runs, never during an exam or a classroom session, and not after sign-out.
-  const wantSound = !!scope && running && !!prefs.sound && !quiet.session
+  const wantSound = !!scope && running && !!prefs.sound && !quiet.session && !examRoute
   useEffect(() => {
     if (wantSound && unlocked && prefs.sound) engine.play(prefs.sound)
     else engine.stop()

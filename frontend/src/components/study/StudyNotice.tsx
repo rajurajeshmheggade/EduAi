@@ -35,7 +35,7 @@ export function BreakDueNotice({ onOk }: { onOk: () => void }) {
     <Notice title={`Time for a ${BREAK_MINUTES}-minute break`} icon={<Coffee className="h-7 w-7" />}
       action={<Button size="lg" className="min-w-32" autoFocus onClick={onOk}>OK</Button>}>
       <p>You’ve studied for {STUDY_BLOCK_MINUTES} minutes — great focus! A short break helps it stick.</p>
-      <p className="flex items-center justify-center gap-1.5"><Gamepad2 className="h-4 w-4 text-purple-500" aria-hidden />
+      <p><Gamepad2 className="mr-1 inline h-4 w-4 align-[-3px] text-purple-500" aria-hidden />
         Relax in the Wellness Game Zone; after {BREAK_MINUTES} minutes we’ll take you back to your AI Classroom.</p>
     </Notice>
   )

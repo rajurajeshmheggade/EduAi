@@ -170,6 +170,7 @@ describe('floating Focus Timer', () => {
 
     nav.to('/student/tests/t1/take')
     expect(screen.queryByRole('button', { name: /focus timer/i })).not.toBeInTheDocument()
+    expect(playingSources(made[0].nodes)).toHaveLength(0)                               // silent on the test runner
     nav.to('/student/dashboard')
     expect(screen.getByRole('button', { name: /^Focus timer running/ })).toBeInTheDocument()
 
