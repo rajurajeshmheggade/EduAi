@@ -90,6 +90,8 @@ Unknown id → **404** `{"params": {"status": "failed", "err": "NOT_FOUND"}, "re
 
 ## 4. Required parameters and headers
 
+* Search filters on `mimeType` and `license` work as expected (verified 2 November 2026; facet values come back in
+  lower case, matching is case-insensitive). The library uses them to search only formats and licences it can show.
 * Search: body `{"request": {...}}` is mandatory — a malformed body gives **400** `ERR_CONTENT_SEARCH_FIELDS_MISSING`.
   `filters.status: ["Live"]` keeps only published content. Composite search defaults to `status=Live`, `visibility=Default`
   and `limit=100` (Knowlg docs).
