@@ -24,6 +24,7 @@ from .. import db
 from ..security import ADMIN_ROLES, CurrentUser, require_role
 from ..services import attendance as att
 from ..services import attendance_export as att_export
+from ..services import timetable as tt
 from ..services.members import Name, Password, Phone, create_member
 from ..services.storage import build_key, get_storage
 from .admin import MemberPatch, _patch_member, list_slots, org_scope
@@ -439,28 +440,44 @@ def my_attendance(month: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}
 
 # ---------------------------------------------------------------- timetable: read side (FR-TE-01, FR-ST-03)
 @router.get("/my-timetable")
-def my_timetable(user: CurrentUser = Depends(require_role("teacher", "student"))):
+def my_timetable(start: date | None = Query(default=None, description="Dated calendar from (default: this week's Monday)"),
+                 end: date | None = Query(default=None, description="Dated calendar until (at most 92 days)"),
+                 user: CurrentUser = Depends(require_role("teacher", "student"))):
     """Teachers: every period they teach. Students: their class's week. Also surfaces upcoming published
     holidays (#10) and recent timetable changes (#3B) relevant to them — scoped to their own class(es),
-    never an unrelated one."""
+    never an unrelated one. `sessions` is the dated calendar for [start, end] (weekly periods + dated changes,
+    holidays applied, published classes only); `slots` stays the weekly pattern for older clients."""
     today = date.today()
-    window_end = date(today.year + (1 if today.month == 12 else today.year), ((today.month % 12) + 1), 1)
+    window_end = today + timedelta(days=31)  # upcoming holidays: the next month
+    lo, hi = (start or tt.week_of(today)[0]), (end or (start or tt.week_of(today)[0]) + timedelta(days=6))
+    tt.check_range(lo, hi)
     if user.role == "teacher":
         slots = list_slots(user.org_code, None, user.user_code, student_view=True)
-        my_classes = sorted({s["class_code"] for s in slots})
+        sessions = tt.resolve(user.org_code, lo, hi, None, user.user_code, student_view=True)
+        for s in sessions:  # a weekly period of mine covered by someone else on that date
+            s["is_mine"] = s["teacher_code"] == user.user_code
+        my_classes = sorted({s["class_code"] for s in slots} | {s["class_code"] for s in sessions})
         holidays = db.call_rows("usp_list_holidays", user.org_code, None, today, window_end, True,
                                 casts=[None, None, None, None, "boolean"])
+        range_holidays = db.call_rows("usp_list_holidays", user.org_code, None, lo, hi, True,
+                                      casts=[None, None, None, None, "boolean"])
         changes = [c for c in db.call_rows("usp_recent_timetable_changes", user.org_code, None, 14,
                                            casts=[None, None, "int"]) if c["class_code"] in my_classes] if my_classes else []
     else:
         me = db.call_row("usp_get_member", user.org_code, user.user_code)
         class_code = me["class_code"] if me else None
         slots = list_slots(user.org_code, class_code, None, student_view=True) if class_code else []
+        sessions = tt.resolve(user.org_code, lo, hi, class_code, None, student_view=True) if class_code else []
         holidays = db.call_rows("usp_list_holidays", user.org_code, class_code, today, window_end, True,
                                 casts=[None, None, None, None, "boolean"]) if class_code else []
+        range_holidays = db.call_rows("usp_list_holidays", user.org_code, class_code, lo, hi, True,
+                                      casts=[None, None, None, None, "boolean"]) if class_code else []
         changes = db.call_rows("usp_recent_timetable_changes", user.org_code, class_code, 14,
                                casts=[None, None, "int"]) if class_code else []
-    return {"today": today.isoweekday(), "slots": slots, "holidays": holidays, "recent_changes": changes}
+    return {"today": today.isoweekday(), "today_date": today, "slots": slots, "holidays": holidays,
+            "recent_changes": changes, "range": {"start": lo, "end": hi}, "sessions": sessions,
+            "range_holidays": range_holidays, "working_days": tt.working_days(user.org_code),
+            "bell_schedule": tt.bell_schedule(user.org_code)}
 
 
 # ---------------------------------------------------------------- homework (FR-TE-04, FR-ST-04)
