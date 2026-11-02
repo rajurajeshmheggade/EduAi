@@ -3,7 +3,7 @@ import { Camera, CheckCircle2, CircleAlert, EyeOff, Loader2, Mic, RotateCcw, Sca
 import { Button } from '@/components/ui/button'
 import { Label, Select } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/loading'
-import { type ProctorMedia, sleep } from '@/lib/proctor/media'
+import { isMediaClosed, type ProctorMedia, sleep } from '@/lib/proctor/media'
 import { cameraBlocked, median } from '@/lib/proctor/rules'
 import { type DeviceOption, deviceOptions, type MediaHelp, mediaErrorHelp, micLevel, pickDevice } from '@/lib/proctor/student/devices'
 import { beginState, CHECK_LABEL, type CheckKey, type Checks, type CheckState, faceVerdict, initialChecks, requiredChecks, startChecks, type Step } from '@/lib/proctor/student/gating'
@@ -139,6 +139,17 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
   const baseline = useRef({ yaw: 0, pitch: 0 })
   const faceRun = useRef(0)
   const set = (k: CheckKey, v: CheckState) => setChecks((c) => ({ ...c, [k]: v }))
+  // The window closed (Begin, cancel, the page left): checks still running stop here and open no further device.
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    const v = preview.current
+    return () => {
+      alive.current = false
+      if (v) v.srcObject = null
+    }
+  }, [])
+  const running = useCallback(() => alive.current && !media.closed, [media])
 
   const refreshDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return
@@ -153,7 +164,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
     let good = 0
     const poses: { yaw: number; pitch: number }[] = []
     const end = Date.now() + 30_000
-    while (Date.now() < end && good < 3 && run === faceRun.current) {
+    while (Date.now() < end && good < 3 && run === faceRun.current && running()) {
       const r = await media.analyse()
       if (!r) { await sleep(200); continue }
       const v = faceVerdict(r, cameraBlocked)
@@ -162,18 +173,19 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
       if (run === faceRun.current) set('face', { status: 'running', detail: v.ok ? `Good (${good}/3)` : v.hint })
       await sleep(300)
     }
-    if (run !== faceRun.current) return
+    if (run !== faceRun.current || !running()) return
     if (good >= 3) {
       if (poses.length) baseline.current = { yaw: median(poses.map((p) => p.yaw)), pitch: median(poses.map((p) => p.pitch)) }
       set('face', { status: 'pass', detail: 'One face, clearly visible' })
     } else set('face', { status: 'fail', detail: 'We could not see exactly one face clearly' })
-  }, [media])
+  }, [media, running])
 
   const startCamera = useCallback(async (deviceId?: string) => {
     set('camera', { status: 'running', detail: 'Asking for camera permission…' })
     setHelp((h) => ({ ...h, camera: undefined }))
     try {
       const stream = await media.startCamera(deviceId)
+      if (!running()) return false
       if (preview.current) { preview.current.srcObject = stream; void preview.current.play?.()?.catch(() => {}) }
       setCamId(media.cameraDeviceId())
       set('camera', { status: 'pass', detail: media.cameraLabel ?? 'Camera on' })
@@ -181,18 +193,20 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
       await refreshDevices()   // labels become readable once permission is granted
       return true
     } catch (e) {
+      if (isMediaClosed(e) || !running()) return false
       set('camera', { status: 'fail', detail: mediaErrorHelp(e, 'camera').title })
       setHelp((h) => ({ ...h, camera: mediaErrorHelp(e, 'camera') }))
       set('face', { status: 'pending' })
       return false
     }
-  }, [media, refreshDevices])
+  }, [media, refreshDevices, running])
 
   const startMic = useCallback(async (deviceId?: string) => {
     set('microphone', { status: 'running', detail: 'Asking for microphone permission…' })
     setHelp((h) => ({ ...h, microphone: undefined }))
     try {
       await media.startMic(deviceId)
+      if (!running()) return false
       setMicId(media.micDeviceId())
       for (const t of media.mic?.getAudioTracks() ?? []) t.addEventListener('ended', () => set('microphone', { status: 'fail', detail: 'The microphone was disconnected' }))
       if (rules.detect_voice) {
@@ -203,11 +217,12 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
       await refreshDevices()
       return true
     } catch (e) {
+      if (isMediaClosed(e) || !running()) return false
       set('microphone', { status: 'fail', detail: mediaErrorHelp(e, 'microphone').title })
       setHelp((h) => ({ ...h, microphone: mediaErrorHelp(e, 'microphone') }))
       return false
     }
-  }, [media, refreshDevices, rules.detect_voice])
+  }, [media, refreshDevices, running, rules.detect_voice])
 
   const loadDetector = useCallback(async () => {
     set('detector', { status: 'running', detail: 'Loading on-device detection (first time can take a minute)…' })
@@ -216,20 +231,21 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
       set('detector', { status: 'pass', detail: `Ready (${backend})` })
       return true
     } catch (e) {
+      if (isMediaClosed(e) || !running()) return false
       console.warn('proctoring detector failed to load', e)   // the technical reason stays in the console
       set('detector', { status: 'fail', detail: /too long/i.test(errorMessage(e)) ? 'Loading took too long on this connection'
         : 'The on-device detection files could not be loaded' })
       return false
     }
-  }, [media, rules.detect_objects])
+  }, [media, running, rules.detect_objects])
 
   const runAll = useCallback(async () => {
     setError(null)
     let camOk = false
     if (rules.camera_required) camOk = await startCamera()
-    if (rules.mic_required) await startMic()
-    if (rules.camera_required && (await loadDetector()) && camOk) await checkFace()
-  }, [rules.camera_required, rules.mic_required, startCamera, startMic, loadDetector, checkFace])
+    if (rules.mic_required && running()) await startMic()
+    if (rules.camera_required && running() && (await loadDetector()) && camOk) await checkFace()
+  }, [rules.camera_required, rules.mic_required, running, startCamera, startMic, loadDetector, checkFace])
 
   const started = useRef(false)
   useEffect(() => {
@@ -251,6 +267,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
     if (!md?.addEventListener) return
     const onChange = async () => {
       const all = await md.enumerateDevices().catch(() => [])
+      if (!running()) return
       const c = deviceOptions(all, 'videoinput')
       const m = deviceOptions(all, 'audioinput')
       setCams(c)
@@ -272,7 +289,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
     }
     md.addEventListener('devicechange', onChange)
     return () => md.removeEventListener('devicechange', onChange)
-  }, [camId, micId, media, rules.camera_required, rules.mic_required, startCamera, startMic, checkFace])
+  }, [camId, micId, media, running, rules.camera_required, rules.mic_required, startCamera, startMic, checkFace])
 
   async function chooseCamera(id: string) {
     setNotice(null)

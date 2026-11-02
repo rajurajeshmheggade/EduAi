@@ -69,7 +69,7 @@ describe('ProctorGate', () => {
     await waitFor(() => expect(svc.heartbeat).toHaveBeenCalled())
 
     view.unmount()
-    expect(svc.finish).toHaveBeenCalledWith('s1', 'left')
+    await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'left'))   // after the flags still queued
   })
 
   it('closes the session as submitted when the exam is handed in (and not as "left" afterwards)', async () => {

@@ -9,7 +9,7 @@
 import type { ProctorMedia } from '../media'
 import type { FrameResult } from '../proctor.worker'
 import { cameraBlocked, ConfirmRule, type FlagCode, type FlagEvent, HoldRule, lookingAway, Merger } from '../rules'
-import type { ClientRules, HeartbeatBody, StudentStatus, WireEvent } from '@/services/proctoringService'
+import type { ClientRules, HeartbeatBody, ProctorStatus, StudentStatus, WireEvent } from '@/services/proctoringService'
 
 export interface MonitorHud { camera: boolean; mic: boolean | null; fullscreen: boolean; online: boolean; visible: boolean; faces: number | null; hint: string | null; away: boolean }
 export interface LocalFlag { code: FlagCode; label: string; at: number }
@@ -36,6 +36,9 @@ const INSTANT: FlagCode[] = ['COPY_PASTE', 'FULLSCREEN_EXIT']
 /** Not shown in the student's own list of recorded flags (informational). */
 const QUIET: FlagCode[] = ['SANCTIONED_AWAY', 'PERF_DEGRADED', 'NETWORK_OFFLINE']
 export const AWAY_MAX_MS = 20 * 60_000
+/** A session in one of these states is over for good (the server also says `ended`). */
+const FINISHED: ProctorStatus[] = ['SUBMITTED', 'ENDED_BY_TEACHER', 'CLOSED']
+export const sessionOver = (s: Pick<StudentStatus, 'status' | 'ended'>) => s.ended || FINISHED.includes(s.status)
 
 /** Event details are small scalars only (the server refuses anything else). */
 export function scalars(d: Record<string, unknown> | undefined): Record<string, string | number | boolean | null> | undefined {
@@ -54,6 +57,7 @@ export class StudentProctorMonitor {
   private timers: ReturnType<typeof setInterval>[] = []
   private queue: WireEvent[] = []
   private sending: Promise<void> | null = null
+  private beating = new Set<Promise<void>>()
   private seq: number
   private merger = new Merger()
   private holds: Record<string, HoldRule>
@@ -91,6 +95,7 @@ export class StudentProctorMonitor {
 
   // ---------------------------------------------------------------- lifecycle
   start() {
+    if (this.stopped || this.startedAt) return
     this.startedAt = Date.now()
     const sig = { signal: this.abort.signal }
     document.addEventListener('visibilitychange', () => this.onVisibility(), sig)
@@ -111,13 +116,24 @@ export class StudentProctorMonitor {
     void this.beat()
   }
 
-  /** Stop sensing and send what is left. Safe to call twice. */
+  /** Stop sensing (every listener and timer) and send what is left. Safe to call twice; a stopped monitor stays stopped. */
   stop() {
     if (this.stopped) return
     this.stopped = true
     this.abort.abort()
     this.timers.forEach(clearInterval)
+    this.timers = []
     void this.flush()
+  }
+
+  get isStopped() { return this.stopped }
+
+  /**
+   * Resolves once the flags still queued are sent and a heartbeat already on its way has come back — so the session
+   * can be closed after them (a late heartbeat would otherwise reach the server after "finished").
+   */
+  async settle(): Promise<void> {
+    await Promise.all([this.flush().catch(() => {}), ...this.beating])
   }
 
   get pending() { return this.queue.length }
@@ -137,11 +153,13 @@ export class StudentProctorMonitor {
 
   /** The student reconnected (or switched) the camera from the HUD. */
   async restartCamera(deviceId?: string) {
+    if (this.stopped) return
     await this.o.media.startCamera(deviceId)
     this.checks()
   }
 
   async restartMic(deviceId?: string) {
+    if (this.stopped) return
     await this.o.media.startMic(deviceId)
     this.checks()
   }
@@ -301,15 +319,21 @@ export class StudentProctorMonitor {
     return [s.camera_live, s.mic_live, s.camera_permission, s.mic_permission, s.fullscreen, s.online].join('|')
   }
 
-  private async beat(urgent = false) {
-    if (this.stopped) return
+  private beat(urgent = false): Promise<void> {
+    if (this.stopped) return Promise.resolve()
     const now = Date.now()
-    if (urgent && now - this.lastBeatAt < 2000) return
+    if (urgent && now - this.lastBeatAt < 2000) return Promise.resolve()
     this.lastBeatAt = now
     this.lastBeatKey = this.beatKey()
-    try {
-      this.o.onStatus?.(await this.o.heartbeat(this.status()))
-    } catch { /* offline: the server marks the session interrupted if this lasts */ }
+    const run = (async () => {
+      try {
+        const st = await this.o.heartbeat(this.status())
+        if (!this.stopped) this.o.onStatus?.(st)
+      } catch { /* offline: the server marks the session interrupted if this lasts */ }
+    })()
+    this.beating.add(run)
+    void run.finally(() => this.beating.delete(run))
+    return run
   }
 
   private hud() {

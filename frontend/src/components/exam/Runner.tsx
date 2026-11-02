@@ -65,11 +65,14 @@ export function Runner({ view, media, reference, baseline, onEnded }: {
   const finish = useCallback(async (reason: string | null) => {
     if (ended.current) return
     ended.current = true
+    // Proctoring off at once — camera, microphone, screen share, models, sensors, full screen — then the answers
+    // still on this device are sent (that can wait for the network; the devices must not).
     engine.current?.stop()
-    await queue.current?.flush().catch(() => {})
     media.stop()
+    if (preview.current) preview.current.srcObject = null
     try { (navigator as Navigator & { keyboard?: { unlock(): void } }).keyboard?.unlock() } catch { /* not supported */ }
     if (document.fullscreenElement) await document.exitFullscreen().catch(() => {})
+    await queue.current?.flush().catch(() => {})
     onEnded(reason)
   }, [media, onEnded])
 
@@ -135,7 +138,9 @@ export function Runner({ view, media, reference, baseline, onEnded }: {
 
   useEffect(() => { answersRef.current = answers }, [answers])
   useEffect(() => {
-    if (preview.current && media.camera) { preview.current.srcObject = media.camera; void preview.current.play().catch(() => {}) }
+    const v = preview.current
+    if (v && media.camera) { v.srcObject = media.camera; void v.play().catch(() => {}) }
+    return () => { if (v) v.srcObject = null }
   }, [media])
 
   // ---------------------------------------------------------------- server timer

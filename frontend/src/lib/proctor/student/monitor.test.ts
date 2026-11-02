@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProctorMedia } from '../media'
 import { clientRules } from '@/test/proctoring'
 import type { StudentStatus, WireEvent } from '@/services/proctoringService'
-import { scalars, StudentProctorMonitor } from './monitor'
+import { trackListeners } from '@/test/fakeMedia'
+import { scalars, sessionOver, StudentProctorMonitor } from './monitor'
+
+function deferred<T>() {
+  let resolve!: (v: T) => void
+  const promise = new Promise<T>((r) => { resolve = r })
+  return { promise, resolve }
+}
 
 const LIGHT = { mean: 110, std: 35 }
 const frame = (faces: number, extra: Partial<{ luma: { mean: number; std: number }; objects: { label: string; score: number }[] }> = {}) =>
@@ -94,6 +101,57 @@ describe('StudentProctorMonitor', () => {
     expect(m.pending).toBe(1)
     await m.flush()
     expect(m.pending).toBe(0)
+  })
+
+  it('stop() clears every timer and listener, sends what is left, and nothing restarts it', async () => {
+    vi.useFakeTimers()
+    try {
+      const md = new EventTarget()
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: md })
+      const listeners = trackListeners([document, window, md])
+      const beat = deferred<StudentStatus>()
+      const heartbeat = vi.fn(() => beat.promise)
+      const { m, send, onStatus } = setup({ heartbeat })
+      m.start()
+      expect(vi.getTimerCount()).toBeGreaterThanOrEqual(4)             // vision, checks, flush, heartbeat
+      const types = ['visibilitychange', 'fullscreenchange', 'copy', 'cut', 'paste', 'offline', 'online', 'pagehide', 'devicechange']
+      expect(listeners.active(types)).toHaveLength(types.length)
+      m.emit({ code: 'COPY_PASTE', at: 0, duration_ms: 0 })
+
+      m.stop()
+      m.stop()
+      expect(vi.getTimerCount()).toBe(0)                                // every interval cleared
+      expect(listeners.active(types)).toEqual([])                       // every listener gone
+      await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1))     // the queued flag still goes out
+      document.dispatchEvent(new Event('copy'))
+      md.dispatchEvent(new Event('devicechange'))
+      m.emit({ code: 'COPY_PASTE', at: 1, duration_ms: 0 })
+      m.start()                                                         // a stopped monitor stays stopped
+      await m.restartCamera('cam-b')
+      expect(vi.getTimerCount()).toBe(0)
+      expect(m.pending).toBe(0)
+
+      // settle() waits for the heartbeat already on its way (the session is closed after it), whose reply is dropped
+      let settled = false
+      void m.settle().then(() => { settled = true })
+      await Promise.resolve()
+      expect(settled).toBe(false)
+      beat.resolve({ ...ok, status: 'ENDED_BY_TEACHER', ended: true })
+      await vi.waitFor(() => expect(settled).toBe(true))
+      expect(heartbeat).toHaveBeenCalled()
+      expect(onStatus.mock.calls.map(([st]) => st.status)).toEqual(['ACTIVE'])   // the final flush's reply; the late beat is dropped
+      listeners.restore()
+    } finally {
+      vi.useRealTimers()
+      delete (navigator as unknown as Record<string, unknown>).mediaDevices
+    }
+  })
+
+  it('knows when the server says the session is over (handed in, closed or ended by a teacher)', () => {
+    expect(sessionOver({ status: 'ACTIVE', ended: false })).toBe(false)
+    expect(sessionOver({ status: 'INTERRUPTED', ended: false })).toBe(false)
+    for (const status of ['SUBMITTED', 'CLOSED', 'ENDED_BY_TEACHER'] as const) expect(sessionOver({ status, ended: false })).toBe(true)
+    expect(sessionOver({ status: 'ACTIVE', ended: true })).toBe(true)
   })
 
   it('sends only small scalar details', () => {

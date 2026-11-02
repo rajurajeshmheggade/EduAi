@@ -42,13 +42,24 @@ export function SystemCheck({ view, media, resume, onDone }: {
   const started = useRef(false)
   const preview = useRef<HTMLVideoElement>(null)
   const set = (k: Key, v: State) => setS((x) => ({ ...x, [k]: v }))
+  // Unmounted (or proctoring ended): checks still running stop here and open no further device.
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    const v = preview.current
+    return () => {
+      alive.current = false
+      if (v) v.srcObject = null
+    }
+  }, [])
+  const running = useCallback(() => alive.current && !media.closed, [media])
 
   const checkFace = useCallback(async () => {
     set('face', { status: 'running', detail: 'Looking for your face…' })
     let good = 0
     const poses: { yaw: number; pitch: number }[] = []
     const end = performance.now() + 30_000
-    while (performance.now() < end && good < 3) {
+    while (performance.now() < end && good < 3 && running()) {
       const r = await media.analyse()
       if (!r) { await sleep(150); continue }
       const ok = r.faces === 1 && r.centred && !cameraBlocked(r.luma)
@@ -57,11 +68,12 @@ export function SystemCheck({ view, media, resume, onDone }: {
       set('face', { status: 'running', detail: r.faces === 0 ? 'No face yet — face the camera' : r.faces > 1 ? 'Only you should be in view' : !r.centred ? 'Move to the centre of the picture' : cameraBlocked(r.luma) ? 'It is too dark' : `Good (${good}/3)` })
       await sleep(250)
     }
+    if (!running()) return
     if (good >= 3) {
       baseline.current = { yaw: median(poses.map((p) => p.yaw)), pitch: median(poses.map((p) => p.pitch)) }
       set('face', { status: 'pass', detail: 'One face, centred and lit' })
     } else set('face', { status: 'fail', detail: 'We could not see exactly one face clearly' })
-  }, [media])
+  }, [media, running])
 
   const runAuto = useCallback(async () => {
     set('secure', window.isSecureContext ? { status: 'pass' } : { status: 'fail', detail: 'Not a secure (https) page' })
@@ -84,18 +96,21 @@ export function SystemCheck({ view, media, resume, onDone }: {
         else set('camera', { status: 'pass', detail: media.cameraLabel ?? 'Camera on' })
       } catch (e) { set('camera', { status: 'fail', detail: errorMessage(e, 'Camera not available') }) }
     }
+    if (!running()) return
     set('mic', { status: 'running', detail: 'Measuring room noise — stay quiet for 5 seconds' })
     try {
       await media.startMic()
       const floor = await media.calibrateMic(5000, setMicProgress)
       set('mic', { status: 'pass', detail: `Room noise ${Math.round(floor)} dB` })
     } catch (e) { set('mic', { status: 'fail', detail: errorMessage(e, 'Microphone not available') }) }
+    if (!running()) return
     set('models', { status: 'running', detail: 'Loading on-device models…' })
     try {
       const backend = await media.loadModels({ embed: needCam, objects: needCam })
       set('models', { status: 'pass', detail: `Ready (${backend})` })
     } catch (e) { set('models', { status: 'fail', detail: errorMessage(e) }) }
     if (needCam && media.modelsReady && media.camera) await checkFace()
+    if (!running()) return
     set('network', { status: 'running' })
     const times: number[] = []
     for (let i = 0; i < 3; i++) {
@@ -104,7 +119,7 @@ export function SystemCheck({ view, media, resume, onDone }: {
     }
     network.current = times.length ? Math.round(median(times)) : null
     set('network', network.current !== null && network.current < 800 ? { status: 'pass', detail: `${network.current} ms` } : { status: 'fail', detail: network.current === null ? 'No connection' : `${network.current} ms (slow)` })
-  }, [media, needCam, checkFace])
+  }, [media, needCam, checkFace, running])
 
   useEffect(() => {
     if (started.current) return

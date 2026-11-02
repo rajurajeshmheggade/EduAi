@@ -12,7 +12,7 @@ import { ErrorState, PageLoader } from '@/components/ui/loading'
 import { Toaster } from '@/components/ui/toast'
 import { exam, examStore, PAGE_ID, type ExamView as View } from '@/lib/proctor/examApi'
 import { examChannel, setExamLock } from '@/lib/proctor/examLock'
-import { ProctorMedia } from '@/lib/proctor/media'
+import { useProctorMedia } from '@/lib/proctor/useProctorMedia'
 import { errorMessage } from '@/services/apiClient'
 
 const CSP = [
@@ -53,7 +53,8 @@ export default function ExamView() {
   // Started from the standalone admission application: the end screen returns there instead of the teacher hand-back.
   const [origin, setOrigin] = useState<string | undefined>(undefined)
   const [proctorReady, setProctorReady] = useState(false)
-  const [media] = useState(() => new ProctorMedia())
+  // Owned by this page: switched off when it unmounts, and as soon as the exam is over for this tab (below).
+  const media = useProctorMedia()
   const [reference, setReference] = useState<number[] | null>(null)
   const [baseline, setBaseline] = useState({ yaw: 0, pitch: 0 })
 
@@ -87,7 +88,10 @@ export default function ExamView() {
     }
   }, [])
   useEffect(() => { if (mine) queueMicrotask(() => void load()) }, [mine, load])
-  useEffect(() => () => media.stop(), [media])
+  // Submitted, timed out, ended by the teacher, locked, or taken over by another tab: the end / hand-back screen
+  // shows no camera — every proctoring stream (camera, microphone, screen share) and the models are switched off.
+  const over = refused || ended !== undefined || !!view?.ended || view?.status === 'LOCKED'
+  useEffect(() => { if (over) media.stop() }, [over, media])
 
   if (!mine) return <Shell><HandBack title="This exam is not open on this device" /></Shell>
   if (refused) {

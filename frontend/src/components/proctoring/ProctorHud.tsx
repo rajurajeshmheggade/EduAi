@@ -31,8 +31,13 @@ export function ProctorHud({ hud, media, flags, warnings, fullscreenRequired, ca
   const [fixError, setFixError] = useState<string | null>(null)
   const video = useRef<HTMLVideoElement>(null)
 
+  // The private preview shows the running camera; it lets go of the stream when hidden, closed or gone.
   useEffect(() => {
-    if (open && showPreview && video.current && media.camera) { video.current.srcObject = media.camera; void video.current.play?.()?.catch(() => {}) }
+    const v = video.current
+    if (!open || !showPreview || !v || !media.camera) return
+    v.srcObject = media.camera
+    void v.play?.()?.catch(() => {})
+    return () => { v.srcObject = null }
   }, [open, showPreview, media, hud?.camera])
 
   const warning = warnings[0]
