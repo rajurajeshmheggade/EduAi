@@ -88,10 +88,9 @@ export function ProctorGate({ module, refId, title, autoOpen = false, resume = f
   // Leaving the page (route change) while the session runs: interrupted, or closed for an AI Classroom session.
   useEffect(() => () => {
     const s = session.current
-    monitor.current?.stop()
-    media.stop()
+    stopSensing()
     if (s && !finished.current) { finished.current = true; void proctoringService.finish(s.session_id, closeReason).catch(() => {}) }
-  }, [media, closeReason])
+  }, [stopSensing, closeReason])
 
   async function begin(r: BeginResult) {
     const s = session.current

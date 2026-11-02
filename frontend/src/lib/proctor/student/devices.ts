@@ -12,8 +12,9 @@ export function deviceOptions(devices: Pick<MediaDeviceInfo, 'deviceId' | 'kind'
   const seen = new Set<string>()
   const out: DeviceOption[] = []
   for (const d of devices) {
-    // "default" / "communications" are Chromium aliases of a real device listed separately.
-    if (d.kind !== kind || !d.deviceId || d.deviceId === 'default' || d.deviceId === 'communications' || seen.has(d.deviceId)) continue
+    // "communications" is a Chromium alias of a real device listed separately; "default" is kept (labelled
+    // "Default - …" by the browser) because a stream opened without a device id reports it as its device.
+    if (d.kind !== kind || !d.deviceId || d.deviceId === 'communications' || seen.has(d.deviceId)) continue
     seen.add(d.deviceId)
     out.push({ id: d.deviceId, label: d.label.trim() || `${noun} ${out.length + 1}` })
   }

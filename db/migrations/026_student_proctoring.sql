@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.proctor_settings (
     org_code VARCHAR(64) NOT NULL,
     module VARCHAR(16) NOT NULL CHECK (module IN ('ONLINE_TEST', 'VIRTUAL_LAB', 'AI_CLASSROOM')),
     settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    history JSONB NOT NULL DEFAULT '[]'::jsonb,       -- audit of changes: [{at, by, changes: {key: [old, new]}}], newest last
     updated_by VARCHAR(64),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (org_code, module)
@@ -34,7 +35,8 @@ CREATE TABLE IF NOT EXISTS public.proctor_sessions (
     subject_code VARCHAR(64),
     teacher_codes TEXT[] NOT NULL DEFAULT '{}',
     -- PRECHECK: preparation window open · ACTIVE · INTERRUPTED: left the page / stopped reporting ·
-    -- SUBMITTED: exam handed in · ENDED_BY_TEACHER · CLOSED: an AI Classroom session the student closed
+    -- SUBMITTED: exam handed in · ENDED_BY_TEACHER · CLOSED: an AI Classroom session the student closed, or a
+    -- preparation window closed before the exam started
     status VARCHAR(20) NOT NULL DEFAULT 'PRECHECK'
         CHECK (status IN ('PRECHECK', 'ACTIVE', 'INTERRUPTED', 'SUBMITTED', 'ENDED_BY_TEACHER', 'CLOSED')),
     settings JSONB NOT NULL DEFAULT '{}'::jsonb,       -- effective thresholds when the session was prepared

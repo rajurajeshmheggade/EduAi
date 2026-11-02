@@ -28,6 +28,7 @@ SESSION_SQL = (
     "LEFT JOIN public.app_users u ON u.org_code = s.org_code AND u.user_code = s.student_code "
     "LEFT JOIN public.classes c ON c.org_code = s.org_code AND c.class_code = s.class_code ")
 PRECHECK_STALE_MINUTES = 30
+SETTINGS_HISTORY = 50          # settings changes kept in proctor_settings.history
 SWEEP_EVERY_S = 10
 _sweeps: dict[str, float] = {}
 _sweep_lock = threading.Lock()
@@ -45,20 +46,27 @@ def settings_for(org: str, module: str) -> dict:
 
 def all_settings(org: str) -> dict:
     rows = {r["module"]: r for r in db.fetch_all(
-        "SELECT module, settings, updated_by, updated_at FROM public.proctor_settings WHERE org_code = %s", (org,))}
+        "SELECT module, settings, history, updated_by, updated_at FROM public.proctor_settings WHERE org_code = %s", (org,))}
     return {m: {"effective": cfg.merge(m, rows[m]["settings"] if m in rows else None), "defaults": cfg.defaults_for(m),
                 "overrides": rows[m]["settings"] if m in rows else {}, "updated_by": rows.get(m, {}).get("updated_by"),
-                "updated_at": rows.get(m, {}).get("updated_at")} for m in cfg.MODULES}
+                "updated_at": rows.get(m, {}).get("updated_at"), "history": (rows.get(m, {}).get("history") or [])[-10:]}
+            for m in cfg.MODULES}
 
 
 def save_settings(org: str, module: str, values: dict, actor: str) -> dict:
+    """Store only real overrides of the defaults, and append what changed to the settings' audit history."""
     current = db.fetch_one("SELECT settings FROM public.proctor_settings WHERE org_code = %s AND module = %s", (org, module))
-    merged = {**(current["settings"] if current else {}), **values}
+    before = cfg.merge(module, current["settings"] if current else None)
+    after = cfg.merge(module, {**(current["settings"] if current else {}), **values})
     defaults = cfg.defaults_for(module)
-    overrides = {k: v for k, v in cfg.merge(module, merged).items() if v != defaults[k]}   # store only real overrides
-    db.execute("INSERT INTO public.proctor_settings (org_code, module, settings, updated_by) VALUES (%s,%s,%s,%s) "
-               "ON CONFLICT (org_code, module) DO UPDATE SET settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by, "
-               "updated_at = NOW()", (org, module, Jsonb(overrides), actor))
+    overrides = {k: v for k, v in after.items() if v != defaults[k]}
+    changes = {k: [before[k], after[k]] for k in after if before[k] != after[k]}
+    entry = Jsonb([{"at": now().isoformat(), "by": actor, "changes": changes}])
+    db.execute("INSERT INTO public.proctor_settings (org_code, module, settings, history, updated_by) VALUES (%s,%s,%s,%s,%s) "
+               "ON CONFLICT (org_code, module) DO UPDATE SET settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by, updated_at = NOW(), "
+               "history = (SELECT COALESCE(jsonb_agg(v ORDER BY n), '[]'::jsonb) FROM jsonb_array_elements(public.proctor_settings.history "
+               "|| EXCLUDED.history) WITH ORDINALITY AS h(v, n) WHERE n > jsonb_array_length(public.proctor_settings.history) + 1 - %s)",
+               (org, module, Jsonb(overrides), entry, actor, SETTINGS_HISTORY))
     return all_settings(org)[module]
 
 
@@ -372,9 +380,10 @@ def exam_view(user: CurrentUser, module: str, ref_id: str) -> dict:
         st = stats.get(code) or {}
         state = _state(module, s, attempts.get(code))
         last = (s or {}).get("last_status") or {}
+        need = (s or {}).get("settings") or {}
         open_session = state in ("ACTIVE", "INTERRUPTED")
-        needs_mic = bool(s and (s["settings"] or {}).get("mic_required"))
-        camera_issue = open_session and (last.get("camera_live") is False or (needs_mic and last.get("mic_live") is False)
+        camera_issue = open_session and ((need.get("camera_required") and last.get("camera_live") is False)
+                                         or (need.get("mic_required") and last.get("mic_live") is False)
                                          or bool(st.get("camera_recent")))
         lt = latest.get(code)
         rows.append({
@@ -383,7 +392,8 @@ def exam_view(user: CurrentUser, module: str, ref_id: str) -> dict:
             "last_heartbeat_at": s["last_heartbeat_at"] if s else None,
             "camera": {"live": last.get("camera_live"), "label": s["camera_label"] if s else None},
             "mic": {"live": last.get("mic_live"), "permission": last.get("mic_permission"), "label": s["mic_label"] if s else None},
-            "fullscreen": last.get("fullscreen"), "online": last.get("online"), "faces": last.get("faces"),
+            "fullscreen": last.get("fullscreen") if need.get("fullscreen_required") else None,
+            "online": last.get("online"), "faces": last.get("faces"),
             "alerts": {"open": st.get("open", 0), "total": st.get("total", 0), "high": st.get("high", 0)},
             "suspicious": bool(st.get("suspicious")), "camera_issue": bool(camera_issue), "warnings": warned.get(code, 0),
             "latest_alert": {"code": lt["code"], "label": cfg.FLAGS[lt["code"]].label, "severity": lt["severity"], "at": lt["server_ts"]}
@@ -455,6 +465,8 @@ def session_detail(user: CurrentUser, s: dict) -> dict:
         "student": {"student_code": s["student_code"], "full_name": s["student_name"], "roll_number": s["roll_number"],
                     "class_code": s["class_code"], "class_name": s["class_name"], "section": exams.section_of(s["class_code"], s["class_name"])},
         "can_end": bool(st.get("teacher_can_end", True)) and s["status"] in cfg.OPEN,
+        "requires": {"camera": bool(st.get("camera_required")), "microphone": bool(st.get("mic_required")),
+                     "fullscreen": bool(st.get("fullscreen_required"))},
         "events": [{**_event_view(e), "confidence": e["confidence"], "source": e["source"], "review": _review(e)} for e in events],
         "actions": [a for a in actions if a["action"] != "VIEW"],
         "views": sum(1 for a in actions if a["action"] == "VIEW"),
@@ -484,6 +496,8 @@ def _class_label(f: dict) -> str:
 
 
 def _notify_started(s: dict) -> None:
+    if not (s["settings"] or {}).get("notify_on_start", True):
+        return   # e.g. AI Classroom: the start is on the live dashboard, without a bell notification
     f = _student_fields(s)
     body = (f"{f['student_name']} (ID {f['student_id']}) · {_class_label(f)} · {cfg.MODULE_LABEL[s['module']]} started at "
             f"{_fmt(s['started_at'])} · session {s['status'].lower()}")

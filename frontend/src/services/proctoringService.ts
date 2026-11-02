@@ -110,6 +110,7 @@ export interface SessionDetail {
   }
   student: { student_code: string; full_name: string | null; roll_number: string | null; class_code: string | null; class_name: string | null; section: string | null }
   can_end: boolean
+  requires: { camera: boolean; microphone: boolean; fullscreen: boolean }
   events: ProctorEvent[]
   actions: SessionAction[]
   views: number
@@ -132,9 +133,12 @@ export interface ProctorSettings {
   no_face_seconds: number; multiple_faces_seconds: number; looking_away_seconds: number; camera_blocked_seconds: number
   window_blur_seconds: number; voice_seconds: number; voice_db: number; object_min_confidence: number
   escalate_after_seconds: number; repeat_escalation_count: number; heartbeat_missing_seconds: number
-  notify_min_severity: Severity; notify_cooldown_seconds: number; teacher_can_end: boolean; retention_days: number
+  notify_on_start: boolean; notify_min_severity: Severity; notify_cooldown_seconds: number; teacher_can_end: boolean; retention_days: number
 }
-export interface ModuleSettings { effective: ProctorSettings; defaults: ProctorSettings; overrides: Partial<ProctorSettings>; updated_by: string | null; updated_at: string | null }
+export interface ModuleSettings {
+  effective: ProctorSettings; defaults: ProctorSettings; overrides: Partial<ProctorSettings>; updated_by: string | null; updated_at: string | null
+  history: { at: string; by: string; changes: Record<string, [unknown, unknown]> }[]
+}
 export interface SettingsView {
   modules: Record<ProctorModule, ModuleSettings>
   flags: Record<string, { label: string; severity: Severity; category: string }>

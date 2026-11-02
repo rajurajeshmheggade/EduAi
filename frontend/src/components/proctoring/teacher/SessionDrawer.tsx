@@ -69,9 +69,9 @@ export function SessionDrawer({ sessionId, refresh, onClose, onChanged }: { sess
                 <Fact label="Resumed" value={`${data.session.resumed_count} time${data.session.resumed_count === 1 ? '' : 's'}`} />
               </dl>
               <div className="flex flex-wrap gap-2 text-xs">
-                <Device icon={Camera} ok={st?.camera_live !== false} label={data.session.camera_label ?? 'Camera'} />
-                {(data.session.mic_label || st?.mic_live !== undefined) && <Device icon={Mic} ok={st?.mic_live !== false && st?.mic_permission !== 'denied'} label={data.session.mic_label ?? 'Microphone'} />}
-                {st?.fullscreen !== undefined && st?.fullscreen !== null && <Device icon={Flag} ok={!!st.fullscreen} label={st.fullscreen ? 'Full screen' : 'Not full screen'} />}
+                {data.requires.camera && <Device icon={Camera} ok={st?.camera_live !== false} label={data.session.camera_label ?? 'Camera'} />}
+                {data.requires.microphone && <Device icon={Mic} ok={st?.mic_live !== false && st?.mic_permission !== 'denied'} label={data.session.mic_label ?? 'Microphone'} />}
+                {data.requires.fullscreen && st && <Device icon={Flag} ok={!!st.fullscreen} label={st.fullscreen ? 'Full screen' : 'Not full screen'} />}
               </div>
 
               <div role="tablist" className="flex gap-1 rounded-xl border border-line bg-ink-800 p-1 text-sm">

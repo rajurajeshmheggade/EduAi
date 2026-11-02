@@ -136,17 +136,19 @@ DEFAULTS: dict = {
     "escalate_after_seconds": 30,
     "repeat_escalation_count": 3,
     "heartbeat_missing_seconds": 45,
+    "notify_on_start": True,
     "notify_min_severity": "High",
     "notify_cooldown_seconds": 120,
     "teacher_can_end": True,
     "retention_days": 180,
 }
 # Online tests are the strictest; Virtual Labs may send the student to DIKSHA's player in another tab (allowed and
-# logged as SANCTIONED_AWAY); AI Classroom is study time, so object detection and the microphone stay off.
+# logged as SANCTIONED_AWAY); AI Classroom is study time, so object detection and the microphone stay off and a
+# session start is shown on the live dashboard without a bell notification.
 MODULE_DEFAULTS: dict[str, dict] = {
     "ONLINE_TEST": {"mic_required": True, "fullscreen_required": True, "detect_voice": True},
     "VIRTUAL_LAB": {},
-    "AI_CLASSROOM": {"detect_objects": False, "notify_min_severity": "Critical"},
+    "AI_CLASSROOM": {"detect_objects": False, "notify_on_start": False, "notify_min_severity": "Critical"},
 }
 NUMERIC_LIMITS: dict[str, tuple[float, float]] = {
     "no_face_seconds": (2, 120), "multiple_faces_seconds": (1, 60), "looking_away_seconds": (2, 120),

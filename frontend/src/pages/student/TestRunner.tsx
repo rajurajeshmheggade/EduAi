@@ -39,7 +39,7 @@ export default function TestRunner() {
   if (!test) return <PageLoader message="Opening your test…" />
   const resume = test.my.status === 'IN_PROGRESS'
   return (
-    <ProctorGate module="ONLINE_TEST" refId={id} title={test.test_title} autoOpen resume={resume}
+    <ProctorGate key={id} module="ONLINE_TEST" refId={id} title={test.test_title} autoOpen resume={resume}
       startLabel={resume ? 'Resume test' : 'Start test'} beginLabel={resume ? 'Resume test' : 'Begin test'}
       beginNote={resume ? 'Your timer has kept running while you were away.'
         : `The ${test.duration_minutes ?? ''}-minute timer starts when you press Begin test. You get one attempt.`}

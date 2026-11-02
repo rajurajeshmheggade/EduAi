@@ -99,7 +99,7 @@ export default function ProctoringExam() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-label="Students" className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={filter} onChange={setFilter} className="max-w-full" items={[
+            <Tabs value={filter} onChange={setFilter} className="w-full lg:w-auto lg:max-w-full" items={[
               { id: 'all', label: 'All', count: data.students.length },
               { id: 'writing', label: 'Writing', count: data.students.filter(FILTERS.writing).length },
               { id: 'alerts', label: 'Alerts', count: data.students.filter(FILTERS.alerts).length },
@@ -107,7 +107,7 @@ export default function ProctoringExam() {
               { id: 'waiting', label: 'Yet to start', count: c.yet_to_start },
               { id: 'done', label: 'Submitted', count: c.submitted },
             ]} />
-            <div className="relative ml-auto w-full sm:w-56">
+            <div className="relative w-full sm:w-64 lg:ml-auto">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
               <Input aria-label="Find a student" placeholder="Name, ID or roll no." className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
             </div>

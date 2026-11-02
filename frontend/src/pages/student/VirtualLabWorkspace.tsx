@@ -77,7 +77,7 @@ export default function VirtualLabWorkspace() {
         </Card>
       ) : status === 'not_started' || status === 'in_progress' ? (
         // One gate for starting and resuming: Start opens the proctoring preparation window, then the lab begins.
-        <ProctorGate module="VIRTUAL_LAB" refId={id} title={a.title} resume={!!attempt} startLabel={attempt ? 'Resume the lab' : 'Start the lab'}
+        <ProctorGate key={id} module="VIRTUAL_LAB" refId={id} title={a.title} resume={!!attempt} startLabel={attempt ? 'Resume the lab' : 'Start the lab'}
           beginLabel={attempt ? 'Resume the lab' : 'Begin the lab'} intro={<LabIntro view={view} />}
           beginNote="Opening the simulation on DIKSHA in another tab is allowed and is not counted as switching tabs."
           onBegin={attempt ? undefined : async () => { setView(await virtualLabService.start(id)) }}>

@@ -41,6 +41,7 @@ readers = require_role("teacher", "orgadmin", "superadmin")
 
 ModuleName = Literal["ONLINE_TEST", "VIRTUAL_LAB", "AI_CLASSROOM"]
 MAX_EVENTS_PER_MINUTE = 240
+MAX_HEARTBEATS_PER_MINUTE = 40
 STREAM_SECONDS = 300          # a stream lives at most this long (the client reconnects with a fresh token)
 KEEPALIVE_SECONDS = 15
 limiter = RateLimiter()
@@ -157,7 +158,9 @@ class HeartbeatIn(BaseModel):
 @router.post("/student/sessions/{session_id}/heartbeat")
 def heartbeat(session_id: UUID, body: HeartbeatIn, user: CurrentUser = Depends(students)):
     """Every ~10 s while the exam is open. Returns teacher warnings not yet acknowledged and whether a teacher ended it."""
-    return sessions.heartbeat(sessions.own(user, session_id), body.model_dump())
+    s = sessions.own(user, session_id)
+    limiter.hit(f"proctor-hb:{s['session_id']}", MAX_HEARTBEATS_PER_MINUTE, 60, message="Too many heartbeats")
+    return sessions.heartbeat(s, body.model_dump())
 
 
 @router.post("/student/sessions/{session_id}/warnings/{action_id}/ack")
@@ -328,6 +331,7 @@ class SettingsIn(BaseModel):
     notify_min_severity: Literal["Low", "Medium", "High", "Critical"] | None = None
     notify_cooldown_seconds: int | None = Field(default=None, ge=0, le=3600)
     teacher_can_end: bool | None = None
+    notify_on_start: bool | None = None
     retention_days: int | None = Field(default=None, ge=7, le=730)
 
 

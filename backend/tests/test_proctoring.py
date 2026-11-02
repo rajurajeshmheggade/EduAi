@@ -341,8 +341,12 @@ def test_ai_classroom_sessions(client, u, nlp_root):
     assert _start(client, h, sid, {"camera": True, "face": True}).status_code == 200
     s = sessions.load(sid)
     assert s["teacher_codes"] == ["EMP1001"] and s["subject_code"] == "PHY101"   # the class's Physics teacher
+    assert not [n for n in _notifications("EMP1001", "PROCTOR_STARTED") if n["payload"]["session_id"] == sid]   # dashboard only
+    client.post(f"{P}/student/sessions/{sid}/heartbeat", headers=h, json={"camera_live": True, "mic_live": None, "fullscreen": False})
     view = client.get(f"{P}/teacher/exam", headers=u["priya"], params={"module": "AI_CLASSROOM", "ref_id": "nlp/X/Physics/Motion"}).json()
-    assert view["counts"]["writing"] == 1
+    assert view["counts"]["writing"] == 1 and view["counts"]["camera_issues"] == 0
+    me = next(x for x in view["students"] if x["student_code"] == "REG2026001")
+    assert me["fullscreen"] is None and me["mic"]["live"] is None              # not required here: not shown as a problem
     assert client.get(f"{P}/teacher/exam", headers=u["kavya"], params={"module": "AI_CLASSROOM", "ref_id": "nlp/X/Physics/Motion"}).status_code == 404
     assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "closed"}).json()["status"] == "CLOSED"
 
@@ -368,6 +372,11 @@ def test_settings_are_admin_editable_and_validated(client, u):
             "no_face_seconds": 12, "notify_min_severity": "Medium"}
         rules = client.get(f"{P}/student/config", headers=u["rohan"], params={"module": "ONLINE_TEST"}).json()["client_rules"]
         assert rules["durations_ms"]["NO_FACE"] == 12_000
+        r = client.put(f"{P}/settings/ONLINE_TEST", headers=u["admin"], json={"no_face_seconds": 8})       # back to the default
+        assert r.json()["overrides"] == {"notify_min_severity": "Medium"}
+        hist = r.json()["history"]
+        assert [h["changes"] for h in hist] == [{"no_face_seconds": [8, 12], "notify_min_severity": ["High", "Medium"]}, {"no_face_seconds": [12, 8]}]
+        assert hist[0]["by"] == "ADMIN001"
     finally:
         db.execute("DELETE FROM public.proctor_settings WHERE org_code = %s AND module = 'ONLINE_TEST'", (ORG,))
 

@@ -23,6 +23,7 @@ const SWITCHES: { key: BoolKey; label: string; hint: string }[] = [
   { key: 'detect_looking_away', label: 'Detect looking away', hint: 'Off by default: prone to false positives.' },
   { key: 'detect_voice', label: 'Detect sustained talking / noise', hint: 'Loudness only, needs the microphone; nothing is recorded.' },
   { key: 'teacher_can_end', label: 'Teachers may end a session', hint: 'Ending hands in what the student saved so far.' },
+  { key: 'notify_on_start', label: 'Notify teachers when a student starts', hint: 'Off: the start still shows on the live dashboard.' },
 ]
 const NUMBERS: { key: NumKey; label: string; unit: string; step?: number }[] = [
   { key: 'no_face_seconds', label: 'Face not visible for', unit: 's' },
@@ -120,8 +121,18 @@ function ModuleEditor({ module, current, editable, limits, scope, onSaved }: {
           <Button onClick={() => void save()} disabled={busy || changed.length === 0}><Save className="h-4 w-4" /> Save {changed.length ? `(${changed.length})` : ''}</Button>
           <Button variant="ghost" disabled={busy || changed.length === 0} onClick={() => setDraft({ ...current.effective })}><RotateCcw className="h-4 w-4" /> Undo changes</Button>
           <Button variant="ghost" disabled={busy} onClick={() => setDraft({ ...current.defaults })}>Use the recommended defaults</Button>
-          {current.updated_at && <span className="text-xs text-ink-500">Last saved {new Date(current.updated_at).toLocaleString()}</span>}
+          {current.updated_at && <span className="text-xs text-ink-500">Last saved {new Date(current.updated_at).toLocaleString()}{current.updated_by ? ` by ${current.updated_by}` : ''}</span>}
         </div>
+      )}
+      {current.history.length > 0 && (
+        <details className="text-xs text-ink-500">
+          <summary className="cursor-pointer">Change history ({current.history.length})</summary>
+          <ol className="mt-2 space-y-1">
+            {[...current.history].reverse().map((h) => (
+              <li key={h.at}>{new Date(h.at).toLocaleString()} · {h.by}: {Object.entries(h.changes).map(([k, [a, b]]) => `${k} ${String(a)} → ${String(b)}`).join(', ') || 'no change'}</li>
+            ))}
+          </ol>
+        </details>
       )}
     </div>
   )

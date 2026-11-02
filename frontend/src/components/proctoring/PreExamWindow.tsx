@@ -216,7 +216,9 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
       set('detector', { status: 'pass', detail: `Ready (${backend})` })
       return true
     } catch (e) {
-      set('detector', { status: 'fail', detail: errorMessage(e, 'On-device detection could not start') })
+      console.warn('proctoring detector failed to load', e)   // the technical reason stays in the console
+      set('detector', { status: 'fail', detail: /too long/i.test(errorMessage(e)) ? 'Loading took too long on this connection'
+        : 'The on-device detection files could not be loaded' })
       return false
     }
   }, [media, rules.detect_objects])
@@ -306,7 +308,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
 
   return (
     <section className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]" aria-label="Device check">
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {rules.camera_required && (
           <div className="overflow-hidden rounded-2xl border border-line bg-black">
             <div className="relative">
@@ -357,7 +359,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
         ))}
       </div>
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <ul className="space-y-2" aria-label="Mandatory checks">
           {needed.length === 0 && <li className="rounded-xl border border-line bg-ink-900 px-3 py-2 text-sm text-ink-300">No device checks are needed for this session.</li>}
           {needed.map((k) => {
@@ -370,7 +372,7 @@ function DeviceStep({ config, media, acknowledged, beginLabel, beginNote, onBack
                       : <Loader2 className={cn('h-4 w-4 shrink-0 text-ink-500', c.status === 'running' && 'animate-spin')} aria-label="Checking" />}
                   <span className="font-medium text-fg">{CHECK_LABEL[k]}</span>
                 </div>
-                {c.detail && <p className="mt-0.5 pl-6 text-xs text-ink-500">{c.detail}</p>}
+                {c.detail && <p className="mt-0.5 pl-6 text-xs text-ink-500 [overflow-wrap:anywhere]">{c.detail}</p>}
                 {c.status === 'fail' && <p className="mt-0.5 pl-6 text-xs text-warn">{FIX[k]}</p>}
               </li>
             )

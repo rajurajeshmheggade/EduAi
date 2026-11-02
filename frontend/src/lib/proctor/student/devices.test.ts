@@ -4,11 +4,11 @@ import { deviceOptions, mediaErrorHelp, micLevel, pickDevice } from './devices'
 const dev = (deviceId: string, kind: MediaDeviceKind, label = '') => ({ deviceId, kind, label })
 
 describe('device picker', () => {
-  it('lists one kind, skips Chromium aliases and duplicates, and names unlabelled devices', () => {
-    const all = [dev('default', 'videoinput', 'Default'), dev('cam1', 'videoinput', 'Integrated Camera'), dev('mic1', 'audioinput', 'Mic'),
+  it('lists one kind, skips the communications alias and duplicates, and names unlabelled devices', () => {
+    const all = [dev('default', 'audioinput', 'Default - Mic'), dev('cam1', 'videoinput', 'Integrated Camera'), dev('mic1', 'audioinput', 'Mic'),
       dev('cam2', 'videoinput'), dev('cam1', 'videoinput', 'Integrated Camera'), dev('communications', 'audioinput', 'Comms')]
     expect(deviceOptions(all, 'videoinput')).toEqual([{ id: 'cam1', label: 'Integrated Camera' }, { id: 'cam2', label: 'Camera 2' }])
-    expect(deviceOptions(all, 'audioinput')).toEqual([{ id: 'mic1', label: 'Mic' }])
+    expect(deviceOptions(all, 'audioinput')).toEqual([{ id: 'default', label: 'Default - Mic' }, { id: 'mic1', label: 'Mic' }])
   })
 
   it("keeps the student's choice while it is connected", () => {
