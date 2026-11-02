@@ -49,19 +49,9 @@ export default function TeacherDashboard() {
 
       {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
-      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {!k ? Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
-          <Kpi icon={School} label="My classes" value={k.classes} tone="brand" to="/teacher/classes" />
-          <Kpi icon={Users} label="Students" value={k.students} tone="aqua" to="/teacher/classes" />
-          <Kpi icon={CalendarClock} label="Periods today" value={k.periods_today} tone="neutral" to="/teacher/timetable" />
-          <Kpi icon={CalendarCheck} label="Attendance to mark" value={k.attendance_pending} tone={k.attendance_pending ? 'warn' : 'ok'} to="/teacher/attendance" hint={k.attendance_pending ? 'for today’s periods' : 'All marked'} />
-          <Kpi icon={FileCheck2} label="Homework to review" value={k.homework_to_review} tone={k.homework_to_review ? 'warn' : 'ok'} to="/teacher/homework" />
-          <Kpi icon={AlertTriangle} label="Needs attention" value={k.needs_attention} tone={k.needs_attention ? 'bad' : 'ok'} hint={`${k.active_assessments} test(s) / assignment(s) open`} />
-        </>}
-      </section>
-
+      {/* Today's timetable comes first, right under the greeting. */}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel icon={CalendarClock} title="Today’s schedule" action={{ to: '/teacher/timetable', label: 'Full week' }}>
+        <Panel icon={CalendarClock} title="Today’s schedule" action={{ to: '/teacher/timetable', label: 'Full timetable' }}>
           {!d ? <div className="skeleton h-40" /> : d.today_slots.length === 0 ? <Empty icon={CalendarClock}>{d.holiday_today ? `Holiday today — ${d.holiday_today}.` : 'No periods scheduled today.'}</Empty> : (
             <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-[3.4rem] before:top-2 before:w-px before:bg-line">
               {[...d.today_slots].sort((a, b) => a.start_time.localeCompare(b.start_time)).map((s) => {
@@ -110,6 +100,17 @@ export default function TeacherDashboard() {
           )}
         </Panel>
       </div>
+
+      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {!k ? Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
+          <Kpi icon={School} label="My classes" value={k.classes} tone="brand" to="/teacher/classes" />
+          <Kpi icon={Users} label="Students" value={k.students} tone="aqua" to="/teacher/classes" />
+          <Kpi icon={CalendarClock} label="Periods today" value={k.periods_today} tone="neutral" to="/teacher/timetable" />
+          <Kpi icon={CalendarCheck} label="Attendance to mark" value={k.attendance_pending} tone={k.attendance_pending ? 'warn' : 'ok'} to="/teacher/attendance" hint={k.attendance_pending ? 'for today’s periods' : 'All marked'} />
+          <Kpi icon={FileCheck2} label="Homework to review" value={k.homework_to_review} tone={k.homework_to_review ? 'warn' : 'ok'} to="/teacher/homework" />
+          <Kpi icon={AlertTriangle} label="Needs attention" value={k.needs_attention} tone={k.needs_attention ? 'bad' : 'ok'} hint={`${k.active_assessments} test(s) / assignment(s) open`} />
+        </>}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel icon={PencilRuler} title="Open tests & assignments" action={{ to: '/teacher/tests', label: 'All tests' }}>

@@ -58,16 +58,11 @@ export default function StudentDashboard() {
 
       {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
-      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {!k ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
-          <Kpi icon={CalendarCheck} label="Overall attendance" value={k.attendance_overall == null ? '—' : `${k.attendance_overall}%`} tone={k.attendance_overall != null && d && k.attendance_overall < d.threshold ? 'bad' : 'ok'} to="/student/attendance" hint={`This month ${k.attendance_month == null ? '—' : `${k.attendance_month}%`}`} />
-          <Kpi icon={Hourglass} label="Tests & assignments to do" value={k.to_do} tone={k.to_do ? 'warn' : 'ok'} to="/student/tests" />
-          <Kpi icon={ClipboardList} label="Homework pending" value={k.homework_pending} tone={k.homework_pending ? 'warn' : 'ok'} to="/student/homework" />
-          <Kpi icon={Trophy} label="Average score" value={k.average_score == null ? '—' : `${k.average_score}%`} tone="brand" to="/student/evaluations" hint={`${k.results} result(s) published`} />
-        </>}
-      </section>
-
+      {/* Today's timetable comes first, right under the greeting. */}
       <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+        <Panel icon={CalendarClock} title="Today’s classes" action={{ to: '/student/timetable', label: 'Full timetable' }}>
+          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" empty={d.holiday_today ? `Holiday today — ${d.holiday_today}.` : undefined} />}
+        </Panel>
         <Panel icon={Hourglass} title="Upcoming deadlines" action={{ to: '/student/tests', label: 'All tests' }}>
           {!d ? <div className="skeleton h-40" /> : d.upcoming.length === 0 ? <Empty icon={CheckCircle2}>Nothing due — you’re all caught up.</Empty> : (
             <ul className="space-y-2.5">
@@ -91,11 +86,16 @@ export default function StudentDashboard() {
             </ul>
           )}
         </Panel>
-
-        <Panel icon={CalendarClock} title="Today’s classes" action={{ to: '/student/timetable', label: 'Full week' }}>
-          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" empty={d.holiday_today ? `Holiday today — ${d.holiday_today}.` : undefined} />}
-        </Panel>
       </div>
+
+      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {!k ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
+          <Kpi icon={CalendarCheck} label="Overall attendance" value={k.attendance_overall == null ? '—' : `${k.attendance_overall}%`} tone={k.attendance_overall != null && d && k.attendance_overall < d.threshold ? 'bad' : 'ok'} to="/student/attendance" hint={`This month ${k.attendance_month == null ? '—' : `${k.attendance_month}%`}`} />
+          <Kpi icon={Hourglass} label="Tests & assignments to do" value={k.to_do} tone={k.to_do ? 'warn' : 'ok'} to="/student/tests" />
+          <Kpi icon={ClipboardList} label="Homework pending" value={k.homework_pending} tone={k.homework_pending ? 'warn' : 'ok'} to="/student/homework" />
+          <Kpi icon={Trophy} label="Average score" value={k.average_score == null ? '—' : `${k.average_score}%`} tone="brand" to="/student/evaluations" hint={`${k.results} result(s) published`} />
+        </>}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel icon={Award} title="Recent results" action={{ to: '/student/evaluations', label: 'All results' }}>

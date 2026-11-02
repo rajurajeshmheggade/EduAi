@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { CalendarOff, ChevronLeft, ChevronRight, Copy, Plus, Repeat, UserRoundCheck, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
@@ -120,6 +120,8 @@ export interface CalendarProps {
   onDay?: (date: string) => void
   /** Hide closed weekdays in the week view (they are shown dimmed by default). */
   hideClosedDays?: boolean
+  /** Day view (single list): extra controls under a session card, e.g. "Join online" or "Mark attendance". */
+  sessionAction?: (s: TimetableSession) => ReactNode
 }
 
 /** Dated timetable calendar: day, week and month views over resolved sessions (weekly pattern + dated changes). */
@@ -223,10 +225,18 @@ function DayHeader({ iso, holidays, workingDays }: { iso: string; holidays: Holi
   )
 }
 
-function DayList({ anchor, byDate, holidays, bell, workingDays, secondary, onSession, onEmpty }: Inner) {
+const clockHHMM = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function DayList({ anchor, byDate, holidays, bell, workingDays, secondary, onSession, onEmpty, today, sessionAction }: Inner) {
   const list = byDate.get(anchor) ?? []
   const items = dayItems(bell, anchor, list)
   const closed = !workingDays.includes(isoWeekday(anchor))
+  const [hhmm] = useState(clockHHMM)
+  // On today's page the period running now is marked (as on the dashboards).
+  const isNow = (start: string, end: string) => anchor === today && start <= hhmm && hhmm < end
   return (
     <div>
       <DayHeader iso={anchor} holidays={holidays} workingDays={workingDays} />
@@ -237,11 +247,20 @@ function DayList({ anchor, byDate, holidays, bell, workingDays, secondary, onSes
               return <li key={`b-${i.start_time}`} className="flex items-center gap-3 bg-ink-800/60 px-3 py-1.5 text-xs text-ink-500"><span className="w-28 tabular-nums">{i.start_time}–{i.end_time}</span>{i.label ?? 'Break'}</li>
             }
             const here = list.filter((s) => s.period_number === i.period_number)
+            const live = isNow(i.start_time, i.end_time)
             return (
-              <li key={`p-${i.period_number}`} className="flex gap-3 px-3 py-2">
-                <div className="w-28 shrink-0 pt-1 text-xs tabular-nums text-ink-500"><span className="font-semibold text-fg">P{i.period_number}</span> · {i.start_time}–{i.end_time}</div>
+              <li key={`p-${i.period_number}`} aria-current={live ? 'time' : undefined} className={cn('flex gap-3 px-3 py-2', live && 'bg-brand-500/6')}>
+                <div className="w-28 shrink-0 pt-1 text-xs tabular-nums text-ink-500">
+                  <span className="font-semibold text-fg">P{i.period_number}</span> · {i.start_time}–{i.end_time}
+                  {live && <span className="ml-1 rounded-full bg-ok px-1.5 text-[10px] font-semibold text-white">NOW</span>}
+                </div>
                 <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                  {here.map((s) => <SessionCard key={s.session_key} s={s} secondary={secondary} onClick={onSession} />)}
+                  {here.map((s) => {
+                    const action = sessionAction?.(s)
+                    return action
+                      ? <div key={s.session_key} className="space-y-1.5"><SessionCard s={s} secondary={secondary} onClick={onSession} />{action}</div>
+                      : <SessionCard key={s.session_key} s={s} secondary={secondary} onClick={onSession} />
+                  })}
                   {!here.length && !onEmpty && <span className="pt-1 text-xs text-ink-500">Free</span>}
                   {onEmpty && !closed && !here.some((s) => s.status === 'SCHEDULED') && (
                     <button type="button" onClick={() => onEmpty(anchor, i.period_number!)} aria-label={`Add a session in period ${i.period_number}`}

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { ErrorState, PageLoader } from '@/components/ui/loading'
 import { ProctorMedia } from '@/lib/proctor/media'
 import { type LocalFlag, type MonitorHud, StudentProctorMonitor } from '@/lib/proctor/student/monitor'
+import { useQuietHold } from '@/lib/studyFlow/quiet'
 import { useAsync } from '@/lib/useAsync'
 import { errorMessage } from '@/services/apiClient'
 import { type ProctorModule, type ProctorWarning, proctoringService, type StudentSession, type StudentStatus } from '@/services/proctoringService'
@@ -137,6 +138,11 @@ export function ProctorGate({ module, refId, title, autoOpen = false, resume = f
     stopSensing()
     await proctoringService.finish(s.session_id, reason).catch(() => {})
   }, [stopSensing])
+
+  // The student study flow (floating focus timer, break reminders) never interrupts an exam or a lab attempt, and the
+  // floating timer steps aside during a classroom session.
+  const running = phase === 'opening' || phase === 'prep' || phase === 'active' || phase === 'unproctored' || (cfg.data?.enabled === false && resume && phase === 'idle')
+  useQuietHold(running, module === 'AI_CLASSROOM' ? 'session' : 'exam')
 
   const allowAway = useCallback((reason: string) => monitor.current?.allowAway(reason), [])
   const ctx = useMemo<ProctorContextValue>(() => ({ active: phase === 'active', sessionId: current?.session_id ?? null, finish, allowAway }),

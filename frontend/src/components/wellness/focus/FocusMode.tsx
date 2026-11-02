@@ -1,22 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { Calendar, Pause, Play, RotateCcw, Timer } from 'lucide-react'
+import { Calendar, Pause, Play, SlidersHorizontal, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { AmbientSoundControls } from '@/components/wellness/audio/AmbientSoundControls'
-import { useAmbientSound, useAudioContext } from '@/components/wellness/audio/ambientAudio'
-import { playChime } from '@/components/wellness/audio/sfx'
+import { useFocusTimer, useFocusXp } from '@/components/study/FocusTimerContext'
 import { useWellness } from '@/components/wellness/WellnessContext'
+import { FOCUS_XP_MIN_MINUTES } from '@/lib/studyFlow/config'
+import { formatClock, spokenClock } from '@/lib/studyFlow/focusTimer'
 import { cn } from '@/lib/utils'
 import type { Countdown } from '@/types/wellness'
 
-type TimerMode = 'study' | 'break'
-const MODES: { id: TimerMode; label: string; minutes: number; aria: string }[] = [
-  { id: 'study', label: 'Study', minutes: 25, aria: 'Set timer to Study mode (twenty-five minutes)' },
-  { id: 'break', label: 'Break', minutes: 5, aria: 'Set timer to Break mode (five minutes)' },
-]
-const fullMs = (mode: TimerMode) => (MODES.find((m) => m.id === mode)?.minutes ?? 25) * 60_000
 const DAY_MS = 86_400_000
 const ROSE_BTN = 'from-rose-400 to-rose-600 shadow-[0_10px_28px_-12px_rgb(225_29_72/0.55)]'
+const STATUS = { idle: 'Ready', running: 'Focusing…', paused: 'Paused', done: 'Session complete — well done!' } as const
 
 /** Whole days until the date (0 on/after the day), or null without a valid date. */
 function daysUntil(day: string | null | undefined): number | null {
@@ -30,83 +24,20 @@ function daysUntil(day: string | null | undefined): number | null {
 export interface FocusModeProps {
   /** Next test-like date: the student's own exam date or the next test a teacher assigned (server-chosen). */
   countdown: Countdown | null
-  /** A 25-minute study block finished (the Dashboard awards the Pomodoro XP). */
-  onSessionComplete: () => void
 }
 
-/** MindAlign Focus Mode: countdown to the next test or exams + Pomodoro study/break timer with synthesised ambient sound. */
-export function FocusMode({ countdown, onSessionComplete }: FocusModeProps) {
-  const { alert, meta } = useWellness()
-  // One AudioContext for the ambient sound and the end-of-session chime, created on the first click
-  const audio = useAudioContext()
-  const { soundPlaying, toggleSound, stopSound } = useAmbientSound(audio)
-
-  const [mode, setMode] = useState<TimerMode>('study')
-  const [isActive, setIsActive] = useState(false)
-  const [secondsLeft, setSecondsLeft] = useState(fullMs('study') / 1000)
-  // The countdown runs off a deadline rather than counting ticks, so a throttled background tab still ends on time
-  const endAtRef = useRef(0)
-  const leftMsRef = useRef(fullMs('study'))
-  const completeRef = useRef<() => void>(() => {})
-
-  const resetTimer = (m: TimerMode = mode) => {
-    setIsActive(false)
-    leftMsRef.current = fullMs(m)
-    setSecondsLeft(fullMs(m) / 1000)
-  }
-  const switchMode = (m: TimerMode) => {
-    setMode(m)
-    resetTimer(m)
-  }
-
-  const handleComplete = () => {
-    setIsActive(false)
-    // A gentle chime (the context was unlocked by the Start click)
-    const ctx = audio.ensure()
-    if (ctx) playChime(ctx)
-    if (mode === 'study') {
-      onSessionComplete()
-      alert(
-        `🍅 Pomodoro Completed! (+${meta?.xpRules?.pomodoro ?? 50} XP)`,
-        'Incredible focus! You completed your 25-minute Pomodoro study chunk. Taking a 5-minute breather now prevents fatigue.',
-      )
-      switchMode('break')
-    } else {
-      alert('🌸 Break Session Ended', "You are fully recharged and ready. Let's return to our next focused topic block!")
-      switchMode('study')
-    }
-  }
-  useEffect(() => { completeRef.current = handleComplete })
-
-  useEffect(() => {
-    if (!isActive) return
-    const id = window.setInterval(() => {
-      const leftMs = Math.max(0, endAtRef.current - Date.now())
-      leftMsRef.current = leftMs
-      setSecondsLeft(Math.ceil(leftMs / 1000))
-      if (leftMs === 0) {
-        window.clearInterval(id)
-        completeRef.current()
-      }
-    }, 250)
-    return () => window.clearInterval(id)
-  }, [isActive])
-
-  const startPauseTimer = () => {
-    if (isActive) {
-      leftMsRef.current = Math.max(0, endAtRef.current - Date.now())
-      setSecondsLeft(Math.ceil(leftMsRef.current / 1000))
-      setIsActive(false)
-      return
-    }
-    audio.ensure() // inside the click, so the chime is allowed to play when the block ends
-    endAtRef.current = Date.now() + leftMsRef.current
-    setIsActive(true)
-  }
+/**
+ * MindAlign Focus Mode: countdown to the next test or exams + the Study Focus Timer. The timer is the student's one
+ * floating Focus Timer (components/study): this card shows it and starts / pauses it, and "Timer & sounds" opens its
+ * popup (length presets, sound options, volume). Finished sessions' XP lands in the Wellness XP bar from here.
+ */
+export function FocusMode({ countdown }: FocusModeProps) {
+  const { applyXp, meta } = useWellness()
+  const focus = useFocusTimer()
+  useFocusXp((r) => applyXp(r, 'Focus Session Complete'))
 
   const daysRemaining = daysUntil(countdown?.date)
-  const minutes = Math.floor(secondsLeft / 60)
-  const seconds = secondsLeft % 60
+  const running = focus?.timer.status === 'running'
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,44 +58,38 @@ export function FocusMode({ countdown, onSessionComplete }: FocusModeProps) {
         </p>
       </Card>
 
-      {/* Pomodoro timer */}
-      <Card className="p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Study Focus Timer: the floating timer's controls */}
+      {focus && (
+        <Card className="p-5">
           <div className="flex items-center gap-2">
             <Timer className="h-5 w-5 text-rose-400" aria-hidden />
             <h3 className="font-display text-base font-semibold text-fg">Study Focus Timer</h3>
           </div>
-          <div className="flex gap-1 rounded-lg border border-line bg-ink-800 p-0.5" role="group" aria-label="Timer mode">
-            {MODES.map((m) => (
-              <button key={m.id} type="button" onClick={() => { if (m.id !== mode) switchMode(m.id) }}
-                aria-pressed={mode === m.id} aria-label={m.aria}
-                className={cn('cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                  mode === m.id ? 'bg-ink-900 text-rose-600 shadow-sm ring-1 ring-line' : 'text-ink-300 hover:text-fg')}>
-                {m.label}
-              </button>
-            ))}
+
+          <div role="timer" aria-label={`Focus time remaining: ${spokenClock(focus.remainingMs)}`}
+            className="mt-5 text-center font-display text-6xl font-extrabold tabular-nums tracking-tighter text-fg">
+            {formatClock(focus.remainingMs)}
           </div>
-        </div>
+          <p className="mb-5 mt-1 text-center text-xs text-ink-300">{focus.timer.minutes}-minute session · {STATUS[focus.timer.status]}</p>
 
-        <div role="timer" aria-label={`${mode === 'study' ? 'Study' : 'Break'} time remaining`}
-          className="my-6 text-center font-display text-6xl font-extrabold tabular-nums tracking-tighter text-fg">
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </div>
+          <div className="flex items-center gap-3">
+            <Button onClick={running ? focus.pause : focus.start} className={cn('flex-1', ROSE_BTN)}
+              aria-label={running ? 'Pause focus timer' : 'Start focus timer'}>
+              {running ? <Pause className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+              {running ? 'Pause' : focus.timer.status === 'paused' ? 'Resume' : 'Start Focus'}
+            </Button>
+            <Button variant="secondary" onClick={focus.openPanel} aria-haspopup="dialog">
+              <SlidersHorizontal className="h-4 w-4" aria-hidden /> Timer &amp; sounds
+            </Button>
+          </div>
 
-        <div className="mb-6 flex items-center gap-3">
-          <Button onClick={startPauseTimer} className={cn('flex-1', ROSE_BTN)}
-            aria-label={isActive ? 'Pause focus timer' : 'Start focus timer'}>
-            {isActive ? <Pause className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-            {isActive ? 'Pause' : 'Start Focus'}
-          </Button>
-          <Button variant="secondary" size="icon" className="h-10 w-10" onClick={() => resetTimer()} aria-label="Reset study timer">
-            <RotateCcw className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
-
-        <AmbientSoundControls title="Focus Synthesized Audio" muteLabel="Mute focus audio"
-          soundPlaying={soundPlaying} onToggle={toggleSound} onMute={stopSound} />
-      </Card>
+          <p className="mt-4 border-t border-line pt-3 text-xs leading-relaxed text-ink-500">
+            Your timer stays with you on every page — look for the timer button in the bottom-right corner. Pick 15, 25 or 45 minutes
+            (or your own), and ocean waves, rain, white or brown noise, or binaural beats. A {FOCUS_XP_MIN_MINUTES}+ minute session
+            earns +{meta?.xpRules?.pomodoro ?? 50} XP.
+          </p>
+        </Card>
+      )}
     </div>
   )
 }
