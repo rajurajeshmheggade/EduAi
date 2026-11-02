@@ -18,6 +18,7 @@ from ..config import get_settings
 from ..security import CurrentUser, hash_password, require_role
 from ..services import attendance as att
 from ..services import notifications as notif
+from ..services import timetable as tt
 from ..services.members import Code, Email, Name, Password, Phone, create_member, temp_password
 
 router = APIRouter(prefix="/ICMELive/api/v1/admin", tags=["admin"])
@@ -437,43 +438,70 @@ def list_timetable(class_code: str | None = None, teacher_code: str | None = Non
 
 
 def _record_timetable_change(org: str, class_code: str, day: int, period: int, kind: str, old: dict | None,
-                             new: dict | None, reason: str | None, user: CurrentUser) -> None:
+                             new: dict | None, reason: str | None, user: CurrentUser, *, session_date: date | None = None,
+                             entry_id: str | None = None, notify: bool = True) -> str:
     """Records the before/after in timetable_slot_changes (#3A), then notifies the affected class's students,
     the old/new teacher and the class teacher, and the institution's admins — but only once the class's
     timetable is actually PUBLISHED (#3E): a change to a still-draft timetable isn't visible to anyone yet,
-    so there is nothing to notify about."""
-    db.execute(
+    so there is nothing to notify about. `session_date` marks a change to one date only (dated timetable); changes
+    to dates already in the past are recorded but not notified."""
+    row = db.fetch_one(
         "INSERT INTO public.timetable_slot_changes(org_code, class_code, slot_id, day_of_week, period_number, "
         "change_kind, old_subject_name, old_teacher_name, old_start_time, old_end_time, new_subject_name, "
-        "new_teacher_name, new_start_time, new_end_time, reason, changed_by, changed_by_name) "
-        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        "new_teacher_name, new_start_time, new_end_time, reason, changed_by, changed_by_name, session_date, entry_id) "
+        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING change_id",
         (org, class_code, (new or old or {}).get("slot_id"), day, period, kind,
          (old or {}).get("subject_name"), (old or {}).get("teacher_name"), (old or {}).get("start_time"), (old or {}).get("end_time"),
          (new or {}).get("subject_name"), (new or {}).get("teacher_name"), (new or {}).get("start_time"), (new or {}).get("end_time"),
-         reason, user.user_code, _display_name_of(org, user.user_code)),
+         # The editor's own name: a super-admin editing another institution is not a member of it.
+         reason, user.user_code, _display_name_of(user.org_code, user.user_code), session_date, entry_id),
     )
+    change_id = str(row["change_id"])
+    if not notify or (session_date is not None and session_date < date.today()):
+        return change_id
+    subject = (new or old or {}).get("subject_name") or "A period"
+    o, n = old or {}, new or {}
+    when = (f"{session_date.strftime('%a %d %b')}, period {period}" if session_date
+            else f"{TT_DAYS[day]}s, period {period}")
+    if kind == "CANCELLED":
+        title = f"{subject} removed from {{cls}}'s timetable" if session_date is None else f"{subject} cancelled on {session_date.strftime('%a %d %b')} for {{cls}}"
+        body = f"{when} ({o.get('start_time')}-{o.get('end_time')}) was removed." + (f" Reason: {reason}" if reason else "")
+    elif kind == "ADDED":
+        title = f"Extra {subject} period for {{cls}} on {session_date.strftime('%a %d %b') if session_date else TT_DAYS[day]}"
+        body = f"{when}: {n.get('start_time')}-{n.get('end_time')}" + (f" with {n['teacher_name']}" if n.get("teacher_name") else "") \
+            + (f". {reason}" if reason else ".")
+    elif kind == "RESTORED":
+        title = f"{subject} back to the regular timetable for {{cls}}"
+        body = f"{when} follows the weekly timetable again." + (f" Reason: {reason}" if reason else "")
+    else:
+        title = f"{subject} period updated for {{cls}}" + (f" on {session_date.strftime('%a %d %b')}" if session_date else "")
+        body = f"{when} changed" + (f": {reason}" if reason else ".")
+    notify_timetable_change(org, class_code, [o.get("teacher_code"), n.get("teacher_code")], title, body,
+                            f"TTCHG:{change_id}")
+    return change_id
+
+
+TT_DAYS = ("", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def notify_timetable_change(org: str, class_code: str, teachers: list[str | None], title: str, body: str,
+                            dedup: str) -> None:
+    """Fans a timetable change out to the class's students, the given teachers + the class teacher, and the
+    institution admins — only for a PUBLISHED class. `title` may contain `{cls}` (the class name). `dedup` must be
+    unique per change event (e.g. the change_id), so every later change to the same period is notified too."""
     c = db.fetch_one("SELECT class_name, class_teacher_code, timetable_status FROM public.classes "
                      "WHERE org_code = %s AND class_code = %s", (org, class_code))
     if not c or c["timetable_status"] != "PUBLISHED":
         return  # draft: recorded for audit, nobody is notified until it's published
-
+    title = title.replace("{cls}", c["class_name"])
     students = [r["user_code"] for r in db.fetch_all(
         "SELECT user_code FROM public.app_users WHERE org_code = %s AND class_code = %s "
         "AND user_role = 'student' AND is_active", (org, class_code))]
     admins_of_org = [r["user_code"] for r in db.fetch_all(
         "SELECT user_code FROM public.app_users WHERE org_code = %s AND user_role = 'orgadmin' AND is_active", (org,))]
-    teachers = [t for t in {(old or {}).get("teacher_code"), (new or {}).get("teacher_code"), c["class_teacher_code"]} if t]
-
-    subject = (new or old or {}).get("subject_name") or "A period"
-    if kind == "CANCELLED":
-        title, body = f"{subject} removed from {c['class_name']}'s timetable", \
-            f"Day {day}, period {period} ({(old or {}).get('start_time')}-{(old or {}).get('end_time')}) was removed." + (f" Reason: {reason}" if reason else "")
-    else:
-        title, body = f"{subject} period updated for {c['class_name']}", \
-            f"Day {day}, period {period} changed" + (f": {reason}" if reason else ".")
-    dedup = f"TTCHG:{class_code}:{day}:{period}:{user.user_code}"
+    staff = [t for t in dict.fromkeys([*teachers, c["class_teacher_code"]]) if t]
     notif.notify_many(org, students, "TIMETABLE_CHANGE", title, body, "/student/timetable", dedup + ":student")
-    notif.notify_many(org, teachers, "TIMETABLE_CHANGE", title, body, "/teacher/timetable", dedup + ":teacher")
+    notif.notify_many(org, staff, "TIMETABLE_CHANGE", title, body, "/teacher/timetable", dedup + ":teacher")
     notif.notify_many(org, admins_of_org, "TIMETABLE_CHANGE", title, body, "/admin-dashboard?tab=timetable", dedup + ":admin")
 
 
@@ -489,11 +517,18 @@ def upsert_timetable_slot(body: TimetableSlot, org_code: str | None = None, user
     if body.end_time <= body.start_time:
         raise HTTPException(422, "End time must be after start time")
     subject = db.fetch_one(
-        "SELECT 1 FROM public.class_subjects WHERE org_code = %s AND class_code = %s AND subject_code = %s",
+        "SELECT teacher_code FROM public.class_subjects WHERE org_code = %s AND class_code = %s AND subject_code = %s",
         (org, body.class_code, body.subject_code))
     if not subject:
         raise HTTPException(422, f"{body.subject_code} is not a subject of {body.class_code}")
     _active_teacher(org, body.teacher_code)
+    # Every teacher / class / room clash (effective-range and dated-session aware) and non-working day, in one 409.
+    found = tt.conflicts(org, class_code=body.class_code, period=body.period_number, start=body.start_time,
+                         end=body.end_time, teacher_code=body.teacher_code or subject["teacher_code"],
+                         room=body.room_number, is_online=body.is_online, day=body.day_of_week,
+                         effective_from=body.effective_from, effective_to=body.effective_to)
+    if tt.errors_of(found):
+        return tt.conflict_response(found)
     before = next((s for s in list_slots(org, body.class_code) if s["day_of_week"] == body.day_of_week
                    and s["period_number"] == body.period_number), None)
     try:
@@ -506,8 +541,9 @@ def upsert_timetable_slot(body: TimetableSlot, org_code: str | None = None, user
         )
     except pg_errors.RaiseException as e:
         kind, _, detail = (e.diag.message_primary or str(e)).partition(": ")
-        raise HTTPException(409, detail if kind in ("TEACHER_CLASH", "CLASS_CLASH") else str(e))
+        raise HTTPException(409, detail if kind in tt.ERROR_ORDER else str(e))
     after = next(x for x in list_slots(org, body.class_code) if x["slot_id"] == slot_id)
+    after["warnings"] = [c for c in found if c["severity"] == "warning"]
     if before and (before["subject_code"] != after["subject_code"] or before["teacher_code"] != after["teacher_code"]
                   or before["start_time"] != after["start_time"] or before["end_time"] != after["end_time"]):
         _record_timetable_change(org, body.class_code, body.day_of_week, body.period_number, "UPDATED",

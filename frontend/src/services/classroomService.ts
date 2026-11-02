@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { AttendanceDay, AttendanceRegister, AttendanceStatus, CreatedMember, Holiday, Homework, HomeworkSubmission, Member, StudentAttendance, StudentHomework, TeacherClass, TimetableChange, TimetableSlot } from '@/types'
+import type { AttendanceDay, AttendanceRegister, AttendanceStatus, CreatedMember, Homework, HomeworkSubmission, Member, MyTimetable, StudentAttendance, StudentHomework, TeacherClass } from '@/types'
 
 const B = '/ICMELive/api/v1/classroom'
 
@@ -77,9 +77,10 @@ export const classroomService = {
     return (await api.get<StudentAttendance>(`${B}/my-attendance`, { params: month ? { month } : {} })).data
   },
 
-  /** Teacher: periods I teach · Student: my class's week. `today` is the ISO weekday (1 = Monday). */
-  async myTimetable(): Promise<{ today: number; slots: TimetableSlot[]; holidays: Holiday[]; recent_changes: TimetableChange[] }> {
-    return (await api.get<{ today: number; slots: TimetableSlot[]; holidays: Holiday[]; recent_changes: TimetableChange[] }>(`${B}/my-timetable`)).data
+  /** Teacher: periods I teach · Student: my class's week. `today` is the ISO weekday (1 = Monday). `sessions` is the
+   * dated calendar for [start, end] (default: this week) — weekly periods with dated changes and holidays applied. */
+  async myTimetable(range?: { start: string; end: string }, signal?: AbortSignal): Promise<MyTimetable> {
+    return (await api.get<MyTimetable>(`${B}/my-timetable`, { params: range ?? {}, signal })).data
   },
 
   async homework(classCode: string, subject?: string): Promise<Homework[]> {

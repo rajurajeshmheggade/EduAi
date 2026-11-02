@@ -14,6 +14,7 @@ from psycopg import errors as pg_errors
 from . import db
 from .config import get_settings
 from .routers import admin, admission, admission_exam, admission_reports, admission_tests, ai_classroom, assessments, auth, classroom, copilot, curriculum, dashboards, diksha, evaluation, lessonplan, library, nlp_catalog, notifications, public, rag, read_aloud, syllabus, virtual_labs, wellness
+from .routers import timetable as timetable_calendar  # date-level timetable (admin console)
 from .services.storage import LocalStorage, get_storage
 
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,7 @@ app.include_router(admission_tests.router)
 app.include_router(admission_exam.router)
 app.include_router(admission_reports.router)
 app.include_router(admin.router)
+app.include_router(timetable_calendar.router)
 app.include_router(classroom.router)
 app.include_router(evaluation.router)
 app.include_router(evaluation.admin_router)

@@ -94,7 +94,7 @@ export default function StudentDashboard() {
         </Panel>
 
         <Panel icon={CalendarClock} title="Today’s classes" action={{ to: '/student/timetable', label: 'Full week' }}>
-          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" />}
+          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" empty={d.holiday_today ? `Holiday today — ${d.holiday_today}.` : undefined} />}
         </Panel>
       </div>
 
