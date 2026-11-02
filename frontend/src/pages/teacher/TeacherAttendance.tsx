@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input, Label, Select } from '@/components/ui/field'
 import { Tabs } from '@/components/ui/tabs'
-import { PERIODS } from '@/lib/timetable'
+import { bellForDay, isoWeekday } from '@/lib/calendar'
+import { PERIODS, periodOptions } from '@/lib/timetable'
+import { useAsync } from '@/lib/useAsync'
 import { errorMessage } from '@/services/apiClient'
 import { classroomService, isoDay, isoMonth } from '@/services/classroomService'
 import { cn } from '@/lib/utils'
@@ -21,7 +23,10 @@ export default function TeacherAttendance() {
   // Deep links from the timetable / dashboard: ?class=…&subject=…&period=N
   const [params] = useSearchParams()
   const linkPeriod = Number(params.get('period'))
-  const initialSlot = linkPeriod >= 1 && linkPeriod <= PERIODS.length ? `Period-${linkPeriod}` : PERIODS[0]
+  // '' = pick the period from the day's timetable once it has loaded
+  const initialSlot = linkPeriod >= 1 && linkPeriod <= 12 ? `Period-${linkPeriod}` : ''
+  const linkDate = params.get('date')
+  const initialDay = linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate) && linkDate <= isoDay() ? linkDate : undefined
   const [classes, setClasses] = useState<TeacherClass[] | null>(null)
   const [klass, setKlass] = useState('')
   const [subject, setSubject] = useState('')
@@ -77,7 +82,7 @@ export default function TeacherAttendance() {
 
       {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
       {!classes ? <div className="skeleton h-64" /> : klass && subject && (tab === 'mark'
-        ? <MarkSession key={`${klass}-${subject}`} klass={klass} subject={subject} initialSlot={initialSlot} />
+        ? <MarkSession key={`${klass}-${subject}`} klass={klass} subject={subject} initialSlot={initialSlot} initialDay={initialDay} />
         : <Register key={`${klass}-${subject}`} klass={klass} subject={subject} onExport={(month) => setExporting({ month })} />)}
       {exporting && classes && (
         <ExportAttendanceDialog open onClose={() => setExporting(null)} classes={classes}
@@ -87,9 +92,25 @@ export default function TeacherAttendance() {
   )
 }
 
-function MarkSession({ klass, subject, initialSlot }: { klass: string; subject: string; initialSlot: string }) {
-  const [day, setDay] = useState(isoDay())
+function MarkSession({ klass, subject, initialSlot, initialDay }: { klass: string; subject: string; initialSlot: string; initialDay?: string }) {
+  const [day, setDay] = useState(initialDay ?? isoDay())
   const [slot, setSlot] = useState(initialSlot)
+  // Period choices come from the institution's bell for that weekday and the day's actual (dated) timetable.
+  const tt = useAsync((signal) => classroomService.myTimetable({ start: day, end: day }, signal), [day])
+  const daySessions = useMemo(() => (tt.data?.sessions ?? []).filter((s) => s.session_date === day), [tt.data, day])
+  const scheduled = useMemo(() => new Set(daySessions.filter((s) => s.class_code === klass && s.subject_code === subject
+    && s.status === 'SCHEDULED' && s.is_mine !== false).map((s) => s.period_number)), [daySessions, klass, subject])
+  const options = useMemo(() => {
+    const opts = tt.data
+      ? periodOptions(bellForDay(tt.data.bell_schedule, isoWeekday(day)), daySessions, scheduled)
+      : PERIODS.map((v, i) => ({ value: v, period: i + 1, label: v.replace('-', ' '), scheduled: false }))
+    if (slot && !opts.some((o) => o.value === slot)) opts.push({ value: slot, period: Number(slot.split('-')[1]) || 0, label: slot.replace('-', ' '), scheduled: false })
+    return opts
+  }, [tt.data, day, daySessions, scheduled, slot])
+  useEffect(() => {
+    if (slot || !tt.data) return
+    setSlot((options.find((o) => o.scheduled) ?? options[0])?.value ?? 'Period-1')
+  }, [slot, tt.data, options])
   const [rows, setRows] = useState<DayRosterRow[] | null>(null)
   const [marks, setMarks] = useState<Record<string, { status: AttendanceStatus | null; remarks: string }>>({})
   const [saved, setSaved] = useState<string>('')
@@ -98,6 +119,7 @@ function MarkSession({ klass, subject, initialSlot }: { klass: string; subject: 
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const load = useCallback(async () => {
+    if (!slot) return
     setRows(null); setMsg(null)
     try {
       const d = await classroomService.day({ class_code: klass, subject_code: subject, attendance_date: day, session_slot: slot })
@@ -134,7 +156,10 @@ function MarkSession({ klass, subject, initialSlot }: { klass: string; subject: 
         <div className="flex flex-wrap items-end gap-3">
           <div><Label htmlFor="a-date">Date</Label><Input id="a-date" type="date" className="w-44" max={isoDay()} value={day} onChange={(e) => e.target.value && setDay(e.target.value)} /></div>
           <div><Label htmlFor="a-slot">Period</Label>
-            <Select id="a-slot" className="w-40" value={slot} onChange={(e) => setSlot(e.target.value)}>{PERIODS.map((s) => <option key={s} value={s}>{s.replace('-', ' ')}</option>)}</Select>
+            <Select id="a-slot" className="w-64" value={slot} onChange={(e) => setSlot(e.target.value)} disabled={!slot}>
+              {!slot && <option value="">Loading periods…</option>}
+              {options.map((o) => <option key={o.value} value={o.value}>{o.label}{o.scheduled ? ' · your period' : ''}</option>)}
+            </Select>
           </div>
           <div className="flex flex-wrap gap-1.5 pb-1">
             {wasMarked ? <Badge tone="ok">Already marked — editing</Badge> : <Badge tone="warn">Not marked yet</Badge>}

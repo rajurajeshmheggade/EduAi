@@ -362,7 +362,7 @@ export interface TimetableChange {
   class_code: string
   day_of_week: number
   period_number: number
-  change_kind: 'UPDATED' | 'CANCELLED'
+  change_kind: 'UPDATED' | 'CANCELLED' | 'ADDED' | 'RESTORED'
   old_subject_name: string | null
   old_teacher_name: string | null
   old_start_time: string | null
@@ -374,6 +374,8 @@ export interface TimetableChange {
   reason: string | null
   changed_by_name: string | null
   changed_at: string
+  /** Set when the change applies to one date only (dated timetable); null = the weekly pattern changed. */
+  session_date?: string | null
 }
 
 export interface Holiday {
@@ -387,4 +389,118 @@ export interface Holiday {
   class_codes: string[]
   is_full_day: boolean
   status: 'DRAFT' | 'PUBLISHED'
+}
+
+// ───────────── Date-level timetable (calendar, dated sessions, bell schedule, rooms) ─────────────
+/** One concrete period on one date: the weekly pattern with dated changes and holidays applied. */
+export interface TimetableSession {
+  session_key: string
+  session_date: string
+  day_of_week: number
+  class_code: string
+  class_name: string
+  period_number: number
+  start_time: string
+  end_time: string
+  subject_code: string | null
+  subject_name: string | null
+  subject_type: SubjectType | null
+  teacher_code: string | null
+  teacher_name: string | null
+  room_number: string | null
+  is_online: boolean
+  online_url: string | null
+  /** TEMPLATE = weekly period · OVERRIDE = weekly period changed on this date · DATED = added on this date */
+  source: 'TEMPLATE' | 'OVERRIDE' | 'DATED'
+  status: 'SCHEDULED' | 'CANCELLED' | 'HOLIDAY'
+  slot_id: string | null
+  entry_id: string | null
+  schedule_type: 'WEEKLY' | 'MONTHLY' | 'YEARLY' | null
+  /** The weekly period's own teacher (differs from teacher_code when someone covers it on this date). */
+  template_teacher_code: string | null
+  note: string | null
+  holiday_name: string | null
+  class_timetable_status: 'DRAFT' | 'PUBLISHED'
+  copied_from: string | null
+  /** Teacher's own calendar only: false when another teacher covers this period of theirs. */
+  is_mine?: boolean
+}
+
+export interface BellItem {
+  item_kind: 'PERIOD' | 'BREAK'
+  period_number: number | null
+  label: string | null
+  start_time: string
+  end_time: string
+}
+
+export interface BellSchedule {
+  /** false = the built-in bell (8 × 45 min from 09:00, break after period 3) */
+  configured: boolean
+  default: BellItem[]
+  /** ISO weekday ("1"…"7") -> that day's own bell */
+  by_day: Record<string, BellItem[]>
+}
+
+export type ConflictKind = 'NON_WORKING_DAY' | 'TEACHER_CLASH' | 'CLASS_CLASH' | 'ROOM_CLASH' | 'HOLIDAY' | 'BREAK_OVERLAP'
+
+export interface TimetableConflict {
+  kind: ConflictKind
+  severity: 'error' | 'warning'
+  message: string
+  conflict_date: string | null
+  day_of_week: number | null
+  class_code: string | null
+  period_number: number | null
+  start_time: string | null
+  end_time: string | null
+  teacher_code: string | null
+  room_number: string | null
+  subject_name: string | null
+  source: 'TEMPLATE' | 'OVERRIDE' | 'DATED' | null
+}
+
+export interface Room {
+  room_id: string
+  room_code: string
+  room_name: string | null
+  room_type: 'CLASSROOM' | 'LAB' | 'HALL' | 'OTHER'
+  capacity: number | null
+  is_active: boolean
+}
+
+export interface TimetableCalendar {
+  start: string
+  end: string
+  today: string
+  sessions: TimetableSession[]
+  holidays: Holiday[]
+  working_days: number[]
+  bell_schedule: BellSchedule
+}
+
+export interface CopyReport {
+  dry_run: boolean
+  days: number
+  non_working_days_skipped: number
+  unchanged: number
+  copied: { date: string; source_date: string; class_code: string; class_name: string; period_number: number; subject_name: string | null;
+    teacher_name: string | null; start_time: string; end_time: string; action: 'ADDED' | 'REPLACED' }[]
+  cancelled: { date: string; class_code: string; period_number: number; subject_name: string | null; start_time: string; end_time: string }[]
+  skipped: { date: string; source_date?: string; reason: 'OCCUPIED' | 'CONFLICT' | 'HOLIDAY' | 'NON_WORKING_DAY' | 'NOTHING_TO_COPY';
+    class_code: string | null; period_number: number | null; subject_name: string | null; message: string; conflicts: TimetableConflict[] }[]
+}
+
+/** GET /classroom/my-timetable */
+export interface MyTimetable {
+  today: number
+  today_date: string
+  slots: TimetableSlot[]
+  holidays: Holiday[]
+  recent_changes: TimetableChange[]
+  range: { start: string; end: string }
+  sessions: TimetableSession[]
+  range_holidays: Holiday[]
+  working_days: number[]
+  bell_schedule: BellSchedule
 }

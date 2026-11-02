@@ -63,13 +63,13 @@ export default function TeacherDashboard() {
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Panel icon={CalendarClock} title="Today’s schedule" action={{ to: '/teacher/timetable', label: 'Full week' }}>
-          {!d ? <div className="skeleton h-40" /> : d.today_slots.length === 0 ? <Empty icon={CalendarClock}>No periods scheduled today.</Empty> : (
+          {!d ? <div className="skeleton h-40" /> : d.today_slots.length === 0 ? <Empty icon={CalendarClock}>{d.holiday_today ? `Holiday today — ${d.holiday_today}.` : 'No periods scheduled today.'}</Empty> : (
             <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-[3.4rem] before:top-2 before:w-px before:bg-line">
               {[...d.today_slots].sort((a, b) => a.start_time.localeCompare(b.start_time)).map((s) => {
                 const live = s.start_time <= hhmm && hhmm < s.end_time
                 const past = s.end_time <= hhmm
                 return (
-                  <li key={s.slot_id} className="relative flex items-center gap-4">
+                  <li key={s.session_key} className="relative flex items-center gap-4">
                     <span className={cn('w-11 text-right text-xs tabular-nums', live ? 'font-semibold text-brand-600' : 'text-ink-500')}>{s.start_time}</span>
                     <span className={cn('relative z-10 h-3 w-3 shrink-0 rounded-full ring-4 ring-ink-900', live ? 'bg-brand-500' : past ? 'bg-ink-700' : 'bg-aqua-500')} />
                     <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3 rounded-xl border p-3', live ? 'border-brand-400 bg-brand-500/6' : 'border-line')}>
