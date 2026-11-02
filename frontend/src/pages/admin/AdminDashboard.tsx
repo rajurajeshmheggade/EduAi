@@ -14,6 +14,7 @@ import { InstitutionsPanel } from '@/components/admin/InstitutionsPanel'
 import { LibraryCatalogPanel } from '@/components/admin/LibraryCatalogPanel'
 import { OverviewPanel } from '@/components/admin/OverviewPanel'
 import { PlatformOverview } from '@/components/admin/PlatformOverview'
+import { QgenMappingPanel } from '@/components/admin/QgenMappingPanel'
 import { StudentsPanel } from '@/components/admin/StudentsPanel'
 import { TeachersPanel } from '@/components/admin/TeachersPanel'
 import { TimetablePanel } from '@/components/admin/TimetablePanel'
@@ -102,6 +103,7 @@ export default function AdminDashboard() {
           {tab === 'attendance' && <AttendanceSummaryPanel org={scope} />}
           {tab === 'evaluation' && <EvaluationScoresPanel org={scope} />}
           {tab === 'library' && <LibraryCatalogPanel org={scope} />}
+          {tab === 'question-generator' && <QgenMappingPanel org={scope} />}
           {tab === 'admissions' && <AdmissionsHome org={scope} />}
           {tab === 'admissions-team' && <AdmissionTeamPanel org={scope} />}
           {tab === 'privacy' && <PrivacyPanel org={scope} />}

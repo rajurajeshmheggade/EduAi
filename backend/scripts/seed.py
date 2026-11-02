@@ -39,7 +39,7 @@ CLASSES = [
 ]
 
 
-def run(demo_attendance: bool = False) -> None:
+def run(demo_attendance: bool = False, demo_breadth: bool = False) -> None:
     db.execute(
         "INSERT INTO public.organizations(org_code, customer_code, org_name, institution_level) "
         "VALUES (%s,'ICME','Demo International School','school') ON CONFLICT (org_code) DO NOTHING",
@@ -85,6 +85,10 @@ def run(demo_attendance: bool = False) -> None:
     if demo_attendance:
         _demo_attendance()
         _demo_homework()
+    # AI Question Generator: module on, syllabus from the content repository (+ extra demo classes when run directly)
+    from scripts import seed_question_generator
+
+    seed_question_generator.run(breadth=demo_breadth)
     print(f"Seeded org {ORG} with {len(USERS)} users (password: {PASSWORD}) + {SUPERADMIN[0]} / {SUPERADMIN[1]}")
 
 
@@ -151,5 +155,5 @@ if __name__ == "__main__":
     from scripts.migrate import run as migrate
 
     migrate()
-    run(demo_attendance=True)
+    run(demo_attendance=True, demo_breadth=True)
     db.close_pool()

@@ -360,18 +360,17 @@ def syllabus_topics_for(chapter: str, syllabus: list[dict]) -> list[dict]:
     want = _norm_title(chapter)
     if not want:
         return []
-    best = None
+    exact, near = [], []
     for ch in syllabus:
         have = _norm_title(re.sub(r"^\s*(chapter|unit|lesson)?\s*\d+\s*[:.\-–]?\s*", "", ch["chapter_title"], flags=re.I))
-        if not have:
-            continue
+        topics = [t for t in ch.get("topics", []) if (t.get("title") or "").strip()]
+        if not have or len(topics) < 2:
+            continue   # a syllabus chapter without at least two topics cannot provide the Topic level
         if have == want:
-            best = ch
-            break
-        if (want in have or have in want) and best is None:
-            best = ch
-    topics = [t for t in (best or {}).get("topics", []) if (t.get("title") or "").strip()]
-    return topics if len(topics) >= 2 else []
+            exact.append(topics)
+        elif want in have or have in want:
+            near.append(topics)
+    return (exact or near or [[]])[0]
 
 
 def _assign_to_syllabus(struct: dict, topics: list[dict]) -> list[dict]:

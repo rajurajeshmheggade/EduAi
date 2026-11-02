@@ -681,3 +681,91 @@ def test_delete_paper(client, teacher, kavya):
     assert client.delete(f"{Q}/papers/{p['paper_id']}", headers=kavya).status_code == 404
     assert client.delete(f"{Q}/papers/{p['paper_id']}", headers=teacher).status_code == 200
     assert client.get(f"{Q}/papers/{p['paper_id']}", headers=teacher).status_code == 404
+
+
+# ════════════════════════════════════════════════════════════ demo data: the full cascade for real logins
+def _cascade(client, headers, class_code, subject_code):
+    ch = client.get(f"{Q}/catalog/chapters", headers=headers, params={"class_code": class_code, "subject_code": subject_code})
+    assert ch.status_code == 200, ch.text
+    body = ch.json()
+    assert body["chapters"], (class_code, subject_code)
+    chapter = (body["primary"] or body["chapters"])[0]
+    tp = client.get(f"{Q}/catalog/topics", headers=headers,
+                    params={"class_code": class_code, "subject_code": subject_code, "chapter": chapter}).json()
+    assert tp["topics"], (class_code, subject_code, chapter)
+    topic = max(tp["topics"], key=lambda t: t["word_count"])
+    params = {"class_code": class_code, "subject_code": subject_code, "chapter": chapter, "topic_id": topic["id"]}
+    segs = client.get(f"{Q}/catalog/content", headers=headers, params=params).json()["segments"]
+    assert segs and all(s["word_count"] > 0 for s in segs)
+    prev = client.get(f"{Q}/catalog/preview", headers=headers, params=params).json()
+    assert prev["word_count"] > 50 and prev["segments"][0]["text"]
+    return body, chapter, topic
+
+
+def test_cascade_is_complete_for_the_demo_teachers(client, teacher, kavya):
+    classes = client.get(f"{Q}/catalog/classes", headers=teacher).json()["classes"]
+    pairs = [(c["class_code"], s["subject_code"]) for c in classes for s in c["subjects"]]
+    assert set(pairs) >= {("Grade-10-A", "PHY101"), ("Grade-10-A", "MATH-12"), ("Grade-9-B", "PHY101")}
+    for cc, sc in pairs:
+        _cascade(client, teacher, cc, sc)
+    # Physics maps onto the combined Science book: its own chapters come first
+    body, chapter, _ = _cascade(client, teacher, "Grade-10-A", "PHY101")
+    assert body["discipline"] == "physics"
+    assert set(body["primary"]) == {"electricity", "light - reflection and refraction", "magnetic effect of electric current",
+                                    "the human eye and the colourful world"}
+    assert body["chapters"][:4] == body["primary"] and "acids bases and salts" in body["chapters"]
+    nine, _, _ = _cascade(client, teacher, "Grade-9-B", "PHY101")
+    assert set(nine["primary"]) == {"motion", "force and laws of motion", "gravitation", "work and energy", "sound"}
+    maths, _, _ = _cascade(client, teacher, "Grade-10-A", "MATH-12")
+    assert maths["discipline"] is None and not set(maths["chapters"]) - set(maths["primary"])
+    _cascade(client, kavya, "Grade-9-B", "ENG-9")
+
+
+def test_demo_syllabus_is_seeded_from_the_repository(client, teacher):
+    rows = db.fetch_all("SELECT c.title, COUNT(t.topic_id) AS topics FROM public.syllabus_chapters c "
+                        "LEFT JOIN public.syllabus_topics t ON t.chapter_id = c.chapter_id WHERE c.org_code = 'DEMO-SCHOOL' "
+                        "AND c.class_code = 'Grade-10-A' AND c.subject_code = 'PHY101' GROUP BY c.title, c.position ORDER BY c.position")
+    assert [r["title"] for r in rows] == ["Electricity", "Light - Reflection and Refraction", "Magnetic Effect of Electric Current",
+                                          "The Human Eye and the Colourful World"]
+    assert all(r["topics"] >= 2 for r in rows)
+    assert db.fetch_one("SELECT COUNT(*) AS n FROM public.syllabus_chapters WHERE org_code = 'DEMO-SCHOOL' "
+                        "AND class_code = 'Grade-10-A' AND subject_code = 'MATH-12'")["n"] == 14
+    from scripts import seed_question_generator
+    assert seed_question_generator.run()["syllabus_chapters"] == 0          # idempotent
+    org = db.fetch_one("SELECT ai_modules FROM public.organizations WHERE org_code = 'DEMO-SCHOOL'")["ai_modules"]
+    assert "question_generator" in org
+
+
+def test_every_question_type_from_a_seeded_chapter(client, teacher):
+    seeded = db.fetch_one("SELECT description FROM public.syllabus_chapters WHERE org_code = 'DEMO-SCHOOL' AND "
+                          "class_code = 'Grade-10-A' AND subject_code = 'PHY101' ORDER BY position LIMIT 1")["description"]
+    chapter = seeded.rsplit(" / ", 1)[1]
+    tp = client.get(f"{Q}/catalog/topics", headers=teacher,
+                    params={"class_code": "Grade-10-A", "subject_code": "PHY101", "chapter": chapter}).json()
+    topic = max(tp["topics"], key=lambda t: t["word_count"])
+    r = client.post(f"{Q}/generate", headers=teacher, json={
+        "class_code": "Grade-10-A", "subject_code": "PHY101", "chapter": chapter, "topic_id": topic["id"],
+        "blueprint": [{"type": t, "count": 1} for t in ALL_TYPES]})
+    assert r.status_code == 200, r.text
+    items = r.json()["items"]
+    assert {q["type"] for q in items} == set(ALL_TYPES), set(ALL_TYPES) - {q["type"] for q in items}
+    for q in items:
+        schema.validate_question(q)
+
+
+def test_breadth_classes_for_the_demo_teacher(client, teacher):
+    from scripts import seed_question_generator as sq
+    added = sq.seed_extra_classes()
+    try:
+        sq.seed_syllabus()
+        classes = {c["class_code"]: c for c in client.get(f"{Q}/catalog/classes", headers=teacher).json()["classes"]}
+        eight = classes["Grade-8-C"]["subjects"][0]
+        twelve = classes["Grade-12-A"]["subjects"][0]
+        assert (eight["nlp_class"], eight["nlp_subject"]) == ("VIII", "General Science")
+        assert (twelve["nlp_class"], twelve["nlp_subject"]) == ("XII", "Chemistry")
+        _cascade(client, teacher, "Grade-8-C", "SCI-8")
+        body, _, _ = _cascade(client, teacher, "Grade-12-A", "CHEM-12")
+        assert len(body["chapters"]) >= 8
+    finally:
+        for code in added:
+            db.execute("DELETE FROM public.classes WHERE org_code = 'DEMO-SCHOOL' AND class_code = %s", (code,))

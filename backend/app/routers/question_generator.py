@@ -103,9 +103,12 @@ def catalog_classes(user: CurrentUser = Depends(teacher)):
 
 @router.get("/catalog/chapters")
 def catalog_chapters(class_code: str, subject_code: str, user: CurrentUser = Depends(teacher)):
+    """The mapped folder's chapters. When a single-discipline subject (e.g. Physics) maps onto a combined science
+    book, its own chapters come first (`primary`) and the folder's other chapters after them."""
     m = _mapped(user, class_code, subject_code)
-    return {"nlp_class": m["nlp_class"], "nlp_subject": m["nlp_subject"],
-            "chapters": nlp_catalog.chapters(m["nlp_class"], m["nlp_subject"])}
+    own, other, disc = mapping.ranked_chapters(m)
+    return {"nlp_class": m["nlp_class"], "nlp_subject": m["nlp_subject"], "discipline": disc,
+            "chapters": own + other, "primary": own}
 
 
 @router.get("/catalog/topics")

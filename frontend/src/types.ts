@@ -1,5 +1,5 @@
 export type Role = 'superadmin' | 'orgadmin' | 'teacher' | 'student' | 'counsellor' | 'reviewer' | 'parent'
-export type AIModule = 'rag_chatbot' | 'ai_avatar_tutor' | 'ocr_evaluation' | 'capability_analysis'
+export type AIModule = 'rag_chatbot' | 'ai_avatar_tutor' | 'ocr_evaluation' | 'capability_analysis' | 'question_generator'
 export type SubjectType = 'THEORY' | 'LAB' | 'COACHING_TEST'
 
 export interface UserProfile {

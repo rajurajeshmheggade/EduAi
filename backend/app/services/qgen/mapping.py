@@ -180,3 +180,67 @@ def org_mappings(org: str) -> list[dict]:
         m = resolve(crow, r["subject_code"], r["subject_name"], overrides.get((r["class_code"], r["subject_code"])))
         out.append({"class_code": r["class_code"], "class_name": crow.get("class_name"), **r, **m})
     return out
+
+
+# ════════════════════════════════════════════════════════════ one discipline inside a combined science book
+# Up to Class X, NCERT has one Science book: a school's "Physics" subject maps to the Science / General Science
+# folder, which also holds chemistry and biology chapters. Those chapters are classified (chapter name first, then
+# the chapter text) so the discipline's own chapters are listed first and the rest after them.
+COMBINED = {"Science", "General Science", "Environmental Science"}
+DISCIPLINE_TERMS: dict[str, tuple[str, ...]] = {
+    "physics": ("electric", "electricity", "current", "light", "reflection", "refraction", "magnet", "magnetic",
+                "motion", "force", "gravitation", "work", "energy", "power", "sound", "wave", "heat", "temperature",
+                "pressure", "lens", "mirror", "eye", "colourful", "optic", "circuit", "friction", "measurement",
+                "speed", "time", "shadow", "stars", "solar", "universe", "electromagnetic", "physical"),
+    "chemistry": ("acid", "acids", "base", "bases", "salt", "salts", "carbon", "compound", "compounds", "chemical",
+                  "reaction", "reactions", "equation", "metal", "metals", "non-metal", "atom", "atoms", "molecule",
+                  "molecules", "matter", "element", "elements", "periodic", "mixture", "pure", "combustion", "fibre",
+                  "fibres", "materials", "synthetic", "coal", "petroleum", "substances"),
+    "biology": ("life", "living", "cell", "cells", "tissue", "tissues", "organism", "organisms", "reproduce",
+                "reproduction", "heredity", "evolution", "control", "coordination", "environment", "nutrition",
+                "respiration", "plant", "plants", "animal", "animals", "food", "health", "disease", "diseases",
+                "adolescence", "microorganisms", "biodiversity", "ecosystem", "body", "resources", "crop", "forests",
+                "conservation", "germination", "digestion"),
+}
+_DISCIPLINE_OF = {"physics": "physics", "chemistry": "chemistry", "biology": "biology", "botany": "biology",
+                  "zoology": "biology", "life science": "biology", "life sciences": "biology"}
+
+
+def discipline(subject_name: str | None, subject_code: str | None, nlp_subject: str | None) -> str | None:
+    """'physics' | 'chemistry' | 'biology' when a single-discipline subject maps onto a combined science folder."""
+    if nlp_subject not in COMBINED:
+        return None
+    d = _DISCIPLINE_OF.get(_norm(subject_name))
+    if d:
+        return d
+    letters = re.sub(r"[^a-z]", "", (subject_code or "").lower())
+    for prefix, key in (("phy", "physics"), ("chem", "chemistry"), ("che", "chemistry"), ("bio", "biology")):
+        if letters.startswith(prefix):
+            return key
+    return None
+
+
+def chapter_discipline(nlp_class: str, nlp_subject: str, chapter: str) -> str | None:
+    words = set(re.findall(r"[a-z\-]+", chapter.lower()))
+    scores = {d: len(words & set(terms)) for d, terms in DISCIPLINE_TERMS.items()}
+    best = max(scores, key=scores.get)
+    if scores[best] and list(scores.values()).count(scores[best]) == 1:
+        return best
+    try:   # the name is not decisive: count the disciplines' terms in the chapter text
+        text = nlp_catalog.chapter_text(nlp_class, nlp_subject, chapter, max_chars=40_000).lower()
+    except FileNotFoundError:
+        return None
+    tokens = re.findall(r"[a-z\-]+", text)
+    scores = {d: sum(1 for t in tokens if t in set(terms)) for d, terms in DISCIPLINE_TERMS.items()}
+    best = max(scores, key=scores.get)
+    return best if scores[best] else None
+
+
+def ranked_chapters(m: dict) -> tuple[list[str], list[str], str | None]:
+    """(the subject's own chapters, the other chapters of the folder, discipline) for a mapped class subject."""
+    chapters = nlp_catalog.chapters(m["nlp_class"], m["nlp_subject"])
+    d = discipline(m.get("subject_name"), m.get("subject_code"), m["nlp_subject"])
+    if not d:
+        return chapters, [], None
+    own = [c for c in chapters if chapter_discipline(m["nlp_class"], m["nlp_subject"], c) == d]
+    return own, [c for c in chapters if c not in own], d
