@@ -291,6 +291,7 @@ def test_virtual_lab_interruption_resume_and_teacher_end(client, u):
     # leaving the page interrupts; coming back resumes the same session after a new acknowledgement (no 2nd start notice)
     assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "left"}).json()["status"] == "INTERRUPTED"
     assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "submitted"}).json()["status"] == "INTERRUPTED"
+    assert db.fetch_one("SELECT COUNT(*) AS n FROM public.proctor_events WHERE session_id = %s AND code = 'SESSION_LEFT'", (sid,))["n"] == 1
     p = _prepare(client, h, "VIRTUAL_LAB", aid)
     assert p["session_id"] == sid and p["resumed"] and p["last_seq"] == 2
     assert _start(client, h, sid, {"camera": True, "face": True}).json()["status"] == "ACTIVE"

@@ -48,7 +48,7 @@ export function ProctorHud({ hud, media, flags, warnings, fullscreenRequired, ca
 
   return (
     <>
-      <div className="fixed bottom-3 right-3 z-40 w-[min(20rem,calc(100vw-1.5rem))] print:hidden" aria-label="Proctoring status">
+      <div className={cn('fixed bottom-3 right-3 z-40 print:hidden', open ? 'w-[min(20rem,calc(100vw-1.5rem))]' : 'w-auto')} aria-label="Proctoring status">
         {open && (
           <div className="mb-2 space-y-3 rounded-2xl border border-line bg-ink-900 p-3 shadow-xl animate-fade-up">
             {cameraRequired && (

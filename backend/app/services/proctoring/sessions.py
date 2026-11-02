@@ -168,6 +168,8 @@ def finish(s: dict, reason: str) -> dict:
         status, event = "CLOSED", None
     elif reason == "submitted" and exams.attempt_states(s["module"], s["ref_id"]).get(s["student_code"]) == "SUBMITTED":
         status, event = "SUBMITTED", None
+    elif s["status"] == "INTERRUPTED":
+        return student_view(s)                             # already interrupted (e.g. a resume window closed again)
     else:                                                  # left mid-exam (or "submitted" while the attempt is still open)
         status, event = "INTERRUPTED", "SESSION_LEFT"
     db.execute("UPDATE public.proctor_sessions SET status = %s, ended_at = CASE WHEN %s IN ('SUBMITTED', 'CLOSED') THEN NOW() END, "
