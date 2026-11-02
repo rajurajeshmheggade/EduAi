@@ -539,7 +539,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 252 tests incl. lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS, wellness
+cd backend ; .venv\Scripts\python -m pytest        # 327 tests incl. lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS + admission forms, wellness, dated timetable, student proctoring, avatar page pipeline
 cd frontend ; npm test ; npm run build
 ```
 
