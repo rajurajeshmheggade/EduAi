@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { BookOpen, CheckCircle2, CircleAlert, Library, Loader2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -14,6 +15,7 @@ import { Select } from '@/components/ui/field'
 import { ErrorState, PageLoader, Skeleton } from '@/components/ui/loading'
 import { loadAvatarModel } from '@/lib/avatarModel'
 import { AVATAR_MODELS, hasWebGL, loadAvatar3D } from '@/lib/avatars'
+import { parseClassroomLink, pickStart, readyTextbooks } from '@/lib/classroomLink'
 import { useReadiness, type ReadinessSnapshot, type ReadinessStep, type StepState } from '@/lib/readiness'
 import { cn } from '@/lib/utils'
 import { curriculumService } from '@/services/curriculumService'
@@ -42,21 +44,38 @@ function classroomSteps(reader: ReadAloud, page: number, onModel: (url: string |
 /** Student classroom: split-screen textbook PDF (left) + AI avatar tutor that explains the open page aloud
  * (top-right) + k=3 RAG chat (bottom-right). A proctored AI Classroom session per subject (unified proctoring gate);
  * switching subject or leaving the page closes it. On entry a loader prepares the avatar, its voice and the first
- * page before the classroom appears. */
+ * page before the classroom appears.
+ * Deep link (from the AI Classroom home): ?subject=&textbook=&page= opens that book at that page; without one the
+ * workspace subject's first ready book opens at page 1. */
 export default function AvatarSubjectClassroom() {
-  const { subject } = useAuth()
+  const { user, subject: workspace, setSubject } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const link = parseClassroomLink(params, user?.allowed_subjects ?? [])
+  const linkSubject = link?.subject
+  // The linked subject becomes the workspace subject (the subject picker shows it, other pages follow it).
+  useEffect(() => { if (linkSubject && linkSubject !== workspace) setSubject(linkSubject) }, [linkSubject, workspace, setSubject])
+  // Picking another subject here drops the link: that subject opens on its first book, page 1.
+  const dropLink = useCallback(() => setParams({}, { replace: true }), [setParams])
+  const subject = linkSubject ?? workspace
   if (!subject) return <Empty title="No subjects assigned" body="Ask your teacher to enrol you in a subject." />
   return (
     <ProctorGate key={subject} module="AI_CLASSROOM" refId={`textbook/${subject}`} title={`${subject} textbook classroom`}
       startLabel="Start classroom session" beginLabel="Begin session"
       intro={<div className="flex items-center gap-3"><BookOpen className="h-6 w-6 text-brand-600" /><div><h1 className="font-display text-xl font-bold text-fg">Textbook classroom</h1>
-        <p className="text-sm text-ink-300">Your {subject} textbook with the AI avatar tutor and page-aware chat.</p></div><SubjectPicker className="ml-auto w-44" /></div>}>
-      <TextbookClassroom subject={subject} />
+        <p className="text-sm text-ink-300">Your {subject} textbook with the AI avatar tutor and page-aware chat{link?.page ? `, starting at page ${link.page}` : ''}.</p></div>
+        <SubjectPicker className="ml-auto w-44" onChange={dropLink} /></div>}>
+      <TextbookClassroom subject={subject} startBook={link?.textbookId} startPage={link?.page} onSubjectChange={dropLink} />
     </ProctorGate>
   )
 }
 
-function TextbookClassroom({ subject }: { subject: string }) {
+function TextbookClassroom({ subject, startBook, startPage, onSubjectChange }: {
+  subject: string
+  /** Deep-linked book and page to open on (falls back to the first ready book, page 1). */
+  startBook?: string
+  startPage?: number
+  onSubjectChange?: () => void
+}) {
   const [books, setBooks] = useState<Textbook[] | null>(null)
   const [bookId, setBookId] = useState<string>('')
   const [page, setPage] = useState(1)
@@ -72,10 +91,15 @@ function TextbookClassroom({ subject }: { subject: string }) {
     let alive = true
     setBooks(null); setError(null)
     curriculumService.listTextbooks(subject)
-      .then((b) => { if (!alive) return; const ready = b.filter((x) => x.vector_status === 'indexed'); setBooks(ready); setBookId(ready[0]?.textbook_id ?? ''); setPage(1); setHighlight(null) })
+      .then((b) => {
+        if (!alive) return
+        const ready = readyTextbooks(b)
+        const start = pickStart(ready, { textbookId: startBook, page: startPage })
+        setBooks(ready); setBookId(start.bookId); setPage(start.page); setHighlight(null)
+      })
       .catch((e) => alive && setError(errorMessage(e)))
     return () => { alive = false }
-  }, [subject, reload])
+  }, [subject, reload, startBook, startPage])
 
   const book = books?.find((b) => b.textbook_id === bookId)
   const turnPage = useCallback((p: number) => { setPage(p); setHighlight(null) }, [])
@@ -99,7 +123,7 @@ function TextbookClassroom({ subject }: { subject: string }) {
   }, [readiness, enter])
 
   if (error) return <div className="mx-auto max-w-xl p-8"><ErrorState title="Couldn't load your library" message={error} onRetry={() => setReload((n) => n + 1)} /></div>
-  if (books && !book) return <Empty title={`No textbook published for ${subject} yet`} body="Your teacher hasn't published a chapter for this subject. Check back soon." action={<SubjectPicker className="mx-auto mt-4 w-48" />} />
+  if (books && !book) return <Empty title={`No textbook published for ${subject} yet`} body="Your teacher hasn't published a chapter for this subject. Check back soon." action={<SubjectPicker className="mx-auto mt-4 w-48" onChange={onSubjectChange} />} />
   // One loader from "finding your textbook" to "first page ready", so it never flickers between phases.
   if (!books || !book || !entered) return <ClassroomLoader readiness={books ? readiness : null} onSkip={books ? enter : undefined} />
 
@@ -107,7 +131,7 @@ function TextbookClassroom({ subject }: { subject: string }) {
     <div className="flex h-full min-h-[34rem] flex-col gap-3 p-4 md:p-6 animate-fade-up">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-auto flex items-center gap-2 font-display text-xl font-semibold text-fg"><BookOpen className="h-5 w-5 text-brand-300" /> {book.title}</h1>
-        <SubjectPicker />
+        <SubjectPicker onChange={onSubjectChange} />
         {books.length > 1 && (
           <Select aria-label="Textbook" className="w-56" value={bookId} onChange={(e) => { setBookId(e.target.value); setPage(1); setHighlight(null) }}>
             {books.map((b) => <option key={b.textbook_id} value={b.textbook_id}>{b.title}</option>)}
