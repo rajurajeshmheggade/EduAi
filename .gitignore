@@ -43,3 +43,6 @@ Thumbs.db
 
 # Admission-test proctoring models (npm run models:proctor)
 frontend/public/models/proctor/
+
+# Textbook PDFs dropped into the NLP chapter folders (scripts.import_nlp_pdfs) are copyrighted and large: local only
+backend/nlp/**/*.pdf

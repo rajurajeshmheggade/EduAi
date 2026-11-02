@@ -157,8 +157,11 @@ def _scan_classroom_chapters(subj_dir: Path) -> list[dict]:
     return out
 
 
+_CLASSROOM_RESCAN_S = 30  # PDFs dropped into chapter folders (scripts.import_nlp_pdfs) show up without a restart
+
+
 @lru_cache(maxsize=1)
-def _classroom_tree() -> dict[str, dict[str, list[dict]]]:
+def _classroom_tree_at(_bucket: int) -> dict[str, dict[str, list[dict]]]:
     out: dict[str, dict[str, list[dict]]] = {}
     if not ROOT.is_dir():
         return out
@@ -171,6 +174,13 @@ def _classroom_tree() -> dict[str, dict[str, list[dict]]]:
         if subjects_out:
             out[class_dir.name] = subjects_out
     return out
+
+
+def _classroom_tree() -> dict[str, dict[str, list[dict]]]:
+    return _classroom_tree_at(int(time.monotonic() // _CLASSROOM_RESCAN_S))
+
+
+_classroom_tree.cache_clear = _classroom_tree_at.cache_clear  # type: ignore[attr-defined]
 
 
 def classroom_classes() -> list[dict]:
@@ -195,7 +205,7 @@ def classroom_chapter_pdf_path(class_label: str, subject: str, chapter: str) -> 
 
 
 @lru_cache(maxsize=64)
-def _pdf_page_texts(path_str: str) -> tuple[str, ...]:
+def _pdf_page_texts(path_str: str, _mtime: float = 0.0) -> tuple[str, ...]:  # mtime: a replaced PDF is re-read
     import pymupdf as fitz
 
     with fitz.open(path_str) as doc:
@@ -208,4 +218,4 @@ def classroom_chapter_pages(class_label: str, subject: str, chapter: str) -> tup
     path = classroom_chapter_pdf_path(class_label, subject, chapter)
     if not path:
         raise FileNotFoundError(f"No PDF for chapter '{chapter}' ({subject}, class {class_label})")
-    return _pdf_page_texts(str(path))
+    return _pdf_page_texts(str(path), path.stat().st_mtime)

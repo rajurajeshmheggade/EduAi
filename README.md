@@ -130,6 +130,8 @@ topics (Admin → Classes & subjects → syllabus) for a matching chapter, else 
 **Learning content** = ~250-word segments of the topic with stable ids. The structure is computed lazily, cached per
 file (path, modification time, size) and the catalogue is re-read when folders change.
 
+**Textbook PDFs in the chapter folders.** Download the books yourself (e.g. NCERT chapter PDFs or their zips) and run `python -m scripts.import_nlp_pdfs <download folder> --dry-run`, then again without `--dry-run`: each PDF is matched to its chapter by content (the chapter's `.txt` vocabulary; NCERT names like `jesc112.pdf` only narrow the class) and copied next to that `.txt` as `<chapter>/<chapter>.pdf`. Prelims/answers are skipped, uncertain files are reported, existing PDFs are kept unless `--force`. AI Classroom picks new PDFs up within 30 s. The PDFs are copyrighted and large, so `.gitignore` keeps them out of the repository — distributing them with the product needs the publisher's permission.
+
 **Class / subject mapping** — the class's grade (`classes.grade_number`, else read from its name or code: "Grade 10 —
 Section A" → 10) ↔ the Roman-numeral folder (X); the subject name / code is normalised and matched against the class's
 subject folders, then an alias table (Physics, Chemistry, Biology → Science / General Science up to Class X; Maths →
