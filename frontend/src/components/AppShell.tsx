@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ChangePasswordDialog, ProfileMenu } from '@/components/ProfileMenu'
 import { CommandPalette, type Command } from '@/components/shell/CommandPalette'
 import { CopilotDrawer } from '@/components/shell/CopilotDrawer'
+import { COPILOT_SHORTCUT, isCopilotShortcut, useCopilotDock } from '@/components/shell/copilot/useCopilotDock'
 import { NotificationBell } from '@/components/shell/NotificationBell'
 import { RouteFallback } from '@/components/shell/RouteFallback'
 import { TopProgress } from '@/components/shell/TopProgress'
@@ -92,7 +93,10 @@ export function AppShell() {
   const nav = useNavigate()
   const { pathname, search } = useLocation()
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [copilotOpen, setCopilotOpen] = useState(false)
+  const copilot = !!user && COPILOT_ROLES.includes(user.role)
+  const dock = useCopilotDock(user?.user_code ?? '')
+  const { setOpen: setCopilotOpen } = dock
+  const copilotOpen = copilot && dock.open
   const [pwOpen, setPwOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [newLeads, setNewLeads] = useState(0)
@@ -102,23 +106,35 @@ export function AppShell() {
   useEffect(() => {
     if (isSuper) leadsService.list('NEW').then((d) => setNewLeads(d.counts.NEW ?? 0)).catch(() => {})
   }, [isSuper, onLeads])
-  // Ctrl/⌘-K opens the command palette anywhere in the app.
+  // Ctrl/⌘-K opens the command palette anywhere in the app; Ctrl/⌘-J toggles Copilot.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(true) }
+      else if (copilot && isCopilotShortcut(e)) { e.preventDefault(); setCopilotOpen((o) => !o) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [copilot, setCopilotOpen])
+  // Width the docked Copilot takes at the right edge, as `--copilot-offset` on <html> (portals inherit it too): fixed
+  // bottom-right widgets (toasts, floating timers) use `right-[calc(1rem+var(--copilot-offset,0px))]` so the panel
+  // never hides them.
+  const copilotOffset = copilotOpen && dock.docked ? dock.width : 0
+  useEffect(() => {
+    const root = document.documentElement
+    root.style.setProperty('--copilot-offset', `${copilotOffset}px`)
+    return () => { root.style.removeProperty('--copilot-offset') }
+  }, [copilotOffset])
   const commands = useMemo<Command[]>(() => {
     if (!user) return []
     const pages = NAV[user.role].filter((i) => !i.soon && (!i.needs || i.needs(user)))
       .map((i) => ({ id: i.to, label: i.tKey ? t(i.tKey) : i.label, hint: i.section, icon: i.icon, run: () => nav(i.to) }))
-    return [...pages, { id: 'change-password', label: 'Change password', hint: 'Account', icon: KeyRound, run: () => setPwOpen(true) }]
-  }, [user, t, nav])
+    const assistant: Command[] = copilot
+      ? [{ id: 'copilot', label: copilotOpen ? 'Close Copilot' : 'Open Copilot', hint: 'Assistant', shortcut: COPILOT_SHORTCUT.label, icon: Sparkles, run: () => setCopilotOpen((o) => !o) }]
+      : []
+    return [...pages, ...assistant, { id: 'change-password', label: 'Change password', hint: 'Account', icon: KeyRound, run: () => setPwOpen(true) }]
+  }, [user, t, nav, copilot, copilotOpen, setCopilotOpen])
   if (!user) return null
   const label = (i: NavItem) => (i.tKey ? t(i.tKey) : i.label)
-  const copilot = COPILOT_ROLES.includes(user.role)
   const items = NAV[user.role].filter((i) => !i.needs || i.needs(user))
   const sections = [...new Set(items.map((i) => i.section))]
   const toggle = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1') } catch { /* storage unavailable */ } return !c })
@@ -127,7 +143,7 @@ export function AppShell() {
   const initials = user.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full" data-copilot={copilotOpen ? (dock.docked ? 'docked' : 'overlay') : 'closed'}>
       <aside className={cn('hidden shrink-0 flex-col border-r border-line bg-ink-900 p-3 transition-[width] duration-200 md:flex print:hidden', collapsed ? 'w-[4.5rem]' : 'w-64')} aria-label="Primary">
         <div className={cn('mb-6 flex items-center gap-2.5 pt-1', collapsed ? 'justify-center' : 'px-2')}>
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-aqua-500 shadow-glow">
@@ -192,9 +208,11 @@ export function AppShell() {
               <Search className="h-4 w-4" /><span>Search</span><kbd className="rounded border border-line px-1.5 text-[10px] text-ink-500">Ctrl K</kbd>
             </button>
             {copilot && (
-              <button onClick={() => setCopilotOpen((o) => !o)} id="open-copilot" aria-expanded={copilotOpen} aria-label="Copilot"
-                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-500/10">
+              <button onClick={() => setCopilotOpen((o) => !o)} id="open-copilot" aria-expanded={copilotOpen} aria-controls="copilot-panel" aria-label="Copilot"
+                aria-keyshortcuts={COPILOT_SHORTCUT.aria} title={`${copilotOpen ? 'Close' : 'Open'} Copilot (${COPILOT_SHORTCUT.label})`}
+                className={cn('inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-500/10', copilotOpen && 'bg-brand-500/10 ring-1 ring-brand-400/25')}>
                 <Sparkles className="h-4 w-4" /><span className="hidden md:inline">Copilot</span>
+                <kbd className="hidden rounded border border-brand-400/30 px-1.5 text-[10px] font-normal text-brand-600/80 xl:inline">{COPILOT_SHORTCUT.label}</kbd>
               </button>
             )}
             <NotificationBell />
@@ -202,29 +220,34 @@ export function AppShell() {
           </div>
           <TopProgress />
         </header>
-        <nav aria-label="Primary (mobile)" className="flex gap-1 overflow-x-auto border-b border-line bg-ink-900 px-2 py-1.5 md:hidden print:hidden">
-          {items.filter((i) => !i.soon).map((item) => (
-            <Link key={item.to} to={item.to} aria-current={isActive(item) ? 'page' : undefined}
-              className={cn(linkCls({ isActive: isActive(item) }), 'shrink-0 py-1.5 text-xs')}><item.icon className="h-4 w-4" />{label(item)}</Link>
-          ))}
-        </nav>
-        {user.must_change_password && (
-          <div role="alert" className="flex flex-wrap items-center gap-3 border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn md:px-8">
-            <KeyRound className="h-4 w-4 shrink-0" />
-            <span className="flex-1">You are signed in with a default or temporary password. Set your own password to secure your account.</span>
-            <button onClick={() => setPwOpen(true)} id="banner-change-password" className="cursor-pointer rounded-lg bg-warn px-3 py-1 text-xs font-semibold text-white hover:brightness-110">Change password</button>
+        {/* Below the header: the page column, and Copilot docked beside it (the page shrinks to make room). */}
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <nav aria-label="Primary (mobile)" className="flex gap-1 overflow-x-auto border-b border-line bg-ink-900 px-2 py-1.5 md:hidden print:hidden">
+              {items.filter((i) => !i.soon).map((item) => (
+                <Link key={item.to} to={item.to} aria-current={isActive(item) ? 'page' : undefined}
+                  className={cn(linkCls({ isActive: isActive(item) }), 'shrink-0 py-1.5 text-xs')}><item.icon className="h-4 w-4" />{label(item)}</Link>
+              ))}
+            </nav>
+            {user.must_change_password && (
+              <div role="alert" className="flex flex-wrap items-center gap-3 border-b border-warn/30 bg-warn/10 px-4 py-2 text-sm text-warn md:px-8">
+                <KeyRound className="h-4 w-4 shrink-0" />
+                <span className="flex-1">You are signed in with a default or temporary password. Set your own password to secure your account.</span>
+                <button onClick={() => setPwOpen(true)} id="banner-change-password" className="cursor-pointer rounded-lg bg-warn px-3 py-1 text-xs font-semibold text-white hover:brightness-110">Change password</button>
+              </div>
+            )}
+            {/* Pages load inside the shell: the sidebar and header stay while a page's code downloads. */}
+            <main className="min-h-0 flex-1 overflow-y-auto"><ErrorBoundary key={pathname}><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></ErrorBoundary></main>
+            <footer className="flex shrink-0 flex-wrap print:hidden items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-ink-900 px-4 py-2.5 text-xs text-ink-500 md:px-8">
+              <span>© {YEAR} EduAI Platform · Teach · Learn · Grow</span>
+              <span className="truncate">{user.org_name ?? user.org_code} · Signed in as {user.full_name} ({roleLabel(user.role)})</span>
+            </footer>
           </div>
-        )}
-        {/* Pages load inside the shell: the sidebar and header stay while a page's code downloads. */}
-        <main className="min-h-0 flex-1 overflow-y-auto"><ErrorBoundary key={pathname}><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></ErrorBoundary></main>
-        <footer className="flex shrink-0 flex-wrap print:hidden items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-ink-900 px-4 py-2.5 text-xs text-ink-500 md:px-8">
-          <span>© {YEAR} EduAI Platform · Teach · Learn · Grow</span>
-          <span className="truncate">{user.org_name ?? user.org_code} · Signed in as {user.full_name} ({roleLabel(user.role)})</span>
-        </footer>
+          {copilot && <CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} docked={dock.docked} width={dock.width} onResize={dock.setWidth} />}
+        </div>
       </div>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-      {copilot && <CopilotDrawer open={copilotOpen} onClose={() => setCopilotOpen(false)} />}
       <Toaster />
     </div>
   )

@@ -3,7 +3,7 @@ import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react'
 import { Dialog } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-export interface Command { id: string; label: string; hint?: string; icon: LucideIcon; run: () => void }
+export interface Command { id: string; label: string; hint?: string; icon: LucideIcon; run: () => void; /** e.g. "Ctrl J" */ shortcut?: string }
 
 /** Ctrl/⌘-K command palette: type to filter pages and actions, arrows to move, Enter to open. */
 export function CommandPalette({ open, onClose, commands }: { open: boolean; onClose: () => void; commands: Command[] }) {
@@ -43,6 +43,7 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
               <c.icon className="h-4 w-4 shrink-0" />
               <span className="flex-1">{c.label}</span>
               {c.hint && <span className="text-xs text-ink-500">{c.hint}</span>}
+              {c.shortcut && <kbd className="rounded border border-line px-1.5 text-[10px] text-ink-500">{c.shortcut}</kbd>}
               {i === current && <CornerDownLeft className="h-3.5 w-3.5 text-ink-500" aria-hidden />}
             </li>
           ))}
