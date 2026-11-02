@@ -142,6 +142,15 @@ def finish(s: dict, reason: str, *, actor: str | None = None, role: str | None =
         audit(s["org_code"], f"session_{reason.lower()}", actor=actor, role=role, test_id=s["test_id"], session_id=s["session_id"],
               details=details, conn=conn)
     s.update(status=status, submit_reason=reason)
+    if s.get("origin") == "applicant":   # taken from the standalone admission app: complete the application
+        try:
+            from ..admission.applications import on_exam_finished
+
+            on_exam_finished(s)
+        except Exception:  # noqa: BLE001 — the applicant app completes it on the next request instead
+            import logging
+
+            logging.getLogger("eduai.admission.forms").exception("completing the application after the test failed")
     if s.get("started_at"):
         from .report import schedule
 
