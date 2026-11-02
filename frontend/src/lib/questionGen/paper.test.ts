@@ -164,3 +164,12 @@ describe('paper numbering and answer key', () => {
     expect(one.every((x, i) => x !== ids[i])).toBe(true)
   })
 })
+
+describe('file names', () => {
+  it('keep letters of every script and turn dashes into hyphens', async () => {
+    const { paperFileBase } = await import('./paper')
+    expect(paperFileBase('Physics — Electricity')).toBe('Physics - Electricity')
+    expect(paperFileBase('इकाई परीक्षा: विद्युत/2')).toBe('इकाई परीक्षा विद्युत 2')
+    expect(paperFileBase('???')).toBe('question-paper')
+  })
+})

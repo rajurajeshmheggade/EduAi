@@ -164,6 +164,8 @@ export const PAPER_CSS = `
 .qg-paper .qg-r { text-align: right; }
 .qg-paper .qg-rule { border: 0; border-top: 1.5px solid #222; margin: 6px 0 8px; }
 .qg-paper .qg-gi { font-size: 13px; margin-bottom: 8px; }
+.qg-paper ol { list-style: decimal; } .qg-paper ul { list-style: disc; }
+.qg-paper ol, .qg-paper ul { margin: 2px 0 4px 20px; padding: 0; }
 .qg-paper .qg-gi ol { margin: 2px 0 0 18px; padding: 0; }
 .qg-paper .qg-sec { font-family: inherit; letter-spacing: 0; text-align: center; font-size: 15px; font-weight: 700; margin: 14px 0 2px; }
 .qg-paper .qg-sec-i { text-align: center; font-style: italic; font-size: 12.5px; color: #333; margin: 0 0 6px; }

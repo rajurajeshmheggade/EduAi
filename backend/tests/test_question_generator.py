@@ -769,3 +769,12 @@ def test_breadth_classes_for_the_demo_teacher(client, teacher):
     finally:
         for code in added:
             db.execute("DELETE FROM public.classes WHERE org_code = 'DEMO-SCHOOL' AND class_code = %s", (code,))
+
+
+def test_frontend_catalogue_fixture_matches_the_server():
+    """The frontend tests use a copy of GET /qgen/meta's catalogue; keep it in step with schema.py."""
+    import json
+    from pathlib import Path
+    fixture = json.loads((Path(__file__).resolve().parents[2] / "frontend/src/lib/questionGen/meta.fixture.json").read_text("utf-8"))
+    assert fixture["types"] == schema.TYPE_CATALOGUE
+    assert fixture["settings"]["ar_codes"] == schema.AR_CODES_DEFAULT

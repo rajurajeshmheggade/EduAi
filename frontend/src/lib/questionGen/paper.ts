@@ -390,5 +390,6 @@ export function normaliseMarks(q: Question): Question {
 }
 
 export function paperFileBase(title: string): string {
-  return title.replace(/[^A-Za-z0-9ऀ-ൿ _-]+/g, '').trim().slice(0, 80) || 'question-paper'
+  // letters of any script, digits, space, _ and -; dashes become '-', anything else a space
+  return title.replace(/[\u2013\u2014]/g, '-').replace(/[^\p{L}\p{M}\p{N} _-]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'question-paper'
 }

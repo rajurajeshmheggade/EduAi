@@ -297,6 +297,10 @@ def render(paper: dict, ar: dict, *, answer_key_mode: bool = False) -> bytes:
     doc.set_metadata({"title": f"{title} — {L['answer_key']}" if answer_key_mode else title,
                       "subject": f"{paper.get('class_name', '')} · {paper.get('subject_name', '')}",
                       "creator": "EduAI Question Generator", "producer": "EduAI"})
+    try:
+        doc.subset_fonts()   # embed only the glyphs used (the bundled fonts are ~0.5 MB each)
+    except Exception:  # noqa: BLE001 — a full font is still a correct PDF
+        pass
     out = doc.tobytes(garbage=3, deflate=True)
     doc.close()
     return out

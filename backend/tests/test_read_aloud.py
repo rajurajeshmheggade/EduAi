@@ -236,7 +236,7 @@ def test_read_aloud_needs_the_avatar_module_and_the_subject(client, student, stu
         assert client.get(f"{RA}/{book}/voice", headers=student).status_code == 403
     finally:
         db.execute("UPDATE public.organizations SET ai_modules = ARRAY['rag_chatbot','ai_avatar_tutor','ocr_evaluation',"
-                   "'capability_analysis'] WHERE org_code = 'DEMO-SCHOOL'")
+                   "'capability_analysis','question_generator'] WHERE org_code = 'DEMO-SCHOOL'")
     assert client.get(f"{RA}/{book}/voice", headers=admin).status_code == 403          # classroom roles only
 
 

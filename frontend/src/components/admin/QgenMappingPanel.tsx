@@ -75,7 +75,7 @@ function MappingsCard({ scope }: { scope?: string }) {
 }
 
 function MappingRow({ row, repo, scope, onSaved }: { row: SubjectMappingRow; repo: Repo; scope?: string; onSaved: (d: MappingsResponse) => void }) {
-  const initialClass = row.nlp_class ?? repo.find((c) => c.grade === row.grade)?.class_label ?? ''
+  const initialClass = row.nlp_class ?? (row.grade != null ? repo.find((c) => c.grade === row.grade)?.class_label : undefined) ?? ''
   const [klass, setKlass] = useState(initialClass)
   const subjects = useMemo(() => repo.find((c) => c.class_label === klass)?.subjects ?? [], [repo, klass])
   const [subject, setSubject] = useState(row.nlp_subject && subjects.includes(row.nlp_subject) ? row.nlp_subject : '')

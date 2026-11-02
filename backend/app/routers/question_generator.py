@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Literal
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
@@ -515,7 +516,8 @@ def create_assessment(paper_id: UUID, body: AssessmentBody, user: CurrentUser = 
 
 
 def _filename(p: dict, suffix: str) -> str:
-    base = re.sub(r"[^A-Za-z0-9 _\-]+", "", (p["header"].get("exam_title") or p["title"]))[:80].strip() or "question-paper"
+    title = (p["header"].get("exam_title") or p["title"]).replace("—", "-").replace("–", "-")
+    base = re.sub(r"\s+", " ", re.sub(r"[^A-Za-z0-9 _\-]+", " ", title)).strip()[:80] or "question-paper"
     return f"{base}{suffix}.pdf"
 
 
@@ -523,9 +525,11 @@ def _filename(p: dict, suffix: str) -> str:
 def export_pdf(paper_id: UUID, answer_key: bool = False, user: CurrentUser = Depends(teacher)):
     p = _full(user, paper_id)
     data = pdf.render(p, store.settings(user.org_code), answer_key_mode=answer_key)
-    name = _filename(p, " - Answer Key" if answer_key else "")
-    return Response(data, media_type="application/pdf", headers={
-        "Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+    suffix = " - Answer Key" if answer_key else ""
+    title = (p["header"].get("exam_title") or p["title"]).replace("—", "-").replace("–", "-")
+    utf8 = re.sub(r"\s+", " ", re.sub(r"[^\w \-]+", " ", title)).strip()[:80] or "question-paper"
+    disposition = f'attachment; filename="{_filename(p, suffix)}"; filename*=UTF-8\'\'{quote(utf8 + suffix + ".pdf")}'
+    return Response(data, media_type="application/pdf", headers={"Content-Disposition": disposition, "Cache-Control": "no-store"})
 
 
 # ════════════════════════════════════════════════════════════ question bank

@@ -87,6 +87,86 @@ Typed PDFs are read from their text layer (works offline in `mock` mode with a r
 scripts need `PROVIDER_MODE=azure|openai` (GPT-4o vision OCR + the FRD examiner prompt). Try it with
 `python -m scripts.sample_evaluation` → files in `.data/sample_evaluation/` (Grade-10-A, PHY101, `teacher@demo.edu`).
 
+## AI Question Generator (Teacher → Assessments → AI Question Generator / Question Bank)
+
+Teachers generate exam questions **only from the NLP learning content they select**, edit them into a question paper,
+keep them in a question bank, publish the paper and download it.
+
+* **Generate** — cascading dropdowns *Class → Subject → Chapter → Topic → NLP learning content*. Class and subject are
+  the teacher's own class subjects; chapters, topics and content come from the content repository. **Preview content**
+  shows the exact cleaned text the questions will be grounded on. A blueprint mixes any of the 17 question types, each
+  row with number of questions, difficulty (Easy / Medium / Hard), Bloom's level, marks per question (blank = automatic)
+  and the type's own inputs (options per MCQ, statements per True/False, pairs, blanks, word bank, sub-questions,
+  numbering, word limit, tolerance …); plus language (English, Hindi, Kannada, Tamil) and additional instructions.
+  The drafts are reviewed (edit / discard / show answers) and added to a new or a draft paper, or saved to the bank.
+* **Question paper editor** — questions by section, numbered continuously; drag-and-drop or keyboard reorder (arrow
+  buttons, Alt + ↑ / ↓ on the handle), edit, duplicate, delete, move between sections, add manually / generate more /
+  add from the bank. Type-specific editors for every type (options and correct answers, statements, blanks with
+  alternates and case sensitivity, pairs, codes, marking points, rubric, sub-questions, …), rich text (bold, italic,
+  underline, sub/superscript, lists) with **KaTeX equations**, images / diagrams (PNG or JPEG ≤ 2 MB). Paper settings:
+  institution name and logo (defaults to the school's name), exam title, academic year, date, time, general
+  instructions, marks and name / roll-number lines, sections. **Preview** shows the paper and the answer key.
+* **Save as draft** (optimistic concurrency: a paper changed in another window is never overwritten) · **Save to
+  question bank** · **Publish** (final: the API and a database trigger refuse changes; **New version** makes an editable
+  copy) · **PDF / Word / Print** of the paper and, separately, of the **answer key** (answers, explanations, key
+  points / marking scheme and marks per question) · **Create online test / assignment** from a published paper.
+* **Question bank** — the teacher's own questions plus those shared with the school; search by text (question and
+  answer), type, difficulty, Bloom's level and subject; reuse in a paper; delete own questions. Duplicates are skipped
+  on save: same normalised text, or an embedding ≥ 0.95 cosine-similar to a bank question of the same type and subject.
+
+| Question types (all enabled) | Online test / assignment item when a published paper is converted |
+| --- | --- |
+| Multiple Choice (2–8 options, list / 2 / 4 columns), Assertion–Reason (codes A–D, configurable per school; consecutive A/R questions share one directions block), True/False with one statement | MCQ — graded exactly |
+| Numerical (value, unit, tolerance, worked solution) | NUMERICAL |
+| Multiple Response (≥ 2 correct, partial credit max(0, (right − wrong) ÷ correct) × marks), Fill in the blanks (`[answer]` in the text, alternates, case sensitivity, word bank), Match the following (Column II shuffled), One-word, Arrange in order, Short answer, True/False with several statements | SHORT_ANSWER, answer key as model answer |
+| Long answer (marking points), Descriptive / Essay (rubric, word limit), HOTS (Analyse / Evaluate / Create only), Diagram-based (uploaded image or a described diagram) | DESCRIPTIVE with the points as rubric |
+| Case-based, Scenario-based, Passage-based (sub-questions of mixed types, (a)/(b) or (i)/(ii)) | one item per sub-question (`5a`, `5b` …) |
+
+**Content repository** (`backend/nlp/<Class>/<Subject>/<Chapter>/<Chapter>.txt`, Classes III–XII and JEE, whose chapters
+sit one level deeper, `JEE/Physics/mechanics/<chapter>/`). The text is cleaned deterministically (page markers,
+the PDF's duplicated text layer and repeated headings removed). **Topics** come from the chapter's numbered section
+headings ("11.1 Electric current and circuit", about a third of the chapters), else from the school's own syllabus
+topics (Admin → Classes & subjects → syllabus) for a matching chapter, else from labelled sections of the text.
+**Learning content** = ~250-word segments of the topic with stable ids. The structure is computed lazily, cached per
+file (path, modification time, size) and the catalogue is re-read when folders change.
+
+**Class / subject mapping** — the class's grade (`classes.grade_number`, else read from its name or code: "Grade 10 —
+Section A" → 10) ↔ the Roman-numeral folder (X); the subject name / code is normalised and matched against the class's
+subject folders, then an alias table (Physics, Chemistry, Biology → Science / General Science up to Class X; Maths →
+Mathematics; SST → Social Science; EVS → Environmental Science; Accounts → Accountancy …). When a single-discipline
+subject maps onto a combined Science book, its own chapters are listed first (Class X Physics: Electricity, Light,
+Magnetic effects, Human eye). Admin console → **Question generator** corrects or sets a mapping per class subject and
+edits the Assertion–Reason instruction and codes.
+
+**AI** (`PROVIDER_MODE`): one call per blueprint row with only the selected segments as context (labelled, declared
+data), 60 s budget per call / 170 s per generation, one retry on invalid JSON, every item converted to the typed schema
+and validated, rejected unless ≥ 45 % of its subject terms occur in the selected content (English papers) or if it
+duplicates a question already on the paper or in the batch (normalised text, Jaccard ≥ 0.8). Marks are always set by
+the server (the row's marks, else per-type defaults: per statement / pair / blank for True-False, Match and Fill in the
+blanks, +1 for Hard subjective). Whatever the AI does not deliver is written by a **deterministic offline generator**
+from the selected sentences (blanked key terms, facts altered with another term of the same content for false
+statements, quoted sentences as model answers) — the whole path in `PROVIDER_MODE=mock`; it writes in the content's
+language (English). Generation is limited to 12 runs per 10 minutes per teacher.
+
+**Exports** — PDF is rendered on the server with MuPDF's HTML engine (PyMuPDF, already a dependency), which shapes
+Devanagari, Kannada and Tamil with HarfBuzz (reportlab cannot shape Indic scripts); fonts are bundled
+(`backend/app/assets/fonts`, Noto Serif + Noto Serif Devanagari / Kannada / Tamil, SIL OFL) and subset, so output is
+the same on Windows and Linux: A4, logo, institution, exam title, class / subject / year / time / maximum marks / date,
+name and roll number, general instructions, sections, numbering, "Page n of N" (in the paper's language), images;
+equations print from their LaTeX as text with super/subscripts and symbols. Word (.docx) is built in the browser with
+the same layout and real Word equations (Indic text uses Word's shaping with Nirmala UI). Print opens a print-ready page.
+
+Demo: `teacher@demo.edu` (Grade 10-A Physics → X / General Science, Mathematics → X / Mathematics; Grade 9-B Physics →
+IX / Science) and `kavya@demo.edu` (Grade 9-B English → IX / English). `python -m scripts.seed` also seeds syllabus
+chapters + topics from the repository for these class subjects and adds Grade-8-C Science (Class VIII) and Grade-12-A
+Chemistry (Class XII) for `teacher@demo.edu`. The AI module `question_generator` is on for every institution.
+
+API (`/ICMELive/api/v1/qgen`): `meta` · `catalog/{classes, chapters, topics, content, preview}` · `generate` · `validate` ·
+`papers` (GET / POST) · `papers/{id}` (GET / PUT / DELETE) · `papers/{id}/{items, items/{item}, items/{item}/duplicate,
+reorder, items/from-bank, publish, new-version, assessment, bank, export.pdf?answer_key=}` · `bank` (GET / POST) ·
+`bank/{id}` · `media` · `media/{id}` · admin `admin/{mappings, mappings/{class}/{subject}, settings}`. Migration
+`025_question_generator.sql` (subject mapping, settings, media, papers + items + publish trigger, question bank).
+
 ## Digital Library (school catalog + DIKSHA)
 
 Teacher → **Digital Library**, Student → **My Library**, Admin console → **Digital library**.
@@ -375,7 +455,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 252 tests incl. lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS, wellness
+cd backend ; .venv\Scripts\python -m pytest        # 291 tests incl. AI question generator, lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS, wellness
 cd frontend ; npm test ; npm run build
 ```
 

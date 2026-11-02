@@ -131,7 +131,7 @@ export function ContentPicker({ locked, onChange, idPrefix = 'qg' }: {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <Level id={`${idPrefix}-class`} label="Class" loading={classes.loading}>
           <Select id={`${idPrefix}-class`} value={classCode} disabled={!!locked || !classes.data?.length}
             onChange={(e) => { setClassCode(e.target.value); setSubjectCode('') }}>
