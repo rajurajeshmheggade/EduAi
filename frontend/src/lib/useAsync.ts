@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLoadingSignal } from '@/lib/navProgress'
 import { errorMessage } from '@/services/apiClient'
 
 /**
@@ -26,5 +27,6 @@ export function useAsync<T>(fn: (signal: AbortSignal) => Promise<T>, deps: unkno
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, nonce, timeoutMs])
   const retry = useCallback(() => setNonce((n) => n + 1), [])
+  useLoadingSignal(state.loading && state.data === undefined)    // first load: the shell's top progress bar runs
   return { ...state, retry }
 }

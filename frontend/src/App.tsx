@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { HomeRedirect, FullPageSpinner, RequireRole } from '@/auth/RequireRole'
 import { AppShell } from '@/components/AppShell'
 import { ExamLockGate } from '@/components/exam/ExamLockGate'
 import Landing from '@/pages/Landing'
 import Login from '@/pages/auth/Login'
+// Every route's `lazy` retries a failed download and reloads once on a stale chunk (see lib/lazyWithRetry).
+import { lazyWithRetry as lazy } from '@/lib/lazyWithRetry'
 
 // Route-level code splitting keeps react-pdf (large) out of the initial bundle.
 const TeacherDashboard = lazy(() => import('@/pages/teacher/TeacherDashboard'))

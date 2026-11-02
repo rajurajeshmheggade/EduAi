@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
-import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ErrorState, PageLoader, Skeleton } from '@/components/ui/loading'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
-/** Left pane of the split-screen classroom: textbook PDF with page control and cited-passage highlighting. */
+/** Left pane of the split-screen classroom: textbook PDF with page control and cited-passage highlighting. The next
+ * page is rendered ahead, out of sight, so turning to it is instant. */
 export function SplitScreenPDFReader({ url, page, onPageChange, highlight }: {
   url: string
   page: number
@@ -20,6 +22,7 @@ export function SplitScreenPDFReader({ url, page, onPageChange, highlight }: {
   const [zoom, setZoom] = useState(1)
   const [width, setWidth] = useState(600)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const box = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -54,18 +57,25 @@ export function SplitScreenPDFReader({ url, page, onPageChange, highlight }: {
         </div>
       </div>
 
-      <div ref={box} className="min-h-0 flex-1 overflow-auto p-4">
+      <div ref={box} className="relative min-h-0 flex-1 overflow-auto p-4">
         {error ? (
-          <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 p-3 text-sm text-bad">{error}</p>
+          <ErrorState title="Could not load the textbook" message={error} onRetry={() => { setError(null); setAttempt((n) => n + 1) }} />
         ) : (
           <Document
+            key={attempt}
             file={url}
             onLoadSuccess={(d) => setPages(d.numPages)}
-            onLoadError={(e) => setError(`Could not load the textbook: ${e.message}`)}
-            loading={<div className="grid place-items-center py-24 text-ink-300"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+            onLoadError={(e) => setError(e.message)}
+            loading={<PageLoader message="Opening the textbook…" className="min-h-[60vh]" />}
           >
-            <Page pageNumber={page} width={Math.floor(width * zoom)} customTextRenderer={customTextRenderer} renderAnnotationLayer={false}
-              loading={<div className="skeleton h-[60vh] w-full" />} />
+            {[page, page + 1].filter((p) => p === page || p <= pages).map((p) => (
+              // Same key when the next page becomes the current one: its canvas is reused, not drawn again.
+              <div key={p} aria-hidden={p !== page || undefined}
+                className={p === page ? undefined : 'pointer-events-none invisible absolute inset-x-4 top-4 h-0 overflow-hidden'}>
+                <Page pageNumber={p} width={Math.floor(width * zoom)} customTextRenderer={p === page ? customTextRenderer : undefined}
+                  renderAnnotationLayer={false} loading={<Skeleton className="h-[60vh] w-full" />} />
+              </div>
+            ))}
           </Document>
         )}
       </div>
