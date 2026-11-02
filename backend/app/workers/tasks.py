@@ -2,6 +2,7 @@
 so progress survives API/worker restarts — replacing the volatile in-memory runtime_state.py queues."""
 from __future__ import annotations
 
+import hashlib
 import logging
 import threading
 from typing import Callable
@@ -61,6 +62,10 @@ def vectorize_textbook(textbook_id: str, job_id: str) -> None:
                  {"stage": "embedding", "chunks_done": min(i + EMBED_BATCH, total), "chunks_total": total})
 
         db.call_scalar("usp_update_textbook_status", tb_id, "indexed", len(parsed.pages))
+        # Content version for the avatar tutor's page cache (migration 027): new content -> pages explained afresh.
+        digest = hashlib.sha256(data).hexdigest()
+        db.execute("UPDATE public.subject_textbooks SET content_sha256 = %s, content_updated_at = NOW() "
+                   "WHERE textbook_id = %s AND content_sha256 IS DISTINCT FROM %s", (digest, tb_id, digest))
         _job(jb_id, "completed", 100,
              {"stage": "done", "chunks": total, "chapters": len(chapters),
               "pages": len(parsed.pages), "scanned_pages": parsed.scanned_pages})

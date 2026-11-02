@@ -18,6 +18,7 @@ from ..config import get_settings
 from ..security import CurrentUser, hash_password, require_role
 from ..services import attendance as att
 from ..services import notifications as notif
+from ..services import read_aloud
 from ..services.members import Code, Email, Name, Password, Phone, create_member, temp_password
 
 router = APIRouter(prefix="/ICMELive/api/v1/admin", tags=["admin"])
@@ -275,6 +276,7 @@ def _patch_member(org: str, user_code: str, role: str, body: MemberPatch, **extr
                    (org, user_code))
     if body.gender is not None:
         db.execute("UPDATE public.app_users SET gender = %s WHERE org_code = %s AND user_code = %s", (body.gender, org, user_code))
+    read_aloud.forget_avatar_teachers()   # the AI classroom avatar / voice follow the teacher's name and gender
     out = db.call_rows("usp_list_members", org, role, m["class_code"])
     row = next(r for r in out if r["user_code"] == user_code)
     return {**row, "temporary_password": pw}
