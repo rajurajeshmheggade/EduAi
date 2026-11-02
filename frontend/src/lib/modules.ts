@@ -5,4 +5,5 @@ export const AI_MODULES: { id: AIModule; label: string }[] = [
   { id: 'ai_avatar_tutor', label: 'AI avatar tutor' },
   { id: 'ocr_evaluation', label: 'AI script evaluation' },
   { id: 'capability_analysis', label: 'Capability reports' },
+  { id: 'question_generator', label: 'AI question generator' },
 ]

@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronsLeft, ChevronsRight, CalendarCheck, FlaskConical, CalendarClock, ClipboardCheck, ClipboardList, DoorOpen, FileSignature, HeartPulse, House, KanbanSquare, KeyRound, Library, LayoutDashboard, ListChecks, MessageSquareText, NotebookPen, PencilRuler, ScanEye, ScanText, School, Search, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
+import { ChevronsLeft, ChevronsRight, CalendarCheck, FlaskConical, CalendarClock, ClipboardCheck, ClipboardList, DoorOpen, FileQuestionMark, FileSignature, HeartPulse, House, KanbanSquare, KeyRound, Library, LayoutDashboard, ListChecks, MessageSquareText, NotebookPen, PencilRuler, ScanEye, ScanText, School, Search, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ChangePasswordDialog, ProfileMenu } from '@/components/ProfileMenu'
@@ -38,6 +38,8 @@ const NAV: Record<Role, NavItem[]> = {
     { to: '/teacher/admissions', section: 'Assessments', label: 'Admissions', icon: DoorOpen },
     { to: '/teacher/admission-forms', section: 'Assessments', label: 'Admission forms', icon: FileSignature },
     { to: '/teacher/proctoring', section: 'Assessments', label: 'Live proctoring', icon: ScanEye },
+    { to: '/teacher/question-generator', section: 'Assessments', label: 'AI Question Generator', icon: FileQuestionMark, needs: (u) => !u.ai_modules || u.ai_modules.includes('question_generator') },
+    { to: '/teacher/question-bank', section: 'Assessments', label: 'Question Bank', icon: Library, needs: (u) => !u.ai_modules || u.ai_modules.includes('question_generator') },
     { to: '/teacher/evaluation', section: 'Assessments', label: 'AI Evaluation', icon: ScanText, needs: (u) => !u.ai_modules || u.ai_modules.includes('ocr_evaluation') },
     { to: '/teacher/wellbeing', section: 'Wellbeing', label: 'Wellbeing & Mindset', icon: HeartPulse },
   ],

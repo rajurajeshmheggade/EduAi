@@ -11,6 +11,8 @@ import { lazyWithRetry as lazy } from '@/lib/lazyWithRetry'
 // Route-level code splitting keeps react-pdf (large) out of the initial bundle.
 const TeacherDashboard = lazy(() => import('@/pages/teacher/TeacherDashboard'))
 const LessonPlans = lazy(() => import('@/pages/teacher/LessonPlans'))
+const QuestionGenerator = lazy(() => import('@/pages/teacher/QuestionGenerator'))
+const QuestionPaperEditor = lazy(() => import('@/pages/teacher/QuestionPaperEditor'))
 const Wellbeing = lazy(() => import('@/pages/teacher/Wellbeing'))
 const Wellness = lazy(() => import('@/pages/student/Wellness'))
 const MyClasses = lazy(() => import('@/pages/teacher/MyClasses'))
@@ -78,6 +80,9 @@ export default function App() {
             <Route path="/teacher/admissions/reports/:sessionId" element={<AdmissionReport />} />
             <Route path="/teacher/admission-forms" element={<AdmissionForms />} />
             <Route path="/teacher/lesson-plans" element={<LessonPlans />} />
+            <Route path="/teacher/question-generator" element={<QuestionGenerator />} />
+            <Route path="/teacher/question-generator/papers/:paperId" element={<QuestionPaperEditor />} />
+            <Route path="/teacher/question-bank" element={<QuestionGenerator />} />
             <Route path="/teacher/wellbeing" element={<Wellbeing />} />
             <Route path="/teacher/proctoring" element={<TeacherProctoring />} />
             <Route path="/teacher/proctoring/exam" element={<ProctoringExam />} />

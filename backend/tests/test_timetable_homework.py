@@ -78,7 +78,8 @@ def test_rag_chatbot_module_gate(client):
         assert r.status_code == 403
     finally:
         client.put(f"{A}/settings", headers=sa, params={"org_code": "DEMO-SCHOOL"},
-                   json={"ai_modules": ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis"]})
+                   json={"ai_modules": ["rag_chatbot", "ai_avatar_tutor", "ocr_evaluation", "capability_analysis",
+                                        "question_generator"]})
 
 
 def test_change_password_clears_flag(client):

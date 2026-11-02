@@ -28,6 +28,7 @@ from ..config import get_settings
 from ..providers import get_embedder
 from ..security import ADMIN_ROLES, CurrentUser, ensure_module, require_role
 from ..services import nlp_catalog
+from ..services.admission_test.guard import RateLimiter
 from ..services.evaluation import analytics, assessments, documents, masters as master_parser, slno
 from ..services.evaluation.matching import match_student
 from ..services.storage import build_key, get_storage
@@ -42,6 +43,7 @@ student_only = require_role("student")
 staff = require_role("teacher", "orgadmin", "superadmin")
 admins = require_role("orgadmin", "superadmin")
 MODULE = "ocr_evaluation"
+gen_limiter = RateLimiter()   # AI question drafts per teacher (generate-ai)
 MAX_MASTER_MB = 20
 MAX_ZIP_UNCOMPRESSED_MB = 600
 
@@ -302,7 +304,10 @@ def generate_masters_ai(test_id: UUID, body: GenerateQuestionsBody, user: Curren
     """AI-generated draft questions (#22) grounded in one chapter of the NLP chapter library — returns the
     same draft shape as /masters/parse, so the teacher reviews/edits them in the identical screen before
     saving. Nothing is saved as real questions until the teacher confirms via the existing /masters endpoint."""
+    ensure_module(user, MODULE)
     _test(user, test_id, write=True)
+    gen_limiter.hit(f"eval-gen:{user.org_code}:{user.user_code}", 12, 600,
+                    message="You can generate questions 12 times in 10 minutes. Please wait a little.")
     try:
         text = nlp_catalog.chapter_text(body.class_label, body.subject, body.chapter)
     except FileNotFoundError as e:

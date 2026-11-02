@@ -3,13 +3,16 @@
 it is intentionally NOT used anywhere Digital Library reads from; it backs Lesson Plans and (chapter-grounded)
 AI question generation for Online Tests instead.
 
-Class folders are Roman numerals (III..XII) plus a non-numeric "JEE" bucket; everything is read fresh off disk
-(cheap: a few hundred directory entries) so new chapters dropped into the folder show up without a restart.
+Class folders are Roman numerals (III..XII) plus a non-numeric "JEE" bucket whose chapters sit one level deeper
+(JEE/Physics/mechanics/<chapter>/). The listing is cached and rebuilt when the folder structure changes, so new
+chapters dropped into the folder show up without a restart.
 All three path segments (class/subject/chapter) are validated against the real enumerated listing before ever
 touching the filesystem again, so a request can never read outside this tree.
 """
 from __future__ import annotations
 
+import re
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,43 +26,120 @@ def _label_sort_key(label: str) -> tuple[int, str]:
     return (grade, "") if grade else (99, label)  # numeric grades first in order, then JEE/others
 
 
-@lru_cache(maxsize=1)
-def _tree() -> dict[str, dict[str, list[str]]]:
-    """{class_label: {subject_name: [chapter_name, ...]}} — read once per process, sorted for stable UIs."""
-    out: dict[str, dict[str, list[str]]] = {}
+def _fold(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", name.lower())
+
+
+def chapter_file(folder: Path) -> Path | None:
+    """The chapter's text file, picked deterministically: the .txt named after its folder (a folder may hold a
+    second copy, e.g. III/English/madhus wish has "madhu's wish.txt" and "madhus wish.txt"), else the largest."""
+    txts = sorted(folder.glob("*.txt"))
+    if not txts:
+        return None
+    exact = [p for p in txts if _fold(p.stem) == _fold(folder.name)]
+    return (exact or sorted(txts, key=lambda p: (-p.stat().st_size, p.name)))[0]
+
+
+def _subdirs(p: Path) -> list[Path]:
+    return sorted((x for x in p.iterdir() if x.is_dir()), key=lambda x: x.name)
+
+
+def _scan_subject(subj_dir: Path) -> dict[str, Path]:
+    """{chapter name: folder}. A chapter is a folder holding a .txt. A folder without one may group chapters one
+    level deeper (JEE/Physics/mechanics/<chapter>/<chapter>.txt): those chapters are listed by their own name
+    (prefixed with the group's name only if that would clash). Loose .txt files beside the chapter folders (e.g.
+    X/General Science) are copies of a folder's text and are not chapters."""
+    out: dict[str, Path] = {}
+    groups = []
+    for p in _subdirs(subj_dir):
+        if any(p.glob("*.txt")):
+            out[p.name] = p
+        else:
+            groups.append(p)
+    for g in groups:
+        for q in _subdirs(g):
+            if any(q.glob("*.txt")):
+                out[q.name if q.name not in out else f"{g.name} / {q.name}"] = q
+    return out
+
+
+def _signature() -> tuple:
+    """Directory mtimes down to chapter-group level: adding/removing a class, subject, chapter or group changes it."""
+    sig = []
     if not ROOT.is_dir():
-        return out
-    for class_dir in sorted((p for p in ROOT.iterdir() if p.is_dir()), key=lambda p: _label_sort_key(p.name)):
-        subjects: dict[str, list[str]] = {}
-        for subj_dir in sorted((p for p in class_dir.iterdir() if p.is_dir()), key=lambda p: p.name):
-            chapters = sorted(p.name for p in subj_dir.iterdir() if p.is_dir() and any(p.glob("*.txt")))
-            if chapters:
-                subjects[subj_dir.name] = chapters
+        return ()
+    for c in _subdirs(ROOT):
+        sig.append((c.name, c.stat().st_mtime_ns))
+        for s in _subdirs(c):
+            sig.append((s.name, s.stat().st_mtime_ns))
+            for g in _subdirs(s):
+                if not any(g.glob("*.txt")):
+                    sig.append((g.name, g.stat().st_mtime_ns))
+    return tuple(sig)
+
+
+@lru_cache(maxsize=2)
+def _build_tree(root: str, sig: tuple) -> dict[str, dict[str, dict[str, Path]]]:
+    out: dict[str, dict[str, dict[str, Path]]] = {}
+    for class_dir in sorted((p for p in Path(root).iterdir() if p.is_dir()), key=lambda p: _label_sort_key(p.name)):
+        subjects: dict[str, dict[str, Path]] = {}
+        for subj_dir in _subdirs(class_dir):
+            chapters_ = _scan_subject(subj_dir)
+            if chapters_:
+                subjects[subj_dir.name] = dict(sorted(chapters_.items()))
         if subjects:
             out[class_dir.name] = subjects
     return out
 
 
+_checked: dict[str, tuple[float, tuple]] = {}
+RECHECK_S = 10.0
+
+
+def _paths() -> dict[str, dict[str, dict[str, Path]]]:
+    """{class_label: {subject: {chapter: folder}}}, rebuilt when the folder structure changes (checked at most every
+    RECHECK_S seconds, so new chapters dropped into backend/nlp show up without a restart)."""
+    if not ROOT.is_dir():
+        return {}
+    key = str(ROOT)
+    now = time.monotonic()
+    seen = _checked.get(key)
+    if not seen or now - seen[0] > RECHECK_S:
+        seen = (now, _signature())
+        _checked[key] = seen
+    return _build_tree(key, seen[1])
+
+
+def _tree() -> dict[str, dict[str, list[str]]]:
+    """{class_label: {subject_name: [chapter_name, ...]}}, sorted for stable UIs."""
+    return {c: {s: list(chs) for s, chs in subs.items()} for c, subs in _paths().items()}
+
+
 def classes() -> list[dict]:
-    return [{"class_label": label, "grade": _ROMAN_TO_GRADE.get(label)} for label in _tree()]
+    return [{"class_label": label, "grade": _ROMAN_TO_GRADE.get(label)} for label in _paths()]
 
 
 def subjects(class_label: str) -> list[str]:
-    return list(_tree().get(class_label, {}))
+    return list(_paths().get(class_label, {}))
 
 
 def chapters(class_label: str, subject: str) -> list[str]:
-    return list(_tree().get(class_label, {}).get(subject, []))
+    return list(_paths().get(class_label, {}).get(subject, {}))
+
+
+def chapter_path(class_label: str, subject: str, chapter: str) -> Path:
+    """The chapter's text file. Raises FileNotFoundError unless the triple is in the enumerated catalogue (path
+    segments from a request are never joined onto the filesystem directly)."""
+    folder = _paths().get(class_label, {}).get(subject, {}).get(chapter)
+    txt = chapter_file(folder) if folder else None
+    if not txt:
+        raise FileNotFoundError(f"No chapter '{chapter}' for {subject} in class {class_label}")
+    return txt
 
 
 def chapter_text(class_label: str, subject: str, chapter: str, max_chars: int = 20_000) -> str:
-    """Raises FileNotFoundError if the triple isn't in the enumerated catalogue (never trusts the path
-    segments directly — they're checked against `_tree()` first)."""
-    if chapter not in chapters(class_label, subject):
-        raise FileNotFoundError(f"No chapter '{chapter}' for {subject} in class {class_label}")
-    folder = ROOT / class_label / subject / chapter
-    txt = next(folder.glob("*.txt"))
-    return txt.read_text(encoding="utf-8", errors="ignore")[:max_chars]
+    """Raises FileNotFoundError if the triple isn't in the enumerated catalogue."""
+    return chapter_path(class_label, subject, chapter).read_text(encoding="utf-8", errors="ignore")[:max_chars]
 
 
 # ---------------------------------------------------------------- AI Classroom (PDF chapters, students)
