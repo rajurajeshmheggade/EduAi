@@ -293,7 +293,7 @@ class ClassCreate(BaseModel):
     room_number: str | None = Field(default=None, max_length=32)
     grade_number: int | None = Field(default=None, ge=1, le=12, description="Class 1-12, used to match library books")
     board: str | None = Field(default=None, max_length=32, description="CBSE / NCERT / State board — sets the Digital "
-                                                                        "Library's DIKSHA board for this class's teachers and students")
+                                                                        "Library catalogue's board for this class's teachers and students")
 
 
 class ClassUpdate(BaseModel):

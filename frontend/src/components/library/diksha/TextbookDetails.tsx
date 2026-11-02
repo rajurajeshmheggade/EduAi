@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { BookOpen, CheckCircle2, Eye, FileText, Layers, ListTree, PlayCircle } from 'lucide-react'
 import { ChapterTree } from '@/components/library/diksha/ChapterTree'
 import { EmptyState } from '@/components/library/diksha/LibraryStates'
+import { Credits } from '@/components/library/diksha/Credits'
 import { ResourceViewer } from '@/components/library/diksha/ResourceViewer'
-import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { boardText, classText, RESOURCE_LABEL, unitResources, VIEWER_LABEL } from '@/lib/diksha'
@@ -65,11 +65,11 @@ export function TextbookDetails({ tree, initialResource, selection }: {
             {b.mediums.map((x) => <Badge key={x} tone="neutral">{x}</Badge>)}
           </div>
           <p className="text-xs text-ink-500">
-            {tree.units.length} chapter{tree.units.length === 1 ? '' : 's'} · {tree.resource_count} linked resource{tree.resource_count === 1 ? '' : 's'}
+            {tree.units.length} chapter{tree.units.length === 1 ? '' : 's'} · {tree.resource_count} resource{tree.resource_count === 1 ? '' : 's'} to open here
             {tree.empty_units > 0 ? ` · ${tree.empty_units} unit${tree.empty_units === 1 ? '' : 's'} without resources` : ''}
-            {b.published_on ? ` · updated on DIKSHA ${new Date(b.published_on).toLocaleDateString()}` : ''}
+            {b.published_on ? ` · updated ${new Date(b.published_on).toLocaleDateString()}` : ''}
           </p>
-          <SourceAttribution item={b} />
+          <Credits item={b} />
           {selection && (
             <div className="pt-1">
               <Button size="sm" variant={selection.isSelected(b.source_id) ? 'default' : 'outline'} disabled={!b.permissions.eligible} onClick={selection.toggleBook}>
@@ -91,7 +91,7 @@ export function TextbookDetails({ tree, initialResource, selection }: {
           <section className="rounded-2xl border border-line bg-ink-900 p-4">
             <h3 className="mb-3 font-display text-base font-semibold text-fg">{unit?.name ?? 'Resources'}</h3>
             {groups.length === 0 ? (
-              <EmptyState title="No resources are linked to this chapter on DIKSHA" icon={Layers}>Choose another chapter, or open the textbook on DIKSHA.</EmptyState>
+              <EmptyState title="No resources in this chapter" icon={Layers}>Choose another chapter.</EmptyState>
             ) : groups.map((g) => (
               <div key={g.group ?? 'direct'} className="mb-3 last:mb-0">
                 {g.group && <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">{g.group}</div>}

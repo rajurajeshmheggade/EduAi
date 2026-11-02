@@ -169,19 +169,29 @@ reorder, items/from-bank, publish, new-version, assessment, bank, export.pdf?ans
 `bank/{id}` · `media` · `media/{id}` · admin `admin/{mappings, mappings/{class}/{subject}, settings}`. Migration
 `025_question_generator.sql` (subject mapping, settings, media, papers + items + publish trigger, question bank).
 
-## Digital Library (school catalog + DIKSHA)
+## Digital Library (school catalog + catalogue content)
 
 Teacher → **Digital Library**, Student → **My Library**, Admin console → **Digital library**.
 
 * **School catalog** — books an admin adds and verifies (source URL, licence, in-app / download permissions, optional
   authorised PDF). Admins can import a CSV and see the publishing log.
-* **DIKSHA** — live search of DIKSHA digital textbooks and learning resources for **NCERT, CBSE and Karnataka State
-  Board, Classes 5–12**: board / class / subject / language / content-type filters come from DIKSHA's own facets.
-  Teachers open a textbook's chapter tree, preview resources and publish a whole textbook or individual resources to a
-  class subject. Students see them under *From DIKSHA*, browse the chapters and read / watch with the method each
-  resource's licence allows (PDF view, video, audio, YouTube player) or open them on DIKSHA.
-* Content stays on DIKSHA: the LMS stores metadata references for published items only and never copies or proxies
-  files. Licences are checked per resource (NonCommercial items open on DIKSHA unless `DIKSHA_EMBED_NONCOMMERCIAL=true`).
+* **Catalogue** (DIKSHA public content APIs; the source platform is not named anywhere in the UI) — live search of
+  digital textbooks and learning resources for **NCERT, CBSE and Karnataka State Board, Classes 5–12**. The filters
+  follow the dependencies *(board → class →) content type → subject → language*: the content type (**Textbooks,
+  Videos, Documents (PDF), Interactive, Audio**) comes first, the Subject list then offers only subjects that have
+  content of that type (facet counts for the selected board / class), and a subject or language the new type lacks is
+  dropped before searching. Teachers open a textbook's chapter tree, preview resources and publish a whole textbook or
+  individual resources to a class subject. Students see them in *My Library* (content-type chips narrow the subjects
+  the same way) and read / watch them **inside EduAI**: PDF view, our HTML5 video / audio player streaming from the
+  content's host, YouTube's embedded player for YouTube-licensed items, sandboxed frame for HTML5 interactives.
+* **Nothing opens elsewhere**: there are no "open on DIKSHA" links or redirects. Items that cannot be shown in-app are
+  not listed at all — NonCommercial licences unless `DIKSHA_EMBED_NONCOMMERCIAL=true`, unknown licences, ECML / H5P
+  packages and question sets (they need DIKSHA's own player) and EPUBs (no in-app reader without a cross-origin
+  download). Each item carries a compact **Credits** line (copyright notice and licence linked to its legal code always
+  visible; author, creator, attributions and organisation listed or one click away). Reader route
+  `/library/explore/:id` (old `/library/diksha/:id` links redirect).
+* Content stays on its source host: the LMS stores metadata references for published items only and never copies or
+  proxies files. Licences are checked per resource.
 * Docs: [`docs/DIKSHA_API_DISCOVERY.md`](docs/DIKSHA_API_DISCOVERY.md) (verified endpoints),
   [`docs/DIKSHA_CONTENT_ACCESS_MATRIX.md`](docs/DIKSHA_CONTENT_ACCESS_MATRIX.md),
   [`docs/DIKSHA_LICENSE_AND_ATTRIBUTION.md`](docs/DIKSHA_LICENSE_AND_ATTRIBUTION.md).
@@ -196,36 +206,44 @@ Teacher → **Digital Library**, Student → **My Library**, Admin console → *
 | `LIBRARY_METADATA_REFRESH_HOURS` | `24` | Age after which `POST /library/diksha/refresh` re-reads published items |
 | `DIKSHA_BOARDS` | `NCERT,CBSE,State (Karnataka)` | Boards offered (DIKSHA `se_boards` names) |
 | `DIKSHA_ASSET_HOSTS` | `obj.diksha.gov.in,files.odev.oci.diksha.gov.in` | Hosts the in-app viewer may load DIKSHA files from |
-| `DIKSHA_EMBED_NONCOMMERCIAL` | `false` | Allow in-app display of CC *NC* content (decide after legal review) |
+| `DIKSHA_EMBED_NONCOMMERCIAL` | `false` | Show CC *NC* content in-app (decide after legal review); when `false` NC items are hidden, not linked |
 
 Set a class's **Grade** (Classes & subjects) so publishing checks that a book or resource is for that class.
 
 ## Virtual Labs (Teacher / Student → Virtual Labs)
 
-DIKSHA's [Virtual Labs](https://diksha.gov.in/virtuallabs.html) for **Classes 6–12** (NCERT with Amrita Vishwa
-Vidyapeetham and C-DAC "OLabs"): 58 lab manuals / activity books in English and Hindi medium, ~1,400 experiments, ~775
-with an HTML5 simulation. The 58 entry points are catalogued in `backend/app/services/virtual_labs/catalog.py`; the
-experiments inside are read live from DIKSHA's hierarchy API (cached), one top-level unit = one experiment.
+DIKSHA's Virtual Labs for **Classes 6–12** (NCERT with Amrita Vishwa Vidyapeetham and C-DAC "OLabs"): 58 lab manuals /
+activity books in English and Hindi medium, ~1,400 experiments, ~775 with an HTML5 simulation. The 58 entry points are
+catalogued in `backend/app/services/virtual_labs/catalog.py`; the experiments inside are read live from the hierarchy
+API (cached), one top-level unit = one experiment. Everything runs **inside EduAI** — no "open on DIKSHA" anywhere.
 
 * **Teacher** — pick class, medium and subject, search the experiments, preview the simulation, theory, procedure,
   animation and lab manual, then **Assign to class**: due date (late work on/off), optional opening time, minimum time
   in the lab, and a lab worksheet the AI drafts (aim, apparatus, procedure checklist, observation table with units,
   4 viva MCQs + 2 short answers, conclusion prompt) and the teacher edits. *Assigned* shows each class's progress; the
-  student list shows time in the lab, simulation launches, MCQ score and the AI-suggested marks; the teacher sets the
-  final marks and feedback or **returns the lab for redo**, and can extend, close / reopen or delete it.
+  student list shows time in the lab, simulation launches, **videos watched**, MCQ score and the AI-suggested marks; the
+  teacher sets the final marks and feedback or **returns the lab for redo**, and can extend, close / reopen or delete it.
 * **Student** — *Virtual Labs* lists the class's labs (to do / submitted / marked). The workspace shows the simulation
   beside the worksheet: aim → procedure checklist → observation table → viva → conclusion, with autosave, a time-in-lab
   clock and an **AI lab assistant** that gives hints but never the worksheet answers. On submit MCQs are marked at
   once and the AI gives feedback on short answers and the lab record; answers and explanations are shown afterwards.
-* **Time in the lab** counts while the workspace is visible and the student is active (including working inside the
-  simulation frame) or, after opening the lab on DIKSHA, while they are away on it (max 20 min per launch). Every
-  report is capped by the server clock, so it cannot run ahead of real time.
-* **Licences** — simulations run unmodified from DIKSHA's host (`obj.diksha.gov.in`) in a sandboxed frame only when the
-  licence allows in-app display. Almost all virtual-lab content is **CC BY-NC-SA / BY-NC-ND**, so with the default
-  `DIKSHA_EMBED_NONCOMMERCIAL=false` it opens in DIKSHA's player in a new tab (launch and time are still tracked);
-  set it to `true` after your institution's licence review to run labs inside EduAI. H5P self-checks always open on
-  DIKSHA. Source, licence and attribution are shown with every resource.
-* **AI** uses the tutor model (`AI_TUTOR_PROVIDER`, else `PROVIDER_MODE`) and sees only DIKSHA's metadata (titles,
+* **Watch the video to unlock Submit** — when the lab has video(s), *Submit* is replaced by "Watch the full video to
+  unlock Submit" (with per-video progress and a *Watch* button) until every video was watched to the end. The in-app
+  player records the parts really played (seeking adds nothing; speed capped at 2x; YouTube-licensed videos through
+  YouTube's IFrame Player API) and reports them to `POST /virtual-labs/my/{id}/video-progress`; the server credits
+  watched time no faster than real time at 2x, completes a video when the end was reached and ≥ 90% was played, keeps
+  progress across reloads, and **rejects `submit` (409) until every video is complete**. Labs without video keep the
+  minimum-time rule only. Migration `033_virtual_lab_video_progress.sql`.
+* **Time in the lab** counts while the workspace is visible and the student is active (input, focus inside the
+  simulation / video frame, or a lab video playing). Time in another tab never counts (the old 20-minute allowance for
+  opening the simulation on DIKSHA is gone). Every report is capped by the server clock.
+* **Licences** — simulations, PDFs and videos run unmodified from the source host (`obj.diksha.gov.in`) in-app only when
+  the licence allows it. Almost all virtual-lab content is **CC BY-NC-SA / BY-NC-ND**: with the default
+  `DIKSHA_EMBED_NONCOMMERCIAL=false` those resources — and experiments left with none — are **not listed or assignable
+  at all** (the teacher sees a note), set it to `true` after your institution's licence review to run them inside
+  EduAI. H5P self-checks need DIKSHA's player and are left out. Each resource shows its **Credits** (copyright, licence
+  linked to its legal code, author / organisation).
+* **AI** uses the tutor model (`AI_TUTOR_PROVIDER`, else `PROVIDER_MODE`) and sees only the source metadata (titles,
   descriptions, keywords), never the licensed files. Without an AI provider the worksheet is a plain template, the
   assistant gives general guidance and the teacher marks short answers / the record.
 
@@ -518,8 +536,8 @@ device (the admission test's MediaPipe worker, `npm run models:proctor` once); n
 leaves it. An event is a code, timing, a server-decided severity and a few small numbers (e.g. `faces: 2`).
 
 * **What "Start" means:** *Online test* — Start test (the timer starts only after the preparation window); *Virtual
-  lab* — Start / resume the lab (opening the simulation on DIKSHA's player in a new tab is allowed and logged as
-  *SANCTIONED_AWAY*, max 20 min); *AI Classroom* — Start classroom session on a chapter (`nlp/<class>/<subject>/<chapter>`)
+  lab* — Start / resume the lab (the lab runs entirely in-app, so no time away is sanctioned any more; the generic
+  *SANCTIONED_AWAY* mechanism stays in `lib/proctor` but labs no longer use it); *AI Classroom* — Start classroom session on a chapter (`nlp/<class>/<subject>/<chapter>`)
   or on the textbook classroom (`textbook/<subject>`); leaving the reader closes it.
 * **Student:** Start opens a full-screen preparation window: every rule + what is / is never recorded → the exact
   acknowledgement *"I have read and understood all examination rules and instructions."* → camera / microphone
@@ -683,7 +701,7 @@ Switching embedding providers requires re-indexing textbooks.
 ## Tests
 
 ```powershell
-cd backend ; .venv\Scripts\python -m pytest        # 390 tests incl. Copilot (suggestions, voice, privacy), AI question generator, lesson plans, digital library + DIKSHA, virtual labs, admission tests + proctoring, admissions RLS + admission forms, wellness, dated timetable, student proctoring, avatar page pipeline
+cd backend ; .venv\Scripts\python -m pytest        # NNN tests incl. Copilot (suggestions, voice, privacy), AI question generator, lesson plans, digital library + catalogue (in-app only), virtual labs + video gating, admission tests + proctoring, admissions RLS + admission forms, wellness + Game Zone, dated timetable, student proctoring + teardown, avatar page pipeline, NLP PDF import
 cd frontend ; npm test ; npm run build
 ```
 
@@ -707,14 +725,18 @@ Institution plan: `max_students` is enforced on enrolment; `ai_modules` switches
 
 Library (`/ICMELive/api/v1/library`): `meta` · `subjects` · `books` (+ admin create / PATCH / DELETE / `import` CSV /
 `{id}/file` / `{id}/check-link`) · `books/{id}/access` · `targets` · `publications` (publish, admin log) ·
-`publications/mine` · `publications/{id}/unpublish` · `student/books` (school books + published DIKSHA items).
+`publications/mine` · `publications/{id}/unpublish` · `student/books?content_type=&subject=&language=&q=` (school books +
+published catalogue items that can be shown in-app; `types` with counts, `subjects` for the chosen type).
 
-DIKSHA (`/ICMELive/api/v1/library/diksha`): `meta` · `filters` · `search` · `items/{id}` · `textbooks/{id}` (chapter tree) ·
-`resources/{id}?within=` (permitted viewer) · `publications` (teacher) · `refresh` (admin).
+Catalogue (`/ICMELive/api/v1/library/diksha`, internal path): `meta` · `filters?content_type=&subject=` (types with counts,
+subjects with content of the type, languages for type + subject) · `search?content_type=textbook|video|document|interactive|audio`
+· `items/{id}` · `textbooks/{id}` (chapter tree, in-app resources only) · `resources/{id}?within=` (in-app viewer; 404 when
+it cannot be shown) · `publications` (teacher) · `refresh` (admin).
 
 Virtual Labs (`/ICMELive/api/v1/virtual-labs`): `catalog` · `collections/{id}` · `collections/{id}/labs/{lab}` (+ `/worksheet`
 AI draft) · `assignments` (teacher: POST / GET / PATCH / DELETE, `{id}/attempts/{student}[/review]`) · `my` (student) ·
-`my/{id}` · `my/{id}/{start, activity, work, submit, ask}`.
+`my/{id}` · `my/{id}/{start, activity, work, video-progress, submit, ask}` (`submit` → 409 until every lab video is
+watched to the end).
 
 Admissions (`/ICMELive/api/v1/admission`): `overview` · `applicants` · `team` · `consent-templates` · `consent-versions` ·
 `retention` · `data-requests` · `breaches` · `audit` · `parent/{home, consent, consents, requests, language}`.

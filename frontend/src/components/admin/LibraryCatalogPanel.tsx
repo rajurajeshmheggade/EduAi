@@ -336,7 +336,7 @@ function PublishLog({ org }: { org?: string | null }) {
     setRefresh({ busy: true })
     try {
       const r = await dikshaService.refresh(org)
-      setRefresh({ busy: false, msg: `Checked ${r.checked} DIKSHA item(s): ${r.updated} updated, ${r.unavailable} no longer on DIKSHA${r.failed ? `, ${r.failed} could not be reached` : ''}.` })
+      setRefresh({ busy: false, msg: `Checked ${r.checked} catalogue item(s): ${r.updated} updated, ${r.unavailable} no longer available${r.failed ? `, ${r.failed} could not be reached` : ''}.` })
       libraryService.publications(org, status).then(setRows).catch(() => {})
     } catch (e) { setRefresh({ busy: false, msg: errorMessage(e) }) }
   }
@@ -347,8 +347,8 @@ function PublishLog({ org }: { org?: string | null }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-300">Every publish and unpublish, with who did it and when.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" disabled={refresh.busy} onClick={refreshDiksha} title="Re-read metadata of published DIKSHA items older than the refresh window">
-              {refresh.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />} Refresh DIKSHA metadata
+            <Button size="sm" variant="secondary" disabled={refresh.busy} onClick={refreshDiksha} title="Re-read metadata of published catalogue items older than the refresh window">
+              {refresh.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />} Refresh catalogue metadata
             </Button>
             <Select aria-label="Status" className="h-9 w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">All</option><option value="published">Published</option><option value="unpublished">Unpublished</option>
@@ -364,8 +364,9 @@ function PublishLog({ org }: { org?: string | null }) {
                 <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 font-medium text-fg">{p.title}
-                    {p.source === 'diksha' && <Badge tone="aqua">DIKSHA</Badge>}
-                    {p.source_status === 'unavailable' && <Badge tone="warn">No longer on DIKSHA</Badge>}
+                    {p.source === 'diksha' && <Badge tone="aqua">Catalogue</Badge>}
+                    {p.source_status === 'unavailable' && <Badge tone="warn">No longer available</Badge>}
+                    {p.status === 'published' && p.hidden_from_students && <Badge tone="warn">Hidden from students (licence)</Badge>}
                   </div>
                   <div className="text-xs text-ink-500">{p.class_name} · {p.class_subject_name ?? p.subject_code} · {p.year_code}{p.source_context ? ` · from ${p.source_context.textbook_name}` : ''}</div>
                   <ol className="mt-1.5 space-y-0.5 text-xs text-ink-300">

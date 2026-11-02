@@ -6,7 +6,7 @@ type Variant = 'dashboard' | 'table' | 'cards' | 'detail'
 
 const VARIANTS: [RegExp, Variant][] = [
   [/dashboard/, 'dashboard'],
-  [/\/(library\/read|library\/diksha|classroom\/nlp|virtual-labs\/[^/]+|admissions\/reports|admission-reports|tests\/[^/]+\/take)/, 'detail'],
+  [/\/(library\/read|library\/explore|library\/diksha|classroom\/nlp|virtual-labs\/[^/]+|admissions\/reports|admission-reports|tests\/[^/]+\/take)/, 'detail'],
   [/\/(timetable|attendance|homework|evaluation|tests|assignments|admissions|classes)/, 'table'],
   [/\/(library|virtual-labs|classroom|lesson-plans|wellness|wellbeing|evaluations|parent)/, 'cards'],
 ]

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, ExternalLink, Globe2, Library, Search } from 'lucide-react'
 import { BookCard } from '@/components/library/BookCard'
+import { Credits } from '@/components/library/diksha/Credits'
 import { ResourceCard, TextbookCard } from '@/components/library/diksha/DikshaCards'
-import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
 import { LibraryEmpty } from '@/components/library/LibraryFilters'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,34 +12,44 @@ import { Input, Label, Select } from '@/components/ui/field'
 import { shortDate } from '@/lib/datetime'
 import { LIBRARY_EMPTY_STUDENT } from '@/lib/library'
 import { errorMessage } from '@/services/apiClient'
-import { dikshaReaderLink, type PublishedExternal } from '@/services/dikshaService'
+import { dikshaReaderLink, type ContentType, type PublishedExternal } from '@/services/dikshaService'
 import { libraryService, type StudentBook } from '@/services/libraryService'
 
 type Data = Awaited<ReturnType<typeof libraryService.studentBooks>>
 
-/** Student Library: only books teachers published to the student's class for the current academic year. */
+type Filters = { content_type: ContentType | ''; subject: string; language: string; q: string }
+
+/** Student Library: only books teachers published to the student's class for the current academic year. Everything
+ * opens inside the app. Choosing a content type narrows the subjects to those that have content of that type. */
 export default function StudentLibrary() {
   const nav = useNavigate()
-  const [f, setF] = useState<{ subject: string; language: string; q: string }>({ subject: '', language: '', q: '' })
+  const [f, setF] = useState<Filters>({ content_type: '', subject: '', language: '', q: '' })
   const [q, setQ] = useState('')
   const [data, setData] = useState<Data | null>(null)
-  const [scope, setScope] = useState<{ subjects: Data['subjects']; languages: string[] } | null>(null)
+  const [scope, setScope] = useState<{ types: Data['types']; languages: string[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
+    let live = true
     libraryService.studentBooks(f).then((d) => {
+      if (!live) return
+      // A subject without content of the chosen type is dropped (the server lists only subjects that have some).
+      if (f.subject && !d.subjects.some((s) => s.subject_code === f.subject)) { setF((x) => ({ ...x, subject: '' })); return }
       setData(d)
-      // Filter options come from the unfiltered library so they don't shrink while filtering.
-      setScope((s) => s ?? { subjects: d.subjects, languages: d.languages })
-    }).catch((e) => setError(errorMessage(e)))
+      // Types and languages come from the whole library so they don't shrink while filtering.
+      setScope((s) => s ?? { types: d.types, languages: d.languages })
+    }).catch((e) => { if (live) setError(errorMessage(e)) })
+    return () => { live = false }
   }, [f])
+  const subjects = data?.subjects ?? []
 
   function open(b: StudentBook) {
     if (b.access === 'official_link') window.open(b.source_url, '_blank', 'noopener,noreferrer')
     else nav(`/library/read/${b.book_id}?from=/student/library`)
   }
-  const filtered = !!(f.subject || f.language || f.q)
+  const filtered = !!(f.content_type || f.subject || f.language || f.q)
+  const types = scope?.types.filter((t) => t.count) ?? []
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
@@ -55,11 +65,21 @@ export default function StudentLibrary() {
 
       {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {(scope?.subjects.length ?? 0) > 0 && (
+      {(scope?.languages.length || types.length > 0) && (
         <Card>
           <CardContent className="space-y-3 pt-5">
+            {types.length > 1 && (
+              <div role="radiogroup" aria-label="Content type" className="flex flex-wrap gap-1.5">
+                {[{ value: '' as const, label: 'All types', count: undefined }, ...types].map((t) => (
+                  <button key={t.value} role="radio" aria-checked={f.content_type === t.value} onClick={() => setF({ ...f, content_type: t.value })}
+                    className={`cursor-pointer rounded-lg border px-3 py-1 text-sm transition-colors ${f.content_type === t.value ? 'border-brand-400 bg-brand-500/10 font-medium text-brand-600' : 'border-line text-ink-300 hover:text-fg'}`}>
+                    {t.label}{t.count != null ? ` (${t.count})` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
             <div role="radiogroup" aria-label="Subject" className="flex flex-wrap gap-1.5">
-              {[{ subject_code: '', subject_name: 'All subjects' }, ...(scope?.subjects ?? [])].map((s) => (
+              {[{ subject_code: '', subject_name: 'All subjects' }, ...subjects].map((s) => (
                 <button key={s.subject_code} role="radio" aria-checked={f.subject === s.subject_code} onClick={() => setF({ ...f, subject: s.subject_code })}
                   className={`cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors ${f.subject === s.subject_code ? 'border-brand-400 bg-brand-500/10 font-medium text-brand-600' : 'border-line text-ink-300 hover:text-fg'}`}>
                   {s.subject_name}
@@ -105,7 +125,7 @@ export default function StudentLibrary() {
         </div>}
         {data.external.length > 0 && (
           <section aria-labelledby="dk-h" className="space-y-3">
-            <h2 id="dk-h" className="flex items-center gap-2 font-display text-lg font-semibold text-fg"><Globe2 className="h-5 w-5 text-brand-600" /> From the Catalogue</h2>
+            <h2 id="dk-h" className="flex items-center gap-2 font-display text-lg font-semibold text-fg"><Globe2 className="h-5 w-5 text-brand-600" /> Textbooks &amp; resources</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {data.external.map((x) => <ExternalCard key={x.source_id} x={x} onOpen={() => nav(dikshaReaderLink(x.source_id, x.kind, { within: x.context?.textbook_id, from: '/student/library' }))} />)}
             </div>
@@ -125,9 +145,9 @@ function ExternalCard({ x, onOpen }: { x: PublishedExternal; onOpen: () => void 
       footer={<div className="w-full space-y-2">
         <p className="text-xs text-ink-500">{x.subjects.map((s) => s.subject_name).join(', ')}{x.subjects[0]?.teacher_name ? ` · by ${x.subjects[0].teacher_name}` : ''} · {shortDate(x.published_at)}
           {x.context ? ` · from ${x.context.textbook_name}` : ''}</p>
-        <SourceAttribution item={x.metadata} compact />
+        <Credits item={x.metadata} compact />
         <Button size="sm" className="w-full" disabled={gone} onClick={onOpen} aria-label={`Open ${x.name}`}>
-          {gone ? 'No longer available in the Catalogue' : x.kind === 'textbook' ? <><BookOpen className="h-3.5 w-3.5" /> Open textbook</> : <><BookOpen className="h-3.5 w-3.5" /> Open</>}
+          {gone ? 'No longer available' : x.kind === 'textbook' ? <><BookOpen className="h-3.5 w-3.5" /> Open textbook</> : <><BookOpen className="h-3.5 w-3.5" /> Open</>}
         </Button>
       </div>} />
   )
