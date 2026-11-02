@@ -64,7 +64,7 @@ export function ApplyHome() {
           </div>
         )}
       </section>
-      <section aria-labelledby="signin-title" className="lg:sticky lg:top-24 lg:self-start">
+      <section aria-labelledby="signin-title" className="order-first lg:order-none lg:sticky lg:top-24 lg:self-start">
         <form onSubmit={submit} className={`${card} space-y-4`} noValidate>
           <div>
             <h2 id="signin-title" className="flex items-center gap-2 font-display text-xl font-semibold"><KeyRound className="h-5 w-5 text-brand-600" /> Sign in</h2>

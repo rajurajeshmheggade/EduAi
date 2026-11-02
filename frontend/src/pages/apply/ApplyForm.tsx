@@ -138,7 +138,7 @@ export default function ApplyForm() {
             })}
           </ol>
         </nav>
-        <div className="space-y-5 pb-20 md:pb-0">
+        <div className="space-y-5">
           {step.kind === 'section' && (() => {
             const s = defn.sections.find((x) => x.key === step.id)!
             return (
@@ -154,7 +154,7 @@ export default function ApplyForm() {
             <Review answers={answers} docs={docs} errors={app.editable ? allErrors : {}} steps={steps} onEdit={(i) => void goTo(i)}
               flush={flush} onSubmitted={onSubmitted} onServerErrors={(e) => { setServerErrors(e); setTouched(new Set(steps.map((s) => s.id))) }} />
           )}
-          <div className="fixed inset-x-0 bottom-0 z-20 flex justify-between gap-2 border-t border-line bg-ink-900/95 px-4 py-3 backdrop-blur md:static md:border-0 md:bg-transparent md:p-0">
+          <div className="sticky bottom-0 z-20 -mx-4 flex justify-between gap-2 border-t border-line bg-ink-900/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
             <Button variant="secondary" onClick={() => void goTo(stepIdx - 1)} disabled={stepIdx === 0}><ArrowLeft className="h-4 w-4" /> Back</Button>
             {stepIdx < steps.length - 1 && <Button onClick={next} id="apply-next">Next <ArrowRight className="h-4 w-4" /></Button>}
           </div>

@@ -360,6 +360,58 @@ command palette everywhere.
 
 Details, screens, decisions and risks: [`docs/PRAVESH_M1.md`](docs/PRAVESH_M1.md). Migration `015_admission_foundation.sql`.
 
+## Admission forms & the standalone admission application (Teacher → Admission forms)
+
+A teacher (or an admin / counsellor) builds the admission form — student information, parent / guardian, academic
+details, custom sections, document uploads, admission instructions and a declaration — previews it live, edits it, and
+**publishes** it as a standalone application at `/apply/<slug>`. Admin console → **Admission forms** shows every form
+of the school plus the school's branding (display name, logo, accent colour); counsellors get **Applications**.
+
+* **One-time credentials.** Publishing issues the first credential; *Issue a new applicant credential* adds one per
+  applicant. The pop-up shows application name, URL, username and temporary password with *Copy Username / Copy
+  Password / Copy All*; *Acknowledge* records who, when, from which IP and what was copied, then shows "Admission
+  application credentials have been copied successfully. Please save these credentials securely." The password exists
+  only in that response (bcrypt hash at rest, never logged). A credential stays valid while the applicant fills in (sign
+  out / back in), expires after the configured days or at the closing date, and is **removed** on final submission —
+  hash wiped, status *submitted*, every applicant session ended. Credentials list: issued / in use / submitted · removed
+  / revoked / expired, with *Revoke* and *Reissue* (the recovery path: the old one stops, saved answers stay).
+* **Applicant app** (own header with logo, navigation, footer, own API client and token storage — no LMS shell):
+  sign in, *Forgot password?* (username + contact → a recovery request the teacher resolves by reissuing), dashboard,
+  multi-step form with autosave, uploads, review with the school's consent notice and the declaration, submit,
+  confirmation with the **application reference number**, and public *Track application* (reference + date of birth →
+  status only, rate limited). Mobile first; labelled controls, error summaries, focus moved per step.
+* **Linked admission test (optional).** After submitting, the applicant takes the teacher's published proctored test
+  from the app (device checks, guardian consent for minors, then the existing exam view); the credential is removed when
+  the test is submitted and the exam returns to the app's confirmation. The teacher sees it on the live monitor and the
+  result with the application. The teacher-launched flow is unchanged.
+* **Review.** Queue by form / status, application detail (answers, documents as 5-minute signed, audited downloads with
+  `Content-Disposition` or one zip, test result, history, staff-only comments), *Start review / Approve / Reject /
+  Request corrections* — a corrections request reopens the application with a fresh one-time credential (pop-up again)
+  and a note shown to the applicant; resubmitting removes it again. Submissions notify the form owner and are copied
+  into the admissions records (Admissions home, counsellor list, consent with `method = applicant_app`).
+* **Security.** Applicant tokens: own audience, issuer and signing key, 15 min, re-checked against the session and
+  credential on every request (LMS tokens are refused there and applicant tokens everywhere else); rotating refresh
+  tokens (SHA-256 at rest, 12 h); 20 sign-ins / 5 min per IP, lock after 5 wrong passwords (15 min), recovery 5 / h per
+  IP, tracking 10 / 10 min per IP; generic errors (no username enumeration); `Cache-Control: no-store`; IP from the
+  socket (X-Forwarded-For not trusted). Uploads (`app/services/uploads.py`, reusable): type by magic bytes, size read
+  from the stream, images re-encoded (metadata dropped, bomb guard), PDFs parsed and refused when encrypted or carrying
+  scripts / attachments, SHA-256 stored. All actions are in the admissions audit log (identifiers only).
+* **Database.** Migration `029_admission_forms.sql`: `admission.forms`, `form_versions` (immutable snapshots),
+  `applications` (status machine enforced by a trigger: draft → test_pending / submitted → under_review →
+  approved / rejected / correction_requested → resubmitted), `applicant_credentials` (a removed credential can never
+  be revived), `applicant_sessions`, `application_documents`, `application_status_history`, `application_comments`,
+  `recovery_requests`; branding columns on `organizations`; `admission_sessions.origin`. Every new table has RLS forced
+  with restrictive per-role policies: teachers see only their own forms' data, an applicant only their own application,
+  the pre-login gate only what sign-in needs, parents / reviewers / unknown roles nothing; teachers and applicants never
+  reach the Milestone 1 CRM / DPDP tables (the server copies a submission in as `admission_system`).
+
+API: `/ICMELive/api/v1/admission/{form-meta, forms, forms/{id}/publish|close|reopen|credentials, credentials/{id}/
+acknowledge|revoke|reissue, recovery-requests, applications, applications/{id}/decision|comments|documents/…, branding}`
+and the applicant app `/ICMELive/api/v1/apply/{slug}` (`login`, `refresh`, `logout`, `recovery`, `track`, `logo`, `me`,
+`me/answers`, `me/documents`, `me/submit`, `me/test/launch`). Tests: `tests/test_admission_forms.py`,
+`tests/test_admission_forms_rls.py`, `tests/test_uploads_and_form_schema.py`; front end `src/lib/admissionForm.test.ts`,
+`src/components/admission-forms/CredentialDialog.test.tsx`, `src/pages/apply/ApplyApp.test.tsx`.
+
 ## Modes
 
 | Setting | Dev default | Production |
