@@ -36,7 +36,7 @@ export function Toaster() {
   }, [])
   if (!items.length) return null
   return createPortal(
-    <div data-app-portal="" className="pointer-events-none fixed bottom-5 right-5 z-[10000] flex w-[min(24rem,calc(100vw-2.5rem))] flex-col gap-2" role="status" aria-live="polite">
+    <div data-app-portal="" className="pointer-events-none fixed bottom-5 right-[calc(1.25rem+var(--copilot-offset,0px))] z-[10000] flex w-[min(24rem,calc(100vw-2.5rem))] flex-col gap-2" role="status" aria-live="polite">
       {items.map((m) => {
         const Icon = ICON[m.tone]
         return (
