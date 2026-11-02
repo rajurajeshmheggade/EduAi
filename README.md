@@ -253,8 +253,20 @@ The subject teacher's avatar explains the open textbook page aloud, like a teach
   also blinks, smiles a little and moves its head and eyes (off under *reduce motion*).
 * **Voice**: Kokoro neural voice, offline on the server CPU, with no cloud cost. Pronunciation is cleaned up first:
   "e.g." → "for example", "1789" → "seventeen eighty-nine", units, per cent. The first sentence of a page is voiced on
-  its own, so speech starts quickly. The server then voices the rest of the page and prepares the next page in the
-  background. Explanations and audio are cached, so each page is explained and voiced once for everybody.
+  its own, so speech starts quickly. Explanations and audio are cached, so each page is explained and voiced once for
+  everybody.
+* **Page pipeline** (`services/page_pipeline.py`): while page N is shown or explained, a shared pool of background
+  workers prepares, in this order, page N's script and first part, page N+1's script and first part, the rest of
+  page N's audio, then N+2. Each page's lesson is written after the previous page's, which it picks up from (title +
+  recap). Identical work is done once however many students ask (single-flight). When a student jumps elsewhere,
+  queued work for the pages they left is cancelled. Failed steps are retried with backoff. If the AI fails, the
+  offline lesson is cached and marked, then replaced once the AI answers again. Cache keys carry the textbook's
+  content checksum and the prompt version, so changed content is explained afresh. The reader fetches the open page
+  and the next one as soon as the page is open, even before Explain is pressed. It cancels requests when the student
+  jumps, pre-renders the next PDF page and shows how ready the open and next pages are.
+* **Entering the classroom**: a loader prepares the teacher's voice, the 3D model (downloaded with a real progress
+  bar) and the first page before the classroom appears. If the 3D model fails or takes too long, the 2D avatar is
+  used, and students can open the classroom early.
 * Only textbook page text is sent to the AI and the voice, never student data. The feature uses the per-institution
   AI module *AI avatar tutor*.
 
@@ -268,14 +280,32 @@ cd backend ; .venv\Scripts\python -m scripts.download_voice    # Kokoro model + 
 | `TTS_MODE` | `auto` | `auto` uses Kokoro if downloaded, else provider TTS (`PROVIDER_MODE` azure/openai), else the OS voice (Windows SAPI / espeak-ng). `kokoro` / `provider` / `offline` force one. |
 | `KOKORO_VOICE_FEMALE` / `KOKORO_VOICE_MALE` | `af_heart` / `am_michael` | Kokoro voices (`bf_emma`, `bm_george` … for British English) |
 | `KOKORO_LANG` / `KOKORO_SPEED` | `en-us` / `0.95` | Pronunciation (`en-us` or `en-gb`) and pace |
-| `READ_ALOUD_PREWARM` | `true` | Voice the rest of the page and the next page in the background |
+| `READ_ALOUD_PREWARM` | `true` | Run the background page pipeline (off: pages are prepared only when asked for) |
+| `READ_ALOUD_LOOKAHEAD_PAGES` | `2` | Pages after the open one that each student's pipeline prepares |
+| `READ_ALOUD_WORKERS` | `3` | Background worker threads shared by all students |
+| `READ_ALOUD_RETRIES` / `READ_ALOUD_RETRY_BACKOFF` | `1` / `0.5` | Extra attempts for a failed AI lesson or background step; seconds before the first retry (doubles) |
+| `READ_ALOUD_FALLBACK_RETRY_SECONDS` | `300` | A cached offline-fallback lesson is re-tried with the AI after this |
+| `AVATAR_TEACHER_CACHE_SECONDS` | `60` | Which teacher's avatar / voice a student gets is cached this long (admin edits to teachers clear it) |
 
 Licences: the Kokoro-82M weights and voices are Apache-2.0, and kokoro-onnx and wawa-lipsync are MIT. Kokoro's
 phonemizer / espeak-ng are GPL-3.0; that is fine for a hosted service, but review it before shipping on-premise
 copies. The avatar is a Ready Player Me model.
 
-API (`/ICMELive/api/v1/read-aloud/textbooks/{id}`): `voice` · `pages/{n}?mode=explain|read` · `pages/{n}/segments/{i}/audio?mode=`.
-Migration `016_read_aloud_avatar.sql` (teacher gender).
+API (`/ICMELive/api/v1/read-aloud/textbooks/{id}`): `voice` · `pages/{n}?mode=explain|read[&prefetch=true]` ·
+`pages/{n}/segments/{i}/audio?mode=&v=` (`v` = script version; 409 if it was replaced) · `pages/{n}/status` (ready /
+preparing / queued / failed / idle for page n and the lookahead, no AI call) · `POST pages/{n}/prepare` (the student
+opened page n: aim their pipeline there). The chapter-library reader's page explanations are cached on the server
+by page text too. Migrations `016_read_aloud_avatar.sql` (teacher gender), `027_textbook_content_version.sql`
+(textbook checksum).
+
+## Loading experience (all portals)
+
+Pages load inside the shell, so the sidebar stays put. While a page's code downloads, a skeleton shaped like the
+page is shown, and a slim progress bar runs under the header until the page's first data has arrived. Every route
+is loaded with `lib/lazyWithRetry`: a failed download is retried with backoff and a timeout. A stale chunk after a
+deploy reloads the page once. Otherwise "Try again" on the error boundary really downloads the page again. Module
+pages use the shared kit (`components/ui/loading.tsx`, `lib/useAsync.ts`): shaped skeletons, `PageLoader` with a
+"taking longer than usual" note, and `ErrorState` with retry. Requests time out after 30 s instead of spinning.
 
 ## Admission tests with AI proctoring (Teacher → Assessments → Admissions)
 
