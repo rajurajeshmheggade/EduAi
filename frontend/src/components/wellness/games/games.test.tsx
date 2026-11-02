@@ -23,7 +23,7 @@ vi.mock('@/components/wellness/WellnessContext', async (importOriginal) => ({
 }))
 
 const XP: XpResult = { xp: 25, level: 1, levelTitle: 'Mindful Rookie', xpToNext: 100, totalXp: 25, awarded: 25, leveledUp: false, capped: false }
-const FAKE = { toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'performance', 'Date'] } as const
+const FAKE: Parameters<typeof vi.useFakeTimers>[0] = { toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'performance', 'Date'] }
 
 function mount(Game: ComponentType<GameProps>, id: GameId) {
   const { ctx, wrapper } = makeWellnessCtx()
@@ -58,7 +58,7 @@ describe('Concept Pairs', () => {
     expect(screen.getByRole('heading', { name: 'Concept Pairs' })).toHaveFocus()
     expect(screen.getByRole('button', { name: 'Mathematics' })).toHaveAttribute('aria-pressed', 'true')
     start()
-    const cards = () => screen.getAllByRole('button', { name: /^Card \d+/ })
+    const cards = () => screen.queryAllByRole('button', { name: /^Card \d+/ })
     expect(cards()).toHaveLength(12)
     expect(cards()[0]).toHaveFocus()
 
@@ -71,6 +71,7 @@ describe('Concept Pairs', () => {
     for (const { term, def } of MATHS) {
       const t = seen.indexOf(term)
       const m = seen.indexOf(def)
+      if (!cards().length) break // the round is over
       if (t < 0 || cards()[t].getAttribute('aria-label')!.includes('matched')) continue
       fireEvent.click(cards()[t])
       fireEvent.click(cards()[m])
