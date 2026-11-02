@@ -1,0 +1,83 @@
+{
+ "id": "api.content.read",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:38:41.211Z",
+ "params": {
+  "resmsgid": "8e6338b0-d142-11f1-b851-f70ca326020f",
+  "msgid": "8e62c380-d142-11f1-91cf-d7a248e3db75",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_3137489904471326721346",
+   "name": "ಓದು ಕರ್ನಾಟಕ - ಸರಳ ಕನ್ನಡ - ಆಡಲು ಬನ್ನಿ - ಭಾಷೆ  4 - ಕಾಗುಣಿತಾಕ್ಷರಗಳಿಂದ ಪದಗಳ ರಚನೆ",
+   "description": "ಕಾಗುಣಿತಾಕ್ಷರಗಳಿಂದ ಪದಗಳ ರಚನೆ",
+   "mimeType": "video/mp4",
+   "primaryCategory": "Explanation Content",
+   "contentType": "Resource",
+   "objectType": "Content",
+   "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_3137489904471326721346/artifact/do_31375329758055628811813_1678869333752_ok.thumb.jpg",
+   "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31375329758055628811813/artifact/do_31375329758055628811813_1678869333752_ok.jpg",
+   "se_boards": [
+    "State (Karnataka)"
+   ],
+   "se_gradeLevels": [
+    "Class 5",
+    "Class 3",
+    "Class 1",
+    "Class 4",
+    "Class 2"
+   ],
+   "se_subjects": [
+    "Kannada"
+   ],
+   "se_mediums": [
+    "Kannada"
+   ],
+   "board": "State (Karnataka)",
+   "gradeLevel": [
+    "Class 5",
+    "Class 3",
+    "Class 1",
+    "Class 4",
+    "Class 2"
+   ],
+   "subject": [
+    "Kannada"
+   ],
+   "medium": [
+    "Kannada"
+   ],
+   "license": "CC BY 4.0",
+   "licenseDetails": {
+    "name": "CC BY 4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+    "description": "For details see below:"
+   },
+   "author": "DSERT eContent",
+   "creator": "econtentcreator2025",
+   "attributions": [
+    "Odu Karnataka"
+   ],
+   "copyright": "DSERT eContent",
+   "copyrightYear": 2023,
+   "organisation": [
+    "Karnataka"
+   ],
+   "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3137489904471326721346/adalu-banni-language-4-l-word-building-l-aaddlu-bnni-bhaasse-4-_-kaagunnitaakssrgllind-pdgll-rcne.mp4",
+   "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya3v6yp7gythexz7lx23qe2c5ne5yyxqhs2oktespbwnpa/master.m3u8",
+   "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3137489904471326721346/adalu-banni-language-4-l-word-building-l-aaddlu-bnni-bhaasse-4-_-kaagunnitaakssrgllind-pdgll-rcne.mp4",
+   "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_3137489904471326721346/oodu-krnaattk-srll-knndd-aaddlu-bnni-bhaasse-4-kaagunnitaakssrgllind-pdgll-rcne_1681137918031_do_3137489904471326721346_2.ecar",
+   "size": 24971686,
+   "pkgVersion": 2,
+   "lastPublishedOn": "2023-04-10T14:45:18.030+0000",
+   "status": "Live",
+   "visibility": "Default",
+   "channel": "01248978648941363234",
+   "framework": "ka_k-12"
+  }
+ }
+}

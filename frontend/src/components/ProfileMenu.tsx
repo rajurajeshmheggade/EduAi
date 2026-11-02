@@ -4,7 +4,7 @@ import { Building2, CalendarRange, ChevronDown, GraduationCap, Hash, KeyRound, L
 import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Input, Label } from '@/components/ui/field'
+import { Label, PasswordInput } from '@/components/ui/field'
 import { api, errorMessage } from '@/services/apiClient'
 import { cn, roleLabel } from '@/lib/utils'
 
@@ -35,7 +35,7 @@ export function ProfileMenu() {
         <Avatar name={user.full_name} />
         <div className="hidden text-left sm:block">
           <div className="max-w-40 truncate text-sm font-medium leading-tight text-fg">{user.full_name}</div>
-          <div className="text-xs leading-tight text-ink-500">{roleLabel(user.role)}</div>
+          <div className="text-xs leading-tight text-ink-500">{roleLabel(user.role)}{user.role === 'superadmin' && <> · @{user.user_code}</>}</div>
         </div>
         <ChevronDown className={cn('h-4 w-4 text-ink-500 transition-transform', open && 'rotate-180')} />
       </button>
@@ -46,13 +46,13 @@ export function ProfileMenu() {
             <Avatar name={user.full_name} size="lg" />
             <div className="min-w-0">
               <div className="truncate font-display font-semibold text-fg">{user.full_name}</div>
-              <div className="text-xs text-ink-500">{roleLabel(user.role)}</div>
+              <div className="text-xs text-ink-500">{roleLabel(user.role)}{user.role === 'superadmin' && <> · signs in as <b>{user.user_code}</b></>}</div>
             </div>
           </div>
 
           <dl className="space-y-2.5 p-4 text-sm">
             {realEmail && <Row icon={Mail} label="Email">{user.email}</Row>}
-            <Row icon={Hash} label={user.role === 'student' ? 'Admission no.' : user.role === 'teacher' ? 'Employee code' : 'User code'}>{user.user_code}</Row>
+            <Row icon={Hash} label={user.role === 'student' ? 'Admission no.' : user.role === 'teacher' ? 'Employee code' : user.role === 'superadmin' ? 'Username' : user.role === 'parent' ? 'Parent ID' : user.role === 'counsellor' || user.role === 'reviewer' ? 'Staff code' : 'User code'}>{user.user_code}</Row>
             <Row icon={Building2} label="Institution">{user.org_name ?? user.org_code}</Row>
             {user.role === 'student' && user.class_code && <Row icon={School} label="Class">{user.class_code}{user.roll_number ? ` · Roll ${user.roll_number}` : ''}</Row>}
             {user.year_code && <Row icon={CalendarRange} label="Academic year">{user.year_code} {user.cycle_code ?? ''}</Row>}
@@ -119,9 +119,9 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
   return (
     <Dialog open={open} onClose={() => { onClose(); setMsg(null) }} title="Change password" description="Use at least 8 characters.">
       <form onSubmit={submit} className="space-y-3">
-        <div><Label htmlFor="pw-cur">Current password</Label><Input id="pw-cur" type="password" autoComplete="current-password" required value={cur} onChange={(e) => setCur(e.target.value)} /></div>
-        <div><Label htmlFor="pw-new">New password</Label><Input id="pw-new" type="password" autoComplete="new-password" required minLength={8} value={next} onChange={(e) => setNext(e.target.value)} /></div>
-        <div><Label htmlFor="pw-confirm">Confirm new password</Label><Input id="pw-confirm" type="password" autoComplete="new-password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
+        <div><Label htmlFor="pw-cur">Current password</Label><PasswordInput id="pw-cur" autoComplete="current-password" required value={cur} onChange={(e) => setCur(e.target.value)} /></div>
+        <div><Label htmlFor="pw-new">New password</Label><PasswordInput id="pw-new" autoComplete="new-password" required minLength={8} value={next} onChange={(e) => setNext(e.target.value)} /></div>
+        <div><Label htmlFor="pw-confirm">Confirm new password</Label><PasswordInput id="pw-confirm" autoComplete="new-password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
         {msg && <p role="status" className={cn('text-sm', msg.ok ? 'text-ok' : 'text-bad')}>{msg.text}</p>}
         <div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Close</Button><Button type="submit" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />} Update password</Button></div>
       </form>

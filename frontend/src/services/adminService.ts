@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { AdminOverview, AIModule, CreatedMember, Member, Organization, SchoolClass, SubjectType, Tally, TimetableSlot } from '@/types'
+import type { AdminOverview, AIModule, CreatedMember, Gender, Holiday, Member, Organization, SchoolClass, SubjectType, Tally, TimetableSlot } from '@/types'
 
 const B = '/ICMELive/api/v1/admin'
 
@@ -31,6 +31,24 @@ export interface SlotBody {
   start_time: string
   end_time: string
   room_number?: string | null
+  schedule_type?: 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+  effective_from?: string | null
+  effective_to?: string | null
+  is_online?: boolean
+  online_url?: string | null
+  change_reason?: string | null
+}
+
+export interface HolidayBody {
+  name: string
+  start_date: string
+  end_date: string
+  holiday_type?: 'PUBLIC' | 'SCHOOL'
+  description?: string | null
+  scope?: 'SCHOOL_WIDE' | 'CLASS'
+  class_codes?: string[]
+  is_full_day?: boolean
+  status?: 'DRAFT' | 'PUBLISHED'
 }
 
 export const adminService = {
@@ -59,20 +77,20 @@ export const adminService = {
   async teachers(org?: string | null): Promise<Member[]> {
     return (await api.get<{ teachers: Member[] }>(`${B}/teachers`, q(org))).data.teachers
   },
-  async createTeacher(body: { user_code: string; full_name: string; email: string; phone?: string; qualification?: string; password?: string }, org?: string | null) {
+  async createTeacher(body: { user_code: string; full_name: string; email: string; phone?: string; qualification?: string; gender?: Gender; password?: string }, org?: string | null) {
     return (await api.post<CreatedMember>(`${B}/teachers`, body, q(org))).data
   },
-  async updateTeacher(code: string, patch: { is_active?: boolean; reset_password?: boolean; full_name?: string; phone?: string }, org?: string | null) {
+  async updateTeacher(code: string, patch: { is_active?: boolean; reset_password?: boolean; full_name?: string; phone?: string; gender?: Gender }, org?: string | null) {
     return (await api.patch<Member & { temporary_password: string | null }>(`${B}/teachers/${encodeURIComponent(code)}`, patch, q(org))).data
   },
 
   async classes(org?: string | null): Promise<SchoolClass[]> {
     return (await api.get<{ classes: SchoolClass[] }>(`${B}/classes`, q(org))).data.classes
   },
-  async createClass(body: { class_code: string; class_name: string; class_teacher_code?: string | null; room_number?: string | null }, org?: string | null) {
+  async createClass(body: { class_code: string; class_name: string; class_teacher_code?: string | null; room_number?: string | null; grade_number?: number | null; board?: string | null }, org?: string | null) {
     return (await api.post<SchoolClass>(`${B}/classes`, body, q(org))).data
   },
-  async updateClass(code: string, body: { class_name: string; class_teacher_code: string | null; is_active: boolean; room_number?: string | null }, org?: string | null) {
+  async updateClass(code: string, body: { class_name: string; class_teacher_code: string | null; is_active: boolean; room_number?: string | null; grade_number?: number | null; board?: string | null }, org?: string | null) {
     return (await api.put<SchoolClass>(`${B}/classes/${encodeURIComponent(code)}`, body, q(org))).data
   },
   async setClassSubject(code: string, subject: string, body: { subject_name: string; teacher_code: string | null; subject_type?: SubjectType }, org?: string | null) {
@@ -104,7 +122,28 @@ export const adminService = {
   async saveSlot(body: SlotBody, org?: string | null): Promise<TimetableSlot> {
     return (await api.put<TimetableSlot>(`${B}/timetable`, body, q(org))).data
   },
-  async deleteSlot(slotId: string, org?: string | null) {
-    return (await api.delete(`${B}/timetable/${slotId}`, q(org))).data
+  async deleteSlot(slotId: string, reason?: string, org?: string | null) {
+    const params: Record<string, string> = {}
+    if (org) params.org_code = org
+    if (reason) params.reason = reason
+    return (await api.delete(`${B}/timetable/${slotId}`, { params })).data
+  },
+  async holidays(filter: { start?: string; end?: string; class_code?: string }, org?: string | null): Promise<Holiday[]> {
+    const params: Record<string, string> = { ...filter }
+    if (org) params.org_code = org
+    return (await api.get<{ holidays: Holiday[] }>(`${B}/holidays`, { params })).data.holidays
+  },
+  async createHoliday(body: HolidayBody, org?: string | null): Promise<Holiday> {
+    return (await api.post<Holiday>(`${B}/holidays`, body, q(org))).data
+  },
+  async updateHoliday(id: string, body: HolidayBody, org?: string | null): Promise<Holiday> {
+    return (await api.put<Holiday>(`${B}/holidays/${id}`, body, q(org))).data
+  },
+  async deleteHoliday(id: string, org?: string | null) {
+    return (await api.delete(`${B}/holidays/${id}`, q(org))).data
+  },
+  async setTimetableStatus(classCode: string, status: 'DRAFT' | 'PUBLISHED', org?: string | null) {
+    return (await api.patch<{ class_code: string; timetable_status: string; timetable_published_at: string | null }>(
+      `${B}/classes/${encodeURIComponent(classCode)}/timetable-status`, { status }, q(org))).data
   },
 }

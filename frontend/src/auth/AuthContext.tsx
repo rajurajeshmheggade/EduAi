@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import axios from 'axios'
+import { onAuthBroadcast } from '@/lib/proctor/examLock'
 import { api, tokenStore } from '@/services/apiClient'
 import type { AuthResponse, UserProfile } from '@/types'
 
@@ -43,6 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('eduai:logout', logout)
     return () => window.removeEventListener('eduai:logout', logout)
   }, [logout])
+
+  // Another tab ended the portal session (an admission exam was launched on this device).
+  useEffect(() => onAuthBroadcast(logout), [logout])
 
   // Keep the selected subject valid for the signed-in user.
   useEffect(() => {

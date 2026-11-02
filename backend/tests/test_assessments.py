@@ -143,6 +143,95 @@ def test_student_takes_online_test(client, student, online):
     assert float(rep["summary"]["total_obtained_marks"]) == 3
 
 
+# ---------------------------------------------------------------- camera/mic check flag count (same as Virtual Labs)
+def test_proctor_flag_count_is_visible_to_the_student_and_the_teacher(client, teacher, student):
+    tid = _create(client, teacher, "ONLINE_TEST", duration_minutes=30)
+    _ready(client, teacher, tid)
+    client.post(f"{S}/my/{tid}/start", headers=student)
+
+    assert client.post(f"{S}/my/{tid}/proctor-flag", headers=student).json() == {"flag_count": 1}
+    assert client.post(f"{S}/my/{tid}/proctor-flag", headers=student).json() == {"flag_count": 2}
+
+    listed = next(x for x in client.get(f"{E}/tests", headers=teacher).json()["tests"] if x["eval_test_id"] == tid)
+    assert listed["proctor_flags"] == 2
+    register = {r["student_user_code"]: r for r in client.get(f"{E}/tests/{tid}/register", headers=teacher).json()["rows"]}
+    assert register["REG2026001"]["proctor_flag_count"] == 2
+
+    client.post(f"{S}/my/{tid}/submit", headers=student, json={"answers": {"1": "b"}})
+    assert client.post(f"{S}/my/{tid}/proctor-flag", headers=student).status_code == 409  # already submitted
+
+
+# ---------------------------------------------------------------- 80% progress flag (student toast, teacher visibility)
+PROGRESS_ITEMS = [
+    {"sl_no": str(i), "question_type": "SHORT_ANSWER", "question_text": f"Question {i}?", "max_marks": 1,
+     "model_answer_text": "Any reasonable answer.", "key_rubric_points": []}
+    for i in range(1, 6)
+]
+
+
+@pytest.fixture(scope="module")
+def progress_test(client, teacher):
+    tid = _create(client, teacher, "ONLINE_TEST", duration_minutes=30)
+    _ready(client, teacher, tid, items=PROGRESS_ITEMS)
+    return tid
+
+
+def test_progress_tracking_80_percent_flag(client, teacher, student_phy_only, progress_test):
+    """FR-TST-PROGRESS: detect 80% completion, persist it, notify once, and show it to the teacher."""
+    meera = student_phy_only
+    started = client.post(f"{S}/my/{progress_test}/start", headers=meera).json()
+    assert started["my"]["progress_percentage"] == 0 and started["my"]["progress_flagged"] is False
+
+    # 3 of 5 answered = 60%: below the threshold — no flag, no milestone.
+    r1 = client.put(f"{S}/my/{progress_test}/answers", headers=meera, json={"answers": {"1": "a", "2": "b", "3": "c"}})
+    assert r1.status_code == 200
+    assert r1.json()["progress_percentage"] == 60.0 and r1.json()["milestone_reached"] is False
+
+    # 4 of 5 answered = 80%: crosses the threshold — the milestone fires exactly once, server-side.
+    r2 = client.put(f"{S}/my/{progress_test}/answers", headers=meera,
+                    json={"answers": {"1": "a", "2": "b", "3": "c", "4": "d"}})
+    assert r2.json()["progress_percentage"] == 80.0 and r2.json()["milestone_reached"] is True
+
+    # answering more (or saving the exact same answers again) never re-raises the same flag.
+    r3 = client.put(f"{S}/my/{progress_test}/answers", headers=meera,
+                    json={"answers": {"1": "a", "2": "b", "3": "c", "4": "d", "5": "e"}})
+    assert r3.json()["progress_percentage"] == 100.0 and r3.json()["milestone_reached"] is False
+    r4 = client.put(f"{S}/my/{progress_test}/answers", headers=meera,
+                    json={"answers": {"1": "a", "2": "b", "3": "c", "4": "d", "5": "e"}})
+    assert r4.json()["milestone_reached"] is False
+
+    # persisted: a fresh GET (a page refresh, or logging out and back in) still shows the flag.
+    resumed = client.get(f"{S}/my/{progress_test}", headers=meera).json()
+    assert resumed["my"]["progress_percentage"] == 100.0 and resumed["my"]["progress_flagged"] is True
+
+    # teacher visibility: the student shows up as near-completion while still taking the test.
+    dash = client.get(f"{E}/tests/{progress_test}/dashboard", headers=teacher).json()
+    near = {s["user_code"]: s for s in dash["submission"]["near_completion_students"]}
+    assert near["REG2026002"]["progress_percentage"] == 100.0 and near["REG2026002"]["full_name"] == "Meera Student"
+    assert dash["submission"]["progress_threshold"] == 80.0
+    assert dash["submission"]["in_progress"] == 1
+
+    client.post(f"{S}/my/{progress_test}/submit", headers=meera,
+               json={"answers": {"1": "a", "2": "b", "3": "c", "4": "d", "5": "e"}})
+    # once submitted the attempt is no longer "in progress", so it drops out of the live near-completion list
+    after = client.get(f"{E}/tests/{progress_test}/dashboard", headers=teacher).json()
+    assert after["submission"]["in_progress"] == 0
+    assert "REG2026002" not in {s["user_code"] for s in after["submission"]["near_completion_students"]}
+
+
+def test_progress_never_flags_below_threshold(client, teacher, student, progress_test):
+    """A student who never reaches 80% is never flagged and never shows up for the teacher."""
+    r = client.post(f"{S}/my/{progress_test}/start", headers=student)
+    assert r.status_code == 200
+    saved = client.put(f"{S}/my/{progress_test}/answers", headers=student, json={"answers": {"1": "a", "2": "b"}})
+    assert saved.json()["progress_percentage"] == 40.0 and saved.json()["milestone_reached"] is False
+    mine = client.get(f"{S}/my/{progress_test}", headers=student).json()
+    assert mine["my"]["progress_flagged"] is False
+    dash = client.get(f"{E}/tests/{progress_test}/dashboard", headers=teacher).json()
+    assert "REG2026001" not in {s["user_code"] for s in dash["submission"]["near_completion_students"]}
+    client.post(f"{S}/my/{progress_test}/submit", headers=student, json={"answers": {"1": "a", "2": "b"}})
+
+
 def test_wrong_mcq_and_timer_auto_submit(client, teacher, student_phy_only, online):
     meera = student_phy_only
     client.post(f"{S}/my/{online}/start", headers=meera)

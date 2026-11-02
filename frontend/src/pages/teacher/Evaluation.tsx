@@ -140,6 +140,7 @@ export default function Evaluation({ kind }: { kind: AssessmentType }) {
                   {t.assessment_type === 'OFFLINE_EXAM' ? `${t.evaluated}/${t.scripts} evaluated` : `${t.submitted}/${t.class_students} submitted · ${t.evaluated} evaluated`}
                   {t.average_percentage != null ? ` · avg ${num(t.average_percentage)}%` : ''}
                 </div>
+                {t.proctor_flags > 0 && <Badge tone="warn" className="mt-1.5" title="Camera/mic check flags across all students' attempts">{t.proctor_flags} camera flag{t.proctor_flags === 1 ? '' : 's'}</Badge>}
               </button>
             )
           })}

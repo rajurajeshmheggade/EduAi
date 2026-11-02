@@ -1,0 +1,16 @@
+{
+ "id": "api.content.read",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:38:42.210Z",
+ "params": {
+  "resmsgid": "8efba820-d142-11f1-8b5f-23fd16dec384",
+  "msgid": null,
+  "status": "failed",
+  "err": "NOT_FOUND",
+  "errmsg": "Error! Node(s) doesn't Exists. | [Invalid Node Id.]: do_doesnotexist123"
+ },
+ "responseCode": "RESOURCE_NOT_FOUND",
+ "result": {
+  "messages": null
+ }
+}

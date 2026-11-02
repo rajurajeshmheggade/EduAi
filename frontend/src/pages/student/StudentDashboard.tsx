@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Award, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, Hourglass,
-  MessageSquareText, PencilRuler, Sparkles, Trophy,
+  Library, MessageSquareText, PencilRuler, Sparkles, Trophy,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { BarList } from '@/components/evaluation/BarList'
@@ -42,6 +42,7 @@ export default function StudentDashboard() {
           { to: '/student/tests', label: 'My tests', icon: PencilRuler, primary: true },
           { to: '/student/assignments', label: 'Assignments', icon: ClipboardCheck },
           { to: '/student/homework', label: 'Homework', icon: ClipboardList },
+          { to: '/student/library', label: 'My Library', icon: Library },
           { to: '/student/classroom', label: 'Ask the AI tutor', icon: MessageSquareText },
         ]}
         aside={d && (

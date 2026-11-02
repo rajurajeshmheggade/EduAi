@@ -3,8 +3,9 @@ import { BookOpen, Library } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SubjectPicker } from '@/components/SubjectPicker'
-import { AIAvatarCanvas } from '@/components/pdf-avatar/AIAvatarCanvas'
+import { AvatarTutor } from '@/components/pdf-avatar/AvatarTutor'
 import { SplitScreenPDFReader } from '@/components/pdf-avatar/SplitScreenPDFReader'
+import { useReadAloud } from '@/components/pdf-avatar/useReadAloud'
 import { K3RagChatPanel } from '@/components/rag-chat/K3RagChatPanel'
 import { Card } from '@/components/ui/card'
 import { Select } from '@/components/ui/field'
@@ -12,7 +13,8 @@ import { curriculumService } from '@/services/curriculumService'
 import { errorMessage } from '@/services/apiClient'
 import type { Textbook } from '@/types'
 
-/** Student classroom: split-screen textbook PDF (left) + AI avatar (top-right) + k=3 RAG chat (bottom-right). */
+/** Student classroom: split-screen textbook PDF (left) + AI avatar tutor that explains the open page aloud
+ * (top-right) + k=3 RAG chat (bottom-right). */
 export default function AvatarSubjectClassroom() {
   const { subject } = useAuth()
   const [books, setBooks] = useState<Textbook[] | null>(null)
@@ -32,7 +34,15 @@ export default function AvatarSubjectClassroom() {
   }, [subject])
 
   const book = books?.find((b) => b.textbook_id === bookId)
-  const jump = useCallback((p: number, snippet?: string) => { setPage(p); setHighlight(snippet ?? null) }, [])
+  const turnPage = useCallback((p: number) => { setPage(p); setHighlight(null) }, [])
+  const reader = useReadAloud(book?.textbook_id ?? '', turnPage)
+  const { followPage } = reader
+  const jump = useCallback((p: number, snippet?: string) => { setPage(p); setHighlight(snippet ?? null); followPage(p) }, [followPage])
+  // While the tutor speaks, the PDF highlights what it is talking about: the key point's words when explaining,
+  // the sentence when reading word for word.
+  const tutorHighlight = reader.reading && reader.page === page
+    ? (reader.mode === 'explain' ? reader.segment?.quote : reader.text) ?? null
+    : null
 
   if (!subject) return <Empty title="No subjects assigned" body="Ask your teacher to enrol you in a subject." />
   if (error) return <Empty title="Couldn't load your library" body={error} />
@@ -62,13 +72,13 @@ export default function AvatarSubjectClassroom() {
           {/* Contain PDF loading/errors to this pane so they never re-suspend or blank the whole page. */}
           <ErrorBoundary title="The textbook couldn't be displayed" key={book.textbook_id}>
             <Suspense fallback={<div className="skeleton m-4 h-[60vh]" />}>
-              <SplitScreenPDFReader url={book.pdf_url} page={page} onPageChange={(p) => jump(p)} highlight={highlight} />
+              <SplitScreenPDFReader url={book.pdf_url} page={page} onPageChange={(p) => jump(p)} highlight={tutorHighlight ?? highlight} />
             </Suspense>
           </ErrorBoundary>
         </Card>
-        <div className="grid min-h-0 grid-rows-[11rem_minmax(22rem,1fr)] gap-4">
-          <Card className="overflow-hidden"><AIAvatarCanvas caption={`Ask me about ${book.title}`} /></Card>
-          <Card className="min-h-0 overflow-hidden"><K3RagChatPanel subject={subject} textbookId={book.textbook_id} currentPage={page} onJump={jump} /></Card>
+        <div className="flex min-h-0 flex-col gap-4">
+          <Card className="shrink-0 overflow-hidden" aria-label="AI avatar tutor"><AvatarTutor reader={reader} page={page} /></Card>
+          <Card className="min-h-[16rem] flex-1 overflow-hidden"><K3RagChatPanel subject={subject} textbookId={book.textbook_id} currentPage={page} onJump={jump} /></Card>
         </div>
       </div>
     </div>

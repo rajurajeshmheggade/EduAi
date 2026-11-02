@@ -1,4 +1,4 @@
-export type Role = 'superadmin' | 'orgadmin' | 'teacher' | 'student'
+export type Role = 'superadmin' | 'orgadmin' | 'teacher' | 'student' | 'counsellor' | 'reviewer' | 'parent'
 export type AIModule = 'rag_chatbot' | 'ai_avatar_tutor' | 'ocr_evaluation' | 'capability_analysis'
 export type SubjectType = 'THEORY' | 'LAB' | 'COACHING_TEST'
 
@@ -121,7 +121,11 @@ export interface Member {
   is_active: boolean
   created_at: string
   qualification?: string | null
+  /** Set by the admin; the AI avatar tutor uses a male avatar + voice for 'male', otherwise female. */
+  gender?: Gender | null
 }
+
+export type Gender = 'female' | 'male' | 'other' | 'undisclosed'
 
 export interface CreatedMember {
   user_id: string
@@ -154,6 +158,12 @@ export interface SchoolClass {
   student_count: number
   subjects: ClassSubject[]
   room_number?: string | null
+  grade_number?: number | null
+  /** CBSE / NCERT / State board — admin-set; scopes the Digital Library's DIKSHA catalog for this class. */
+  board?: string | null
+  /** Draft/publish workflow: DRAFT hides this class's timetable from /my-timetable until an admin publishes it. */
+  timetable_status?: 'DRAFT' | 'PUBLISHED'
+  timetable_published_at?: string | null
 }
 
 export interface TeacherClass {
@@ -272,6 +282,11 @@ export interface TimetableSlot {
   start_time: string
   end_time: string
   room_number: string | null
+  schedule_type: 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+  effective_from: string | null
+  effective_to: string | null
+  is_online: boolean
+  online_url: string | null
 }
 
 export type HomeworkStatus = 'PENDING' | 'SUBMITTED' | 'REVIEWED'
@@ -328,3 +343,48 @@ export interface StudentHomework {
 }
 
 export * from './types/evaluation'
+
+
+// ───────────── Notifications (cross-module in-app inbox) ─────────────
+export interface AppNotification {
+  notification_id: string
+  notif_type: string
+  title: string
+  body: string | null
+  link: string | null
+  is_read: boolean
+  created_at: string
+}
+
+// ───────────── Timetable change history (#3) & holidays (#10) ─────────────
+export interface TimetableChange {
+  change_id: string
+  class_code: string
+  day_of_week: number
+  period_number: number
+  change_kind: 'UPDATED' | 'CANCELLED'
+  old_subject_name: string | null
+  old_teacher_name: string | null
+  old_start_time: string | null
+  old_end_time: string | null
+  new_subject_name: string | null
+  new_teacher_name: string | null
+  new_start_time: string | null
+  new_end_time: string | null
+  reason: string | null
+  changed_by_name: string | null
+  changed_at: string
+}
+
+export interface Holiday {
+  holiday_id: string
+  name: string
+  start_date: string
+  end_date: string
+  holiday_type: 'PUBLIC' | 'SCHOOL'
+  description: string | null
+  scope: 'SCHOOL_WIDE' | 'CLASS'
+  class_codes: string[]
+  is_full_day: boolean
+  status: 'DRAFT' | 'PUBLISHED'
+}

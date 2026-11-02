@@ -29,7 +29,8 @@ def _safe(part: str) -> str:
 class Storage(Protocol):
     def put(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> str: ...
     def get(self, key: str) -> bytes: ...
-    def signed_url(self, key: str) -> str: ...
+    def signed_url(self, key: str, minutes: int | None = None) -> str: ...
+    def delete(self, key: str) -> None: ...
 
 
 class LocalStorage:
@@ -56,8 +57,11 @@ class LocalStorage:
     def resolve_path(self, key: str) -> Path:
         return self._path(key)
 
-    def signed_url(self, key: str) -> str:
-        exp = datetime.now(timezone.utc) + timedelta(minutes=self.s.signed_url_minutes)
+    def delete(self, key: str) -> None:
+        self._path(key).unlink(missing_ok=True)
+
+    def signed_url(self, key: str, minutes: int | None = None) -> str:
+        exp = datetime.now(timezone.utc) + timedelta(minutes=minutes or self.s.signed_url_minutes)
         token = jwt.encode({"key": key, "typ": "file", "exp": exp}, self.s.jwt_secret, algorithm=self.s.jwt_algorithm)
         return f"{self.s.public_base_url}/files/{token}"
 
@@ -87,10 +91,13 @@ class AzureBlobStorage:
     def get(self, key: str) -> bytes:
         return self.container.download_blob(key).readall()
 
-    def signed_url(self, key: str) -> str:
+    def delete(self, key: str) -> None:
+        self.container.delete_blob(key)
+
+    def signed_url(self, key: str, minutes: int | None = None) -> str:
         from azure.storage.blob import BlobSasPermissions, generate_blob_sas
 
-        exp = datetime.now(timezone.utc) + timedelta(minutes=self.s.signed_url_minutes)
+        exp = datetime.now(timezone.utc) + timedelta(minutes=minutes or self.s.signed_url_minutes)
         sas = generate_blob_sas(
             account_name=self.svc.account_name,
             container_name=self.s.azure_storage_container,

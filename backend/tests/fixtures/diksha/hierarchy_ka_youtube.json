@@ -1,0 +1,308 @@
+{
+ "id": "api.course.hierarchy",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:36:32.569Z",
+ "params": {
+  "resmsgid": "41b60290-d142-11f1-8b5f-23fd16dec384",
+  "msgid": "41b3b8a0-d142-11f1-a0d7-e7eb53ebb8e2",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_31430744733091430419003",
+   "name": "2025-26 Marusinchana_8_Kannada_SAB",
+   "description": "Digital Textbook",
+   "mimeType": "application/vnd.ekstep.content-collection",
+   "primaryCategory": "Digital Textbook",
+   "contentType": "TextBook",
+   "objectType": "Content",
+   "appIcon": "",
+   "se_boards": [
+    "State (Karnataka)"
+   ],
+   "se_gradeLevels": [
+    "Class 8"
+   ],
+   "se_subjects": [
+    "Kannada"
+   ],
+   "se_mediums": [
+    "Kannada"
+   ],
+   "board": "State (Karnataka)",
+   "gradeLevel": [
+    "Class 8"
+   ],
+   "subject": [
+    "Kannada"
+   ],
+   "medium": [
+    "Kannada"
+   ],
+   "license": "CC BY 4.0",
+   "author": "DSERT eContent",
+   "creator": "econtentcreator2025",
+   "attributions": [],
+   "copyright": "DSERT eContent",
+   "copyrightYear": 2028,
+   "organisation": [
+    "Karnataka"
+   ],
+   "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31430744733091430419003/2025-26-marusinchana_8_kannada_sab_1775728945722_do_31430744733091430419003_2_SPINE.ecar",
+   "size": 403908,
+   "pkgVersion": 2,
+   "lastPublishedOn": "2026-04-09T10:02:25.508+0000",
+   "leafNodesCount": 48,
+   "depth": 0,
+   "status": "Live",
+   "visibility": "Default",
+   "channel": "01248978648941363234",
+   "framework": "ka_k-12",
+   "children": [
+    {
+     "identifier": "do_314307457148862464112400",
+     "name": "1. ಅಂತ್ಯಾಕ್ಷರಿ ಆಡೋಣ",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31430744733091430419003/2025-26-marusinchana_8_kannada_sab_1775728945722_do_31430744733091430419003_2_SPINE.ecar",
+     "pkgVersion": 2,
+     "lastPublishedOn": "2026-04-09T10:02:25.508+0000",
+     "leafNodesCount": 1,
+     "index": 1,
+     "depth": 1,
+     "parent": "do_31430744733091430419003",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": [
+      {
+       "identifier": "do_3137489904471326721346",
+       "name": "ಓದು ಕರ್ನಾಟಕ - ಸರಳ ಕನ್ನಡ - ಆಡಲು ಬನ್ನಿ - ಭಾಷೆ  4 - ಕಾಗುಣಿತಾಕ್ಷರಗಳಿಂದ ಪದಗಳ ರಚನೆ",
+       "description": "ಕಾಗುಣಿತಾಕ್ಷರಗಳಿಂದ ಪದಗಳ ರಚನೆ",
+       "mimeType": "video/mp4",
+       "primaryCategory": "Explanation Content",
+       "contentType": "Resource",
+       "objectType": "Content",
+       "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_3137489904471326721346/artifact/do_31375329758055628811813_1678869333752_ok.thumb.jpg",
+       "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31375329758055628811813/artifact/do_31375329758055628811813_1678869333752_ok.jpg",
+       "se_boards": [
+        "State (Karnataka)"
+       ],
+       "se_gradeLevels": [
+        "Class 5",
+        "Class 3",
+        "Class 1",
+        "Class 4",
+        "Class 2"
+       ],
+       "se_subjects": [
+        "Kannada"
+       ],
+       "se_mediums": [
+        "Kannada"
+       ],
+       "board": "State (Karnataka)",
+       "gradeLevel": [
+        "Class 5",
+        "Class 3",
+        "Class 1",
+        "Class 4",
+        "Class 2"
+       ],
+       "subject": [
+        "Kannada"
+       ],
+       "medium": [
+        "Kannada"
+       ],
+       "license": "CC BY 4.0",
+       "author": "DSERT eContent",
+       "creator": "econtentcreator2025",
+       "attributions": [
+        "Odu Karnataka"
+       ],
+       "copyright": "DSERT eContent",
+       "copyrightYear": 2023,
+       "organisation": [
+        "Karnataka"
+       ],
+       "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3137489904471326721346/adalu-banni-language-4-l-word-building-l-aaddlu-bnni-bhaasse-4-_-kaagunnitaakssrgllind-pdgll-rcne.mp4",
+       "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya3v6yp7gythexz7lx23qe2c5ne5yyxqhs2oktespbwnpa/master.m3u8",
+       "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_3137489904471326721346/adalu-banni-language-4-l-word-building-l-aaddlu-bnni-bhaasse-4-_-kaagunnitaakssrgllind-pdgll-rcne.mp4",
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_3137489904471326721346/oodu-krnaattk-srll-knndd-aaddlu-bnni-bhaasse-4-kaagunnitaakssrgllind-pdgll-rcne_1681137918031_do_3137489904471326721346_2.ecar",
+       "size": 24971686,
+       "pkgVersion": 2,
+       "lastPublishedOn": "2023-04-10T14:45:18.030+0000",
+       "index": 1,
+       "depth": 2,
+       "parent": "do_314307457148862464112400",
+       "status": "Live",
+       "visibility": "Default",
+       "channel": "01248978648941363234",
+       "framework": "ka_k-12"
+      }
+     ]
+    },
+    {
+     "identifier": "do_314307457148846080112390",
+     "name": "2. ನೋಡಿ – ಮಾತನಾಡಿ",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31430744733091430419003/2025-26-marusinchana_8_kannada_sab_1775728945722_do_31430744733091430419003_2_SPINE.ecar",
+     "pkgVersion": 2,
+     "lastPublishedOn": "2026-04-09T10:02:25.508+0000",
+     "leafNodesCount": 1,
+     "index": 2,
+     "depth": 1,
+     "parent": "do_31430744733091430419003",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": [
+      {
+       "identifier": "do_431346177092480204814249",
+       "name": "ನೋಡಿ - ಕಲಿ",
+       "mimeType": "application/pdf",
+       "primaryCategory": "eTextbook",
+       "contentType": "eTextBook",
+       "objectType": "Content",
+       "se_boards": [
+        "State (Karnataka)"
+       ],
+       "se_gradeLevels": [
+        "Class 1"
+       ],
+       "se_subjects": [
+        "II Language Kannada"
+       ],
+       "se_mediums": [
+        "Kannada"
+       ],
+       "board": "State (Karnataka)",
+       "gradeLevel": [
+        "Class 1"
+       ],
+       "subject": [
+        "II Language Kannada"
+       ],
+       "medium": [
+        "Kannada"
+       ],
+       "license": "CC BY 4.0",
+       "author": "Krishnakumar J",
+       "creator": "Krishnakumar J",
+       "attributions": [
+        "dsert"
+       ],
+       "copyright": "2021",
+       "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431346177092480204814249/artifact/2.nodi-kali.pdf",
+       "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431346177092480204814249/artifact/2.nodi-kali.pdf",
+       "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431346177092480204814249/artifact/2.nodi-kali.pdf",
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431346177092480204814249/nooddi-kli_1679036810398_do_431346177092480204814249_2.ecar",
+       "size": 12590805,
+       "pkgVersion": 2,
+       "lastPublishedOn": "2023-03-17T07:06:50.398+0000",
+       "index": 1,
+       "depth": 2,
+       "parent": "do_314307457148846080112390",
+       "status": "Live",
+       "visibility": "Default",
+       "channel": "01248978648941363234",
+       "framework": "ka_k-12"
+      }
+     ]
+    },
+    {
+     "identifier": "do_314307462093373440111622",
+     "name": "41. ಅರ್ಥವ್ಯತ್ಯಾಸ - ಧ್ವನಿ ಸಾಮ್ಯತೆ - 1",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31430744733091430419003/2025-26-marusinchana_8_kannada_sab_1775728945722_do_31430744733091430419003_2_SPINE.ecar",
+     "pkgVersion": 2,
+     "lastPublishedOn": "2026-04-09T10:02:25.508+0000",
+     "leafNodesCount": 1,
+     "index": 41,
+     "depth": 1,
+     "parent": "do_31430744733091430419003",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": [
+      {
+       "identifier": "do_31403928888678809611801",
+       "name": "Step 13 - ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ",
+       "mimeType": "video/x-youtube",
+       "primaryCategory": "Teacher Resource",
+       "contentType": "Resource",
+       "objectType": "Content",
+       "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31403928888678809611801/artifact/do_31398270417322803211785_1706873070696_literacy.thumb.png",
+       "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31398270417322803211785/artifact/do_31398270417322803211785_1706873070696_literacy.png",
+       "se_boards": [
+        "State (Karnataka)"
+       ],
+       "se_gradeLevels": [
+        "Preschool 2",
+        "Preschool 1",
+        "Preschool 3"
+       ],
+       "se_subjects": [
+        "ECCE"
+       ],
+       "se_mediums": [
+        "Kannada"
+       ],
+       "board": "State (Karnataka)",
+       "gradeLevel": [
+        "Preschool 2",
+        "Preschool 1",
+        "Preschool 3"
+       ],
+       "subject": [
+        "ECCE"
+       ],
+       "medium": [
+        "Kannada"
+       ],
+       "license": "CC BY 4.0",
+       "author": "DSERT eContent",
+       "creator": "econtentcreator2025",
+       "copyright": "DSERT eContent",
+       "copyrightYear": 2024,
+       "organisation": [
+        "Karnataka"
+       ],
+       "artifactUrl": "https://youtu.be/ZkMRHQvsjEs",
+       "streamingUrl": "https://youtu.be/ZkMRHQvsjEs",
+       "previewUrl": "https://youtu.be/ZkMRHQvsjEs",
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31403928888678809611801/step-13-dhvni-gurutisuvike_1713783379231_do_31403928888678809611801_1.ecar",
+       "pkgVersion": 1,
+       "lastPublishedOn": "2024-04-22T10:56:18.518+0000",
+       "index": 1,
+       "depth": 2,
+       "parent": "do_314307462093373440111622",
+       "status": "Live",
+       "visibility": "Default",
+       "channel": "01248978648941363234",
+       "framework": "ka_k-12"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

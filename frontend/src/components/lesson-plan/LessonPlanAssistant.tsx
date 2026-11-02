@@ -4,12 +4,13 @@ import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { aiErrorMessage } from '@/services/lessonPlanService'
+import { nlpCatalogService } from '@/services/nlpCatalogService'
 import type { LpScope } from '@/types/lessonPlan'
 import { IdentityCard, MessageRow, TypingRow } from './assistant/ChatMessage'
 import { flattenScope, suggestionChips } from './assistant/match'
 import { GREETING, NO_CLASSES } from './assistant/text'
 import { handleTurn } from './assistant/turn'
-import type { AssistantDeps, ChaptersCtx, Msg, Pipeline, Turn } from './assistant/types'
+import type { AssistantDeps, ChaptersCtx, Msg, Pipeline, ScopeRow, Turn } from './assistant/types'
 
 /* AI Bot — the conversational Lesson Plan Assistant (port of the `lessonplan` mode of Rapid's ChatBotScreen).
    The model (system prompt built server-side) only collects the inputs and emits trigger tokens; the pipeline in
@@ -42,7 +43,22 @@ export function LessonPlanAssistant({ scope, onClose, onSaved }: {
 }) {
   const { user } = useAuth()
   const initials = (user?.full_name ?? '').split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || 'You'
-  const rows = useMemo(() => flattenScope(scope), [scope])
+  // The chapter library (backend/nlp/, Class III-XII + JEE) is added to the teacher's own room assignments so
+  // "which class/subject" can also resolve to e.g. "Class 10, Mathematics" even if that isn't one of the
+  // teacher's own assignments — the generators accept both (see lessonplan.py's _guard).
+  const [nlpRows, setNlpRows] = useState<ScopeRow[]>([])
+  useEffect(() => {
+    let live = true
+    nlpCatalogService.classes().then(async (classes) => {
+      const perClass = await Promise.all(classes.map((c) => nlpCatalogService.subjects(c.class_label).then((subs) => ({ c, subs })).catch(() => ({ c, subs: [] as string[] }))))
+      if (!live) return
+      setNlpRows(perClass.flatMap(({ c, subs }) => subs.map((s) => ({
+        classCode: c.class_label, className: c.grade ? `Class ${c.grade}` : c.class_label, subjectCode: s, subjectName: s,
+      }))))
+    }).catch(() => setNlpRows([]))
+    return () => { live = false }
+  }, [])
+  const rows = useMemo(() => [...flattenScope(scope), ...nlpRows], [scope, nlpRows])
   const chips = useMemo(() => suggestionChips(rows), [rows])
   const greeting = greetingFor(rows.length > 0)
 

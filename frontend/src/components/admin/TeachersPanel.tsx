@@ -4,12 +4,16 @@ import { CredentialNotice } from '@/components/admin/CredentialNotice'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input, Label } from '@/components/ui/field'
+import { Input, Label, PasswordInput, Select } from '@/components/ui/field'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
-import type { CreatedMember, Member } from '@/types'
+import type { CreatedMember, Gender, Member } from '@/types'
 
-const EMPTY = { user_code: '', full_name: '', email: '', phone: '', qualification: '', password: '' }
+const EMPTY = { user_code: '', full_name: '', email: '', phone: '', qualification: '', gender: '' as Gender | '', password: '' }
+const GENDERS: { value: Gender; label: string }[] = [
+  { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' },
+  { value: 'other', label: 'Other' }, { value: 'undisclosed', label: 'Prefer not to say' },
+]
 
 export function TeachersPanel({ org }: { org?: string | null }) {
   const [rows, setRows] = useState<Member[] | null>(null)
@@ -26,14 +30,14 @@ export function TeachersPanel({ org }: { org?: string | null }) {
     e.preventDefault()
     setBusy(true); setError(null)
     try {
-      const body = { ...form, phone: form.phone || undefined, qualification: form.qualification || undefined, password: form.password || undefined }
+      const body = { ...form, qualification: form.qualification || undefined, gender: form.gender || undefined }
       setCreated(await adminService.createTeacher(body, org))
       setForm(EMPTY)
       await load()
     } catch (err) { setError(errorMessage(err)) } finally { setBusy(false) }
   }
 
-  async function patch(t: Member, p: { is_active?: boolean; reset_password?: boolean }) {
+  async function patch(t: Member, p: { is_active?: boolean; reset_password?: boolean; gender?: Gender }) {
     setError(null)
     try {
       const r = await adminService.updateTeacher(t.user_code, p, org)
@@ -48,15 +52,23 @@ export function TeachersPanel({ org }: { org?: string | null }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[22rem_1fr]">
       <Card>
-        <CardHeader><CardTitle>Add teacher</CardTitle><CardDescription>Leave the password empty to generate a one-time password.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Add teacher</CardTitle><CardDescription>Username, phone and password are required for every new teacher.</CardDescription></CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-3">
             <div><Label htmlFor="t-code">Employee code</Label><Input id="t-code" required value={form.user_code} onChange={(e) => setForm({ ...form, user_code: e.target.value })} placeholder="EMP1003" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,63}" /></div>
             <div><Label htmlFor="t-name">Full name</Label><Input id="t-name" required minLength={2} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
             <div><Label htmlFor="t-email">Email</Label><Input id="t-email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label htmlFor="t-qual">Qualification (optional)</Label><Input id="t-qual" placeholder="M.Sc Physics, B.Ed" value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} maxLength={200} /></div>
-            <div><Label htmlFor="t-phone">Phone (optional)</Label><Input id="t-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><Label htmlFor="t-pw">Password (optional)</Label><Input id="t-pw" type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+            <div>
+              <Label htmlFor="t-gender">Gender (optional)</Label>
+              <Select id="t-gender" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value as Gender | '' })}>
+                <option value="">Not set</option>
+                {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+              </Select>
+              <p className="mt-1 text-xs text-ink-500">The AI avatar tutor reads textbooks to this teacher's students with a male avatar and voice for “Male”, otherwise female.</p>
+            </div>
+            <div><Label htmlFor="t-phone">Phone</Label><Input id="t-phone" type="tel" required pattern="[0-9+][0-9+\-\s]{6,19}" title="Enter a valid phone number (digits, optionally starting with +)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div><Label htmlFor="t-pw">Password</Label><PasswordInput id="t-pw" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
             <Button type="submit" className="w-full" disabled={busy} id="create-teacher">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Create teacher</Button>
           </form>
           {created && <div className="mt-4"><CredentialNotice member={created} onDismiss={() => setCreated(null)} /></div>}
@@ -76,7 +88,7 @@ export function TeachersPanel({ org }: { org?: string | null }) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">
-                  <th className="py-2 pr-3 font-medium">Teacher</th><th className="py-2 pr-3 font-medium">Code</th><th className="py-2 pr-3 font-medium">Subjects</th><th className="py-2 pr-3 font-medium">Status</th><th className="py-2 text-right font-medium">Actions</th>
+                  <th className="py-2 pr-3 font-medium">Teacher</th><th className="py-2 pr-3 font-medium">Code</th><th className="py-2 pr-3 font-medium">Subjects</th><th className="py-2 pr-3 font-medium">Gender (avatar)</th><th className="py-2 pr-3 font-medium">Status</th><th className="py-2 text-right font-medium">Actions</th>
                 </tr></thead>
                 <tbody>
                   {shown!.map((t) => (
@@ -84,6 +96,13 @@ export function TeachersPanel({ org }: { org?: string | null }) {
                       <td className="py-2.5 pr-3"><div className="font-medium text-fg">{t.full_name}</div><div className="text-xs text-ink-500">{t.email}{t.qualification ? ` · ${t.qualification}` : ''}</div></td>
                       <td className="py-2.5 pr-3 font-mono text-xs">{t.user_code}</td>
                       <td className="py-2.5 pr-3"><div className="flex flex-wrap gap-1">{t.allowed_subjects.length ? t.allowed_subjects.map((s) => <Badge key={s} tone="brand">{s}</Badge>) : <span className="text-xs text-ink-500">Not assigned</span>}</div></td>
+                      <td className="py-2.5 pr-3">
+                        <Select aria-label={`Gender of ${t.full_name}`} className="h-8 w-36 px-2 text-xs" value={t.gender ?? ''}
+                          onChange={(e) => e.target.value && patch(t, { gender: e.target.value as Gender })}>
+                          {!t.gender && <option value="">Not set</option>}
+                          {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                        </Select>
+                      </td>
                       <td className="py-2.5 pr-3"><Badge tone={t.is_active ? 'ok' : 'neutral'}>{t.is_active ? 'Active' : 'Inactive'}</Badge></td>
                       <td className="py-2.5 text-right">
                         <div className="flex justify-end gap-1">

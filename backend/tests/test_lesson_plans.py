@@ -68,6 +68,27 @@ def test_generation_is_scope_guarded(client, teacher):
     r = client.post(f"{LP}/course-outcomes", json={**CTX, "class_code": "Grade-9-B", "subject_code": "ENG-9"},
                     headers=teacher)
     assert r.status_code == 403
+
+
+def test_chapter_library_class_subject_bypasses_the_room_assignment_check(client, teacher):
+    # "X" / "Mathematics" is a real chapter-library class+subject (backend/nlp/X/Mathematics/...), not one of
+    # this teacher's own room assignments — it must still be allowed, since the content is generic curriculum
+    # text, not another class's private data.
+    ctx = {**CTX, "class_code": "X", "subject_code": "Mathematics", "chapter": "polynomials"}
+    r = client.post(f"{LP}/course-outcomes", json={**ctx, "co_count": 2}, headers=teacher)
+    assert r.status_code == 200, r.text
+    assert len(r.json()["course_outcomes"]) == 2
+
+    saved = client.post(f"{LP}/save-unit-plan", json={
+        "classCode": "X", "className": "Class X", "subjectCode": "Mathematics", "subjectName": "Mathematics",
+        "chapterName": "polynomials", "unitPlanTitle": "Polynomials", "board": "CBSE", "durationMins": 45,
+        "plan": {"grade": "Class X", "subject": "Mathematics", "topic": "polynomials"},
+        "isCompleted": False, "source": "manual"}, headers=teacher)
+    assert saved.status_code == 200, saved.text
+
+    # A class/subject that is neither a real room assignment NOR a chapter-library entry is still rejected.
+    bad = client.post(f"{LP}/course-outcomes", json={**CTX, "class_code": "XV", "subject_code": "Nonsense"}, headers=teacher)
+    assert bad.status_code == 403
     by_name = client.post(f"{LP}/course-outcomes", json={"grade": "Grade 9 — Section B", "subject": "English",
                                                          "chapter": "Poem"}, headers=teacher)
     assert by_name.status_code == 403

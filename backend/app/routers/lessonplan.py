@@ -16,6 +16,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile, status
 
 from ..security import CurrentUser, require_role
+from ..services import nlp_catalog
 from ..services.lesson_plan import agents, assistant, generation, library, session as session_gen, store
 from ..services.lesson_plan.text_extract import MAX_BYTES, UnsupportedFile, extract_text
 from ..services.storage import build_key, get_storage
@@ -43,11 +44,19 @@ def _int(b: Json, k: str, default: int = 0) -> int:
         return default
 
 
+def _is_nlp_catalogue_pair(cc: str, sc: str) -> bool:
+    """A lesson plan may also be scoped to the shared chapter library (backend/nlp/) — e.g. 'X' / 'Mathematics'
+    — instead of one of the teacher's own room assignments. It's safe to allow for any teacher: the content is
+    generic, read-only curriculum text, not another class's private data."""
+    return sc in nlp_catalog.subjects(cc)
+
+
 def _guard(user: CurrentUser, b: Json) -> tuple[str, str]:
-    """The teacher must be assigned to the (class, subject) before any LLM call. Codes win; names are resolved."""
+    """The teacher must be assigned to the (class, subject), OR it must be a real chapter-library class and
+    subject, before any LLM call. Codes win; names are resolved."""
     cc, sc = _s(b, "class_code") or _s(b, "classCode"), _s(b, "subject_code") or _s(b, "subjectCode")
     if cc and sc:
-        if store.in_scope(user.org_code, user.user_code, cc, sc):
+        if store.in_scope(user.org_code, user.user_code, cc, sc) or _is_nlp_catalogue_pair(cc, sc):
             return cc, sc
     else:
         rc, rs = store.resolve_names(user.org_code, user.user_code, _s(b, "grade"), _s(b, "subject"))
@@ -86,7 +95,7 @@ def scope(user: CurrentUser = Depends(teacher_only)):
 def chapters(class_code: str = Query(..., max_length=64), subject_code: str = Query(..., max_length=64),
              user: CurrentUser = Depends(teacher_only)):
     """Chapters of the indexed textbooks for a class + subject (Textbooks & How to Teach)."""
-    if not store.in_scope(user.org_code, user.user_code, class_code, subject_code):
+    if not store.in_scope(user.org_code, user.user_code, class_code, subject_code) and not _is_nlp_catalogue_pair(class_code, subject_code):
         raise HTTPException(403, "You are not assigned to this class and subject")
     return {"chapters": store.chapters(user.org_code, class_code, subject_code)}
 
@@ -186,7 +195,7 @@ def save_unit_plan(b: Json = Body(...), user: CurrentUser = Depends(teacher_only
     plan = b.get("plan") if isinstance(b.get("plan"), dict) else {}
     title = (_s(b, "unitPlanTitle") or _s(b, "title") or _s(b, "chapterName") or "Lesson Plan")[:300]
     cc, sc = _s(b, "classCode") or None, _s(b, "subjectCode") or None
-    if (cc or sc) and not store.in_scope(user.org_code, user.user_code, cc, sc):
+    if (cc or sc) and not store.in_scope(user.org_code, user.user_code, cc, sc) and not _is_nlp_catalogue_pair(cc or "", sc or ""):
         raise HTTPException(403, "You are not assigned to this class and subject")
     source = "ai_bot" if _s(b, "source") == "ai_bot" or _int(b, "istype") == 1 else "manual"
     completed = b.get("isCompleted")
@@ -344,8 +353,9 @@ def session_generate(b: Json = Body(...), user: CurrentUser = Depends(teacher_on
     """Generate the session on EduAI's AI provider around the picked resources, splice in the four live agent
     blocks, and (save: true) persist it in the same round trip."""
     plan = _plan_or_404(b, user)
-    if plan["class_code"] and plan["subject_code"] and not store.in_scope(
-            user.org_code, user.user_code, plan["class_code"], plan["subject_code"]):
+    if (plan["class_code"] and plan["subject_code"]
+            and not store.in_scope(user.org_code, user.user_code, plan["class_code"], plan["subject_code"])
+            and not _is_nlp_catalogue_pair(plan["class_code"], plan["subject_code"])):
         raise HTTPException(403, f"You are not assigned to {plan['class_name']} · {plan['subject_name']}.")
     title = _s(b, "title")[:300]
     duration = max(0, min(100000, _int(b, "durationMins")))
@@ -379,7 +389,7 @@ def session_generate(b: Json = Body(...), user: CurrentUser = Depends(teacher_on
 def _require_pair(user: CurrentUser, class_code: str, subject_code: str) -> None:
     if not class_code or not subject_code:
         raise HTTPException(400, "classCode and subjectCode are required.")
-    if not store.in_scope(user.org_code, user.user_code, class_code, subject_code):
+    if not store.in_scope(user.org_code, user.user_code, class_code, subject_code) and not _is_nlp_catalogue_pair(class_code, subject_code):
         raise HTTPException(403, "You are not assigned to this class and subject.")
 
 

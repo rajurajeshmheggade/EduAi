@@ -1,0 +1,14 @@
+{
+ "id": "api.course.hierarchy",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:38:43.475Z",
+ "params": {
+  "resmsgid": "8fbcae30-d142-11f1-b552-e1bc248a62cb",
+  "msgid": null,
+  "status": "failed",
+  "err": "RESOURCE_NOT_FOUND",
+  "errmsg": "rootId do_doesnotexist123 does not exist"
+ },
+ "responseCode": "RESOURCE_NOT_FOUND",
+ "result": {}
+}

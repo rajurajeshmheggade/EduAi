@@ -1,0 +1,397 @@
+{
+ "id": "api.content.search",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:20:23.342Z",
+ "params": {
+  "resmsgid": "0001b4e0-d140-11f1-bc20-01dd00e8dbc9",
+  "msgid": "ffff9200-d13f-11f1-8738-6359c84b5882",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "count": 293,
+  "content": [
+   {
+    "identifier": "do_3137971439485173761413",
+    "name": " Math 1",
+    "description": "",
+    "mimeType": "application/vnd.ekstep.content-collection",
+    "primaryCategory": "Digital Textbook",
+    "contentType": "TextBook",
+    "objectType": "Content",
+    "appIcon": "https://files.odev.oci.diksha.gov.in/ntp-content-production/collection/do_3137971439485173761413/artifact/do_3137929242525368321419_1683706574028_thumbnail-square-1.thumb.png",
+    "posterImage": "https://files.odev.oci.diksha.gov.in/ntp-content-production/content/do_3137929242525368321419/artifact/do_3137929242525368321419_1683706574028_thumbnail-square-1.png",
+    "se_boards": [
+     "CBSE"
+    ],
+    "se_gradeLevels": [
+     "Class 1"
+    ],
+    "se_subjects": [
+     "Mathematics"
+    ],
+    "se_mediums": [
+     "English"
+    ],
+    "board": "CBSE",
+    "gradeLevel": [
+     "Class 1"
+    ],
+    "subject": [
+     "Mathematics"
+    ],
+    "medium": [
+     "English"
+    ],
+    "license": "CC BY-NC-SA 4.0",
+    "licenseDetails": {
+     "name": "CC BY-NC-SA 4.0",
+     "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode",
+     "description": "For details see below:"
+    },
+    "author": "Toondemy",
+    "creator": "CBSESkill",
+    "attributions": [],
+    "copyright": "Creative Edtech Pvt Ltd",
+    "copyrightYear": 2023,
+    "organisation": [
+     "CBSE"
+    ],
+    "orgDetails": {
+     "email": null,
+     "orgName": "CBSE"
+    },
+    "downloadUrl": "https://files.odev.oci.diksha.gov.in/ntp-content-production/content/do_3137971439485173761413/math-1_1707112221895_do_3137971439485173761413_3_SPINE.ecar",
+    "size": 34901,
+    "pkgVersion": 3,
+    "lastPublishedOn": "2024-02-05T05:50:21.773+0000",
+    "leafNodesCount": 6,
+    "channel": "01241974041332940818",
+    "framework": "ekstep_ncert_k-12"
+   },
+   {
+    "identifier": "do_3131034750789222401965",
+    "name": "(NEW) A Pact With The Sun",
+    "description": "(NEW) A Pact With The Sun",
+    "mimeType": "application/vnd.ekstep.content-collection",
+    "primaryCategory": "Digital Textbook",
+    "contentType": "TextBook",
+    "objectType": "Content",
+    "appIcon": "https://files.odev.oci.diksha.gov.in/ntp-content-production/collection/do_3131034750789222401965/artifact/fepw1cc.thumb.thumb.thumb.jpg",
+    "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31307360982266675212185/artifact/fepw1cc.thumb.jpg",
+    "se_boards": [
+     "CBSE"
+    ],
+    "se_gradeLevels": [
+     "Class 6"
+    ],
+    "se_subjects": [
+     "English"
+    ],
+    "se_mediums": [
+     "Hindi",
+     "English"
+    ],
+    "board": "CBSE",
+    "gradeLevel": [
+     "Class 6"
+    ],
+    "subject": [
+     "English"
+    ],
+    "medium": [
+     "Hindi",
+     "English"
+    ],
+    "license": "CC BY-SA 4.0",
+    "licenseDetails": {
+     "name": "CC BY-SA 4.0",
+     "url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode",
+     "description": "For details see below:"
+    },
+    "copyright": "NCERT",
+    "organisation": [
+     "CBSE"
+    ],
+    "orgDetails": {
+     "email": null,
+     "orgName": "CBSE"
+    },
+    "downloadUrl": "https://files.odev.oci.diksha.gov.in/ntp-content-production/content/do_3131034750789222401965/new-a-pact-with-the-sun_1718858745043_do_3131034750789222401965_39_SPINE.ecar",
+    "size": 1445977,
+    "pkgVersion": 39,
+    "lastPublishedOn": "2024-06-20T04:45:44.900+0000",
+    "leafNodesCount": 97,
+    "channel": "01241974041332940818",
+    "framework": "ekstep_ncert_k-12"
+   },
+   {
+    "identifier": "do_31310347545794150411449",
+    "name": "(NEW) Accountancy - I - Not for Profit Organisation & Parternship Accounts",
+    "description": "(NEW) Accountancy - I - Not for Profit Organisation & Parternship Accounts",
+    "mimeType": "application/vnd.ekstep.content-collection",
+    "primaryCategory": "Digital Textbook",
+    "contentType": "TextBook",
+    "objectType": "Content",
+    "appIcon": "https://files.odev.oci.diksha.gov.in/ntp-content-production/collection/do_31310347545794150411449/artifact/leac1cc.thumb.thumb.thumb.jpg",
+    "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31307361004425216012890/artifact/leac1cc.thumb.jpg",
+    "se_boards": [
+     "CBSE"
+    ],
+    "se_gradeLevels": [
+     "Class 12"
+    ],
+    "se_subjects": [
+     "Accountancy"
+    ],
+    "se_mediums": [
+     "English"
+    ],
+    "board": "CBSE",
+    "gradeLevel": [
+     "Class 12"
+    ],
+    "subject": [
+     "Accountancy"
+    ],
+    "medium": [
+     "English"
+    ],
+    "license": "CC BY-SA 4.0",
+    "licenseDetails": {
+     "name": "CC BY-SA 4.0",
+     "url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode",
+     "description": "For details see below:"
+    },
+    "organisation": [
+     "CBSE"
+    ],
+    "orgDetails": {
+     "email": null,
+     "orgName": "CBSE"
+    },
+    "downloadUrl": "https://files.odev.oci.diksha.gov.in/ntp-content-production/content/do_31310347545794150411449/new-accountancy-i-not-for-profit-organisation-parternship-accounts_1763100470163_do_31310347545794150411449_38_SPINE.ecar",
+    "size": 363627,
+    "pkgVersion": 38,
+    "lastPublishedOn": "2025-11-14T06:07:50.033+0000",
+    "leafNodesCount": 37,
+    "channel": "01241974041332940818",
+    "framework": "ekstep_ncert_k-12"
+   }
+  ],
+  "facets": [
+   {
+    "values": [
+     {
+      "name": "english",
+      "count": 293
+     },
+     {
+      "name": "hindi",
+      "count": 61
+     }
+    ],
+    "name": "se_mediums"
+   },
+   {
+    "values": [
+     {
+      "name": "cbse",
+      "count": 293
+     }
+    ],
+    "name": "se_boards"
+   },
+   {
+    "values": [
+     {
+      "name": "digital textbook",
+      "count": 293
+     }
+    ],
+    "name": "primaryCategory"
+   },
+   {
+    "values": [
+     {
+      "name": "textbook",
+      "count": 180
+     },
+     {
+      "name": "cct",
+      "count": 14
+     }
+    ],
+    "name": "additionalCategories"
+   },
+   {
+    "values": [
+     {
+      "name": "class 9",
+      "count": 39
+     },
+     {
+      "name": "class 8",
+      "count": 32
+     },
+     {
+      "name": "class 10",
+      "count": 53
+     },
+     {
+      "name": "class 1",
+      "count": 7
+     },
+     {
+      "name": "class 3",
+      "count": 7
+     },
+     {
+      "name": "class 2",
+      "count": 7
+     },
+     {
+      "name": "class 11",
+      "count": 37
+     },
+     {
+      "name": "class 5",
+      "count": 9
+     },
+     {
+      "name": "class 12",
+      "count": 54
+     },
+     {
+      "name": "class 4",
+      "count": 8
+     },
+     {
+      "name": "class 7",
+      "count": 30
+     },
+     {
+      "name": "class 6",
+      "count": 29
+     }
+    ],
+    "name": "se_gradeLevels"
+   },
+   {
+    "values": [
+     {
+      "name": "fine arts",
+      "count": 1
+     },
+     {
+      "name": "mathematics",
+      "count": 40
+     },
+     {
+      "name": "sociology",
+      "count": 4
+     },
+     {
+      "name": "heritage crafts",
+      "count": 2
+     },
+     {
+      "name": "psychology",
+      "count": 8
+     },
+     {
+      "name": "computer science",
+      "count": 4
+     },
+     {
+      "name": "geography",
+      "count": 19
+     },
+     {
+      "name": "political science/civics",
+      "count": 1
+     },
+     {
+      "name": "physics",
+      "count": 6
+     },
+     {
+      "name": "english",
+      "count": 42
+     },
+     {
+      "name": "ict",
+      "count": 1
+     },
+     {
+      "name": "environmental studies",
+      "count": 12
+     },
+     {
+      "name": "health and physical education",
+      "count": 1
+     },
+     {
+      "name": "chemistry",
+      "count": 4
+     },
+     {
+      "name": "biology",
+      "count": 4
+     },
+     {
+      "name": "cbse training",
+      "count": 4
+     },
+     {
+      "name": "graphic design",
+      "count": 1
+     },
+     {
+      "name": "business studies",
+      "count": 4
+     },
+     {
+      "name": "history",
+      "count": 26
+     },
+     {
+      "name": "political science",
+      "count": 18
+     },
+     {
+      "name": "home science",
+      "count": 4
+     },
+     {
+      "name": "economics",
+      "count": 18
+     },
+     {
+      "name": "graphics design",
+      "count": 1
+     },
+     {
+      "name": "accountancy",
+      "count": 5
+     },
+     {
+      "name": "science",
+      "count": 39
+     },
+     {
+      "name": "hindi",
+      "count": 35
+     },
+     {
+      "name": "statistics",
+      "count": 1
+     }
+    ],
+    "name": "se_subjects"
+   }
+  ]
+ }
+}

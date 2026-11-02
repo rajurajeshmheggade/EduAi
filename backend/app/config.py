@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # If DATABASE_URL is empty, an embedded PostgreSQL+pgvector (pgserver) is started for local dev.
     database_url: str = ""
     embedded_pg_dir: str = str(ROOT / ".data" / "pg")
+    # Admissions (row-level security) connection: login role `admission_login`, which may only become
+    # `admission_app`. Empty = same server/database as DATABASE_URL with user admission_login (local trust auth only).
+    admission_database_url: str = ""
 
     # --- Auth ---
     jwt_secret: str = "dev-only-change-me-please-use-key-vault-in-prod-0123456789"
@@ -69,6 +72,32 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
     openai_whisper_model: str = "whisper-1"
 
+    # --- AI avatar tutor (explains / reads the textbook page aloud) ---
+    # Which LLM writes the page explanation: "" = follow PROVIDER_MODE. Set to azure / openai to use the AI for the
+    # tutor while the rest of the app stays in mock mode. Only textbook page text is sent, never student data.
+    ai_tutor_provider: Literal["", "mock", "azure", "openai"] = ""
+    # Admission tests (AI grading, HQ, report narrative, drafting); "" = PROVIDER_MODE.
+    admission_ai_provider: Literal["", "mock", "azure", "openai"] = ""
+    # Admin Copilot (aggregated, anonymised institution Q&A for staff); "" = PROVIDER_MODE.
+    copilot_ai_provider: Literal["", "mock", "azure", "openai"] = ""
+    # Voice: auto = Kokoro offline neural voice when its files are present (python -m scripts.download_voice),
+    # else provider TTS when PROVIDER_MODE is azure/openai, else the operating system voice (Windows SAPI / espeak-ng).
+    tts_mode: Literal["auto", "kokoro", "offline", "provider"] = "auto"
+    kokoro_dir: str = str(ROOT / ".data" / "models" / "kokoro")
+    kokoro_model: str = "kokoro-v1.0.onnx"     # full precision: ~3x faster than int8 on CPU
+    kokoro_voices: str = "voices-v1.0.bin"
+    kokoro_voice_female: str = "af_heart"
+    kokoro_voice_male: str = "am_michael"
+    kokoro_lang: str = "en-us"            # en-us or en-gb pronunciation
+    kokoro_speed: float = 0.95            # a touch slower than default: a teacher explaining, not a newsreader
+    azure_openai_tts_deployment: str = "gpt-4o-mini-tts"
+    azure_openai_tts_api_version: str = "2025-03-01-preview"
+    openai_tts_model: str = "gpt-4o-mini-tts"
+    tts_voice_male: str = "onyx"
+    tts_voice_female: str = "nova"
+    tts_segment_chars: int = 260         # sentences are grouped into segments of about this many characters
+    read_aloud_prewarm: bool = True      # voice the rest of the page + prepare the next page in the background
+
     # --- AI evaluation (answer scripts) ---
     eval_ocr_dpi: int = 300            # FRD: pages rendered at 300 DPI for vision OCR
     eval_ocr_pages_per_call: int = 6   # pages sent to the vision model per request
@@ -78,6 +107,24 @@ class Settings(BaseSettings):
 
     # --- Attendance ---
     attendance_threshold: float = 75.0  # default % below which a student is flagged (per-org override)
+
+    # --- Online test progress tracking ---
+    # % of questions answered at which an online-test attempt is flagged (student toast + teacher notification).
+    test_progress_flag_threshold: float = 80.0
+
+    # --- DIKSHA source (Digital Library) — public, anonymous APIs; see docs/DIKSHA_API_DISCOVERY.md ---
+    diksha_enabled: bool = True
+    diksha_api_base_url: str = "https://diksha.gov.in"
+    diksha_api_timeout_seconds: float = 15.0
+    diksha_request_rate_limit: float = 5.0          # outbound requests per second (per API process)
+    library_cache_ttl_seconds: int = 900            # metadata cache for search / read / hierarchy responses
+    library_metadata_refresh_hours: int = 24        # stored metadata of published items is re-read after this
+    # Supported boards exactly as DIKSHA's se_boards facet names them (case-insensitive on DIKSHA).
+    diksha_boards: str = "NCERT,CBSE,State (Karnataka)"
+    # Hosts our viewer may load DIKSHA files from (no copying, no proxying — the browser loads them directly).
+    diksha_asset_hosts: str = "obj.diksha.gov.in,files.odev.oci.diksha.gov.in"
+    # CC *NonCommercial* licences need a reviewed decision before in-app display inside a commercial LMS.
+    diksha_embed_noncommercial: bool = False
 
     # --- Session Plan content agents (Current Affairs / Video References / Images / Educational Documents) ---
     # Same sources and defaults as the Rapid "SessionAgents" section. Per agent, the first source that answers
@@ -112,6 +159,14 @@ class Settings(BaseSettings):
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def diksha_board_list(self) -> list[str]:
+        return [b.strip() for b in self.diksha_boards.split(",") if b.strip()]
+
+    @property
+    def diksha_asset_host_list(self) -> list[str]:
+        return [h.strip().lower() for h in self.diksha_asset_hosts.split(",") if h.strip()]
 
 
 @lru_cache

@@ -54,12 +54,14 @@ def test_institution_profile_modules_and_extra_admin(client):
 
     # max_students = 1 is enforced on enrolment
     client.post(f"{A}/teachers", headers=adm, json={"user_code": "ZN-T1", "full_name": "Zara T", "email": "zt@zenith.in",
-                                                    "password": "Teach3r!pass", "qualification": "M.Sc Physics"})
+                                                    "phone": "+91 9800000011", "password": "Teach3r!pass", "qualification": "M.Sc Physics"})
     client.post(f"{A}/classes", headers=adm, json={"class_code": "NEET-A", "class_name": "NEET Batch A",
                                                    "class_teacher_code": "ZN-T1", "room_number": "R-12"})
     t = _login(client, "ZN-T1", "Teach3r!pass")
-    assert client.post(f"{C}/classes/NEET-A/students", headers=t, json={"full_name": "First"}).status_code == 201
-    over = client.post(f"{C}/classes/NEET-A/students", headers=t, json={"full_name": "Second"})
+    assert client.post(f"{C}/classes/NEET-A/students", headers=t,
+                       json={"full_name": "First", "email": "first@zenith.in", "password": "Str0ngPass1"}).status_code == 201
+    over = client.post(f"{C}/classes/NEET-A/students", headers=t,
+                       json={"full_name": "Second", "email": "second@zenith.in", "password": "Str0ngPass1"})
     assert over.status_code == 403 and "limit" in over.json()["detail"].lower()
     teachers = client.get(f"{A}/teachers", headers=adm).json()["teachers"]
     assert teachers[0]["qualification"] == "M.Sc Physics"
@@ -133,6 +135,41 @@ def test_timetable_rbac_and_read_views(client, admin, teacher, student):
     assert week and all(s["class_code"] == "Grade-10-A" for s in week)
     assert {s["subject_code"] for s in week} == {"PHY101", "MATH-12"}
     assert client.get(f"{A}/timetable", headers=admin, params={"class_code": "Grade-9-B"}).json()["slots"]
+
+
+def test_timetable_online_class_needs_a_url(client, admin):
+    assert _slot(client, admin, is_online=True).status_code == 422  # no online_url
+    r = _slot(client, admin, is_online=True, online_url="https://meet.example.com/10a-physics")
+    assert r.status_code == 200, r.text
+    assert r.json()["is_online"] is True and r.json()["online_url"].startswith("https://meet")
+    client.delete(f"{A}/timetable/{r.json()['slot_id']}", headers=admin)
+
+
+def test_timetable_schedule_type_and_effective_dates(client, admin):
+    r = _slot(client, admin, schedule_type="MONTHLY", effective_from="2026-01-01", effective_to="2026-03-31")
+    assert r.status_code == 200, r.text
+    assert r.json()["schedule_type"] == "MONTHLY"
+    assert r.json()["effective_from"] == "2026-01-01" and r.json()["effective_to"] == "2026-03-31"
+    assert _slot(client, admin, effective_from="2026-03-31", effective_to="2026-01-01").status_code == 422
+    client.delete(f"{A}/timetable/{r.json()['slot_id']}", headers=admin)
+
+
+def test_timetable_draft_hides_class_from_my_timetable(client, admin, teacher, student):
+    # Grade-10-A starts PUBLISHED (default); flipping to DRAFT hides it from teacher/student reads but not admin's.
+    classes = {c["class_code"]: c for c in client.get(f"{A}/classes", headers=admin).json()["classes"]}
+    assert classes["Grade-10-A"]["timetable_status"] == "PUBLISHED"
+    r = client.patch(f"{A}/classes/Grade-10-A/timetable-status", headers=admin, json={"status": "DRAFT"})
+    assert r.status_code == 200 and r.json()["timetable_status"] == "DRAFT"
+    try:
+        week = client.get(f"{C}/my-timetable", headers=student).json()["slots"]
+        assert week == []  # the student's own class is now in draft
+        mine = client.get(f"{C}/my-timetable", headers=teacher).json()["slots"]
+        assert all(s["class_code"] != "Grade-10-A" for s in mine)  # teacher's other classes still show
+        admin_view = client.get(f"{A}/timetable", headers=admin, params={"class_code": "Grade-10-A"}).json()["slots"]
+        assert admin_view  # admin always sees everything regardless of publish status
+    finally:
+        back = client.patch(f"{A}/classes/Grade-10-A/timetable-status", headers=admin, json={"status": "PUBLISHED"})
+        assert back.status_code == 200 and back.json()["timetable_status"] == "PUBLISHED"
 
 
 def test_timetabled_substitute_can_mark_attendance(client, admin):

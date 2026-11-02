@@ -1,0 +1,133 @@
+{
+ "id": "api.course.hierarchy",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:36:08.496Z",
+ "params": {
+  "resmsgid": "335cc300-d142-11f1-b552-e1bc248a62cb",
+  "msgid": "335bffb0-d142-11f1-bac7-ab98a8c35ada",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_314307573126103040112510",
+   "name": "2025-26 Marusinchana_8_English SAB",
+   "description": "Enter description for TextBook",
+   "mimeType": "application/vnd.ekstep.content-collection",
+   "primaryCategory": "Digital Textbook",
+   "contentType": "TextBook",
+   "objectType": "Content",
+   "appIcon": "",
+   "se_boards": [
+    "State (Karnataka)"
+   ],
+   "se_gradeLevels": [
+    "Class 8"
+   ],
+   "se_subjects": [
+    "English"
+   ],
+   "se_mediums": [
+    "English",
+    "Kannada"
+   ],
+   "board": "State (Karnataka)",
+   "gradeLevel": [
+    "Class 8"
+   ],
+   "subject": [
+    "English"
+   ],
+   "medium": [
+    "English",
+    "Kannada"
+   ],
+   "license": "CC BY 4.0",
+   "author": "econtent Diksha",
+   "creator": "econtent Diksha",
+   "attributions": [],
+   "copyright": "ka",
+   "copyrightYear": 2027,
+   "organisation": [
+    "Karnataka"
+   ],
+   "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314307573126103040112510/2025-26-marusinchana_8_english-sab_1756805223196_do_314307573126103040112510_1_SPINE.ecar",
+   "size": 14054,
+   "pkgVersion": 1,
+   "lastPublishedOn": "2025-09-02T09:27:03.124+0000",
+   "leafNodesCount": 0,
+   "depth": 0,
+   "status": "Live",
+   "visibility": "Default",
+   "channel": "01248978648941363234",
+   "framework": "ka_k-12",
+   "children": [
+    {
+     "identifier": "do_314307579538276352112591",
+     "name": "1. Recite and Enjoy",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314307573126103040112510/2025-26-marusinchana_8_english-sab_1756805223196_do_314307573126103040112510_1_SPINE.ecar",
+     "pkgVersion": 1,
+     "lastPublishedOn": "2025-09-02T09:27:03.124+0000",
+     "leafNodesCount": 0,
+     "index": 1,
+     "depth": 1,
+     "parent": "do_314307573126103040112510",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": []
+    },
+    {
+     "identifier": "do_314307579538251776112575",
+     "name": "2. Listen and Narrate",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314307573126103040112510/2025-26-marusinchana_8_english-sab_1756805223196_do_314307573126103040112510_1_SPINE.ecar",
+     "pkgVersion": 1,
+     "lastPublishedOn": "2025-09-02T09:27:03.124+0000",
+     "leafNodesCount": 0,
+     "index": 2,
+     "depth": 1,
+     "parent": "do_314307573126103040112510",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": []
+    },
+    {
+     "identifier": "do_314307579538292736112599",
+     "name": "3. Follow the Instructions",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_314307573126103040112510/2025-26-marusinchana_8_english-sab_1756805223196_do_314307573126103040112510_1_SPINE.ecar",
+     "pkgVersion": 1,
+     "lastPublishedOn": "2025-09-02T09:27:03.124+0000",
+     "leafNodesCount": 0,
+     "index": 3,
+     "depth": 1,
+     "parent": "do_314307573126103040112510",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "01248978648941363234",
+     "children": []
+    }
+   ]
+  }
+ }
+}

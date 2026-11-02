@@ -4,6 +4,11 @@
 
 Runs on 127.0.0.1:5433 with trust auth (development only). Data: <repo>/.data/pg16.
 In production set DATABASE_URL to Azure Database for PostgreSQL instead.
+
+Where `pgserver` has no wheel (e.g. Linux aarch64), run PostgreSQL 16 + pgvector on the same port yourself and
+`start` just creates the database:
+
+    docker run -d --name eduai-pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1:5433:5432 pgvector/pgvector:pg16
 """
 from __future__ import annotations
 
@@ -27,6 +32,24 @@ def _bin() -> Path:
     return Path(pgserver.__file__).parent / "pginstall" / "bin"
 
 
+def _bundled() -> bool:
+    try:
+        import pgserver  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _accepting() -> bool:
+    import psycopg
+
+    try:
+        with psycopg.connect(f"postgresql://postgres@127.0.0.1:{PORT}/postgres", connect_timeout=3):
+            return True
+    except psycopg.OperationalError:
+        return False
+
+
 def _run(exe: str, *args: str, timeout: int = 90) -> subprocess.CompletedProcess:
     flags = 0
     if sys.platform == "win32":
@@ -38,10 +61,19 @@ def _run(exe: str, *args: str, timeout: int = 90) -> subprocess.CompletedProcess
 
 
 def is_running() -> bool:
+    if not _bundled():
+        return _accepting()
     return DATA.exists() and _run("pg_ctl", "-D", str(DATA), "status", timeout=20).returncode == 0
 
 
 def start() -> str:
+    if not _bundled():
+        if not _accepting():
+            raise RuntimeError(
+                f"pgserver is not installed and nothing accepts connections on 127.0.0.1:{PORT}; "
+                "start PostgreSQL 16 + pgvector there (see the docker command in app/devdb.py) or set DATABASE_URL"
+            )
+        return _ensure_db()
     LOG.parent.mkdir(parents=True, exist_ok=True)
     if not (DATA / "PG_VERSION").exists():
         r = _run("initdb", "-D", str(DATA), "-U", "postgres", "--auth=trust", "-E", "UTF8", "--locale=C")
@@ -51,6 +83,10 @@ def start() -> str:
         r = _run("pg_ctl", "-D", str(DATA), "-o", f"-p {PORT} -h 127.0.0.1", "-l", str(LOG), "-w", "-t", "60", "start")
         if r.returncode != 0:
             raise RuntimeError(f"pg_ctl start failed; see {LOG}")
+    return _ensure_db()
+
+
+def _ensure_db() -> str:
     import psycopg
 
     for _ in range(20):
@@ -65,7 +101,7 @@ def start() -> str:
 
 
 def stop() -> None:
-    if DATA.exists():
+    if _bundled() and DATA.exists():
         _run("pg_ctl", "-D", str(DATA), "-m", "fast", "-w", "stop")
 
 

@@ -37,6 +37,45 @@ def get_embedder() -> EmbeddingProvider:
 
 
 @lru_cache
+def get_tutor_llm() -> LLMProvider:
+    """LLM that writes the AI avatar tutor's page explanations (AI_TUTOR_PROVIDER, else PROVIDER_MODE)."""
+    mode = get_settings().ai_tutor_provider or get_settings().provider_mode
+    if mode in ("azure", "openai"):
+        from .openai_compat import OpenAICompatLLM
+
+        return OpenAICompatLLM(mode)
+    from .mock import MockLLM
+
+    return MockLLM()
+
+
+@lru_cache
+def get_admission_llm() -> LLMProvider:
+    """LLM for admission tests: grading, HQ, report narrative, drafting (ADMISSION_AI_PROVIDER, else PROVIDER_MODE)."""
+    mode = get_settings().admission_ai_provider or get_settings().provider_mode
+    if mode in ("azure", "openai"):
+        from .openai_compat import OpenAICompatLLM
+
+        return OpenAICompatLLM(mode)
+    from .mock import MockLLM
+
+    return MockLLM()
+
+
+@lru_cache
+def get_copilot_llm() -> LLMProvider:
+    """LLM for the admin Copilot (COPILOT_AI_PROVIDER, else PROVIDER_MODE)."""
+    mode = get_settings().copilot_ai_provider or get_settings().provider_mode
+    if mode in ("azure", "openai"):
+        from .openai_compat import OpenAICompatLLM
+
+        return OpenAICompatLLM(mode)
+    from .mock import MockLLM
+
+    return MockLLM()
+
+
+@lru_cache
 def get_llm() -> LLMProvider:
     if get_settings().provider_mode in ("azure", "openai"):
         from .openai_compat import OpenAICompatLLM

@@ -2,6 +2,8 @@
 import { toast } from '@/components/ui/toast'
 import { cleanAiText } from '@/lib/lessonPlan/normalize'
 import { aiErrorMessage, lessonPlanService } from '@/services/lessonPlanService'
+import { nlpCatalogService } from '@/services/nlpCatalogService'
+import type { NlpSelection } from '@/components/nlp/NlpChapterPicker'
 import type { CourseOutcome } from '@/types/lessonPlan'
 import {
   MAX_UPLOAD_BYTES, UPLOAD_EXT, defaultAssessRow, firstStr, freshPhases, isRec, nextId, parseCustom, splitDuration, strList, uniq,
@@ -30,19 +32,39 @@ export function planActions(s: CreatorStore) {
     s.setFile(f)
   }
 
+  const clearNcert = () => { s.setNcertText(null); s.setNcertChapter(null) }
+  // The chapter library (backend/nlp/, Class III-XII + JEE -> Subject -> Chapter) is the primary source for
+  // Class / Subject / Chapter here — selecting a chapter sets the plan's class/subject/chapter AND its
+  // grounding text in one step. The server accepts these codes even though they aren't one of the teacher's
+  // own room assignments (lessonplan.py's _guard has a chapter-library exception for exactly this).
+  const pickNcertSelection = async (sel: NlpSelection | null) => {
+    if (!sel) { clearNcert(); return }
+    s.selectClass(sel.classLabel)
+    s.selectSubject(sel.subject)
+    s.typeChapter(sel.chapter)
+    try {
+      const text = await nlpCatalogService.chapterText(sel.classLabel, sel.subject, sel.chapter)
+      s.setNcertText(text)
+      s.setNcertChapter(sel.chapter)
+    } catch (e) { toast(`✗ ${aiErrorMessage(e, 'Could not load that chapter')}`) }
+  }
+
   const generateCOs = async () => {
     if (!s.setupOk) { toast('Select board, class and subject first'); return }
     if (!s.chapterOk) { toast('Select a chapter/unit first'); return }
     if (!s.durationOk) { toast('Add a time duration before generating COs'); return }
     if (busy) return
     setBusy('co')
-    // An uploaded document grounds the plan: its text is the reference for the Course Outcomes, which the
-    // rest of the plan is built on.
+    // Grounding for the Course Outcomes, in priority order: an uploaded document, then a picked chapter
+    // from the chapter library (backend/nlp/), then (if a textbook chapter was linked) the backend's own
+    // indexed-textbook fallback.
     let referenceText: string | undefined
     if (s.file) {
       try { toast('Reading your document…'); referenceText = await lessonPlanService.extractText(s.file) }
       catch (e) { toast(`✗ ${aiErrorMessage(e, 'Could not read the uploaded file')}`); setBusy(''); return }
       if (!referenceText?.trim()) { toast('No readable text was found in the uploaded file'); setBusy(''); return }
+    } else if (s.ncertText) {
+      referenceText = s.ncertText
     }
     toast('Generating course outcomes…')
     try {
@@ -249,7 +271,7 @@ export function planActions(s: CreatorStore) {
   }
 
   return {
-    pickFile, clearFile, generateCOs,
+    pickFile, clearFile, pickNcertSelection, clearNcert, generateCOs,
     startEditObj, saveEditObj, deleteObj, undoDelete, regenObj, doRegenObj,
     updateCustomRow, saveCustomRow, addCustomRow, removeCustomRow, continueObjectives,
     toggleBloom, setBloomCount, toggleAttitude, removeAttitude, removeSkill, removeComp,

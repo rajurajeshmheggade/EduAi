@@ -1,4 +1,5 @@
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useId, useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const field =
@@ -23,3 +24,27 @@ Select.displayName = 'Select'
 export function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-300">{children}</label>
 }
+
+/**
+ * Password field with a show/hide toggle (eye icon), reused everywhere a password is entered: login, change /
+ * reset password, teacher and student creation. Never shown by default; toggling never clears or mutates the
+ * entered value, and the value itself is never logged or persisted anywhere by this component.
+ */
+export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>>(
+  ({ className, id, ...p }, ref) => {
+    const [show, setShow] = useState(false)
+    const autoId = useId()
+    const inputId = id ?? autoId
+    return (
+      <div className="relative">
+        <input ref={ref} id={inputId} type={show ? 'text' : 'password'} className={cn(field, 'h-10 pr-10', className)} {...p} />
+        <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}
+          aria-controls={inputId} tabIndex={0}
+          className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-ink-500 hover:bg-ink-800 hover:text-fg">
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    )
+  },
+)
+PasswordInput.displayName = 'PasswordInput'

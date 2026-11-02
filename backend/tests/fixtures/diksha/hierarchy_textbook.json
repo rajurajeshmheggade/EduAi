@@ -1,0 +1,950 @@
+{
+ "id": "api.course.hierarchy",
+ "ver": "1.0",
+ "ts": "2026-10-26T13:22:10.806Z",
+ "params": {
+  "resmsgid": "400f6960-d140-11f1-b851-f70ca326020f",
+  "msgid": "400de2c0-d140-11f1-91cf-d7a248e3db75",
+  "status": "successful",
+  "err": null,
+  "errmsg": null
+ },
+ "responseCode": "OK",
+ "result": {
+  "content": {
+   "identifier": "do_31310347535505817611436",
+   "name": "(NEW) Accountancy Financial Accounting - I",
+   "description": "(NEW) Accountancy Financial Accounting - I",
+   "mimeType": "application/vnd.ekstep.content-collection",
+   "primaryCategory": "Digital Textbook",
+   "contentType": "TextBook",
+   "objectType": "Content",
+   "appIcon": "https://obj.diksha.gov.in/ntp-content-production/collection/do_31310347535505817611436/artifact/keac1cc.thumb.thumb.thumb.jpg",
+   "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31307361012977664013161/artifact/keac1cc.thumb.jpg",
+   "se_boards": [
+    "CBSE"
+   ],
+   "se_gradeLevels": [
+    "Class 11"
+   ],
+   "se_subjects": [
+    "Accountancy"
+   ],
+   "se_mediums": [
+    "English"
+   ],
+   "board": "CBSE",
+   "gradeLevel": [
+    "Class 11"
+   ],
+   "subject": [
+    "Accountancy"
+   ],
+   "medium": [
+    "English"
+   ],
+   "license": "CC BY-SA 4.0",
+   "organisation": [
+    "CBSE"
+   ],
+   "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+   "size": 790903,
+   "pkgVersion": 44,
+   "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+   "leafNodesCount": 71,
+   "depth": 0,
+   "status": "Live",
+   "visibility": "Default",
+   "channel": "01241974041332940818",
+   "framework": "ekstep_ncert_k-12",
+   "children": [
+    {
+     "identifier": "do_31307361013093990414867",
+     "name": "1-Introduction to Accounting",
+     "description": "1-Introduction to Accounting",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+     "pkgVersion": 44,
+     "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+     "leafNodesCount": 11,
+     "index": 1,
+     "depth": 1,
+     "parent": "do_31307361012977664013161",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "0125196274181898243",
+     "framework": "ncert_k-12",
+     "children": [
+      {
+       "identifier": "do_31307361013091532814859",
+       "name": "e-Textbook",
+       "description": "e-Textbook",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 1,
+       "index": 1,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_431359533151554764811286",
+         "name": "1- Introduction to Accounting",
+         "description": "This resource is based on Introduction to Accounting.",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/artifact/keac1cc.thumb.jpg",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/artifact/keac1cc.jpg",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "ALOK KUMAR",
+         "attributions": [
+          "NCERT"
+         ],
+         "copyright": "NCERT",
+         "copyrightYear": 2024,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151554764811286/keac1011.pdf",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151554764811286/1-introduction-to-accounting_1726831944537_do_431359533151554764811286_4.ecar",
+         "size": 2142987,
+         "pkgVersion": 4,
+         "lastPublishedOn": "2024-09-20T11:32:24.450+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013091532814859",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_314192911616999424119978",
+       "name": "Text Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 1,
+       "index": 2,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "children": [
+        {
+         "identifier": "do_313068385239523328110421",
+         "name": "Reading Materials on Chapter 1",
+         "mimeType": "application/pdf",
+         "primaryCategory": "Learning Resource",
+         "contentType": "ExplanationReadingMaterial",
+         "objectType": "Content",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY 4.0",
+         "creator": "Ramesh Agarwal",
+         "copyright": "Ramesh Agarwal 2020",
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068385239523328110421/artifact/accountancy-class-xi-chapter-1_1595261870114.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068385239523328110421/artifact/accountancy-class-xi-chapter-1_1595261870114.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068385239523328110421/artifact/accountancy-class-xi-chapter-1_1595261870114.pdf",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068385239523328110421/reading-materials-on-chapter-1_1721707834397_do_313068385239523328110421_3.ecar",
+         "size": 79068,
+         "pkgVersion": 3,
+         "lastPublishedOn": "2024-07-23T04:10:34.397+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_314192911616999424119978",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_31307361013083340814837",
+       "name": "Video Content",
+       "description": "Video Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 7,
+       "index": 3,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_31310415723157913612322",
+         "name": "Double Entry System",
+         "description": "Accountancy",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "ExplanationResource",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310415723157913612322/artifact/206ee204-bf15-495c-97a4-1fc462291dbf.thumb.png",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308581324555059213642/artifact/206ee204-bf15-495c-97a4-1fc462291dbf.png",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-SA 4.0",
+         "author": "NIOS",
+         "creator": "Creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2020,
+         "organisation": [
+          "NCERT"
+         ],
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31310415723157913612322/ch27secondaryday2ch27wk01secondarycourse224lec1.mp4.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya66yggbrqkhtgxn2nerfgsyas2cmv7z7qxtqzuuxqwe3q/master.m3u8",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31310415723157913612322/ch27secondaryday2ch27wk01secondarycourse224lec1.mp4.mp4",
+         "downloadUrl": "",
+         "pkgVersion": 2,
+         "lastPublishedOn": "2023-03-15T10:03:23.180+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013083340814837",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        },
+        {
+         "identifier": "do_31308507584318668811470",
+         "name": "Introduction to Accounting EP 1",
+         "description": "Class 11, Ch. 1. Introduction to Accounting",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "ExplanationResource",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308507584318668811470/artifact/tv-icon.thumb.thumb.thumb.png",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308507584318668811470/artifact/tv-icon.thumb.png",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-SA 4.0",
+         "author": "CIET, NCERT",
+         "creator": "Creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2020,
+         "organisation": [
+          "NCERT"
+         ],
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31308507584318668811470/video-1-accountancy-xi-ch1-ep1-b1.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhya6tfegmwwpg5mtb7bqfrhg5s4rml4mhholqf475s57wpq/master.m3u8",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31308507584318668811470/video-1-accountancy-xi-ch1-ep1-b1.mp4",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308507584318668811470/introduction-to-accounting-ep-1_1714103678502_do_31308507584318668811470_4.ecar",
+         "size": 17427,
+         "pkgVersion": 4,
+         "lastPublishedOn": "2024-04-26T03:54:38.320+0000",
+         "index": 2,
+         "depth": 3,
+         "parent": "do_31307361013083340814837",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_314192911617007616119982",
+       "name": "Audio Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 0,
+       "index": 4,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "children": []
+      },
+      {
+       "identifier": "do_31307361013088256014851",
+       "name": "Practice Set",
+       "description": "Practice Set",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 2,
+       "index": 5,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_313068382451924992110420",
+         "name": "Short Answer Type Questions on basic terms of accountancy",
+         "mimeType": "application/vnd.ekstep.ecml-archive",
+         "primaryCategory": "Practice Question Set",
+         "contentType": "PracticeQuestionSet",
+         "objectType": "Content",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY 4.0",
+         "author": "Ramesh Agarwal",
+         "creator": "Ramesh Agarwal",
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068382451924992110420/artifact/1721707994392_do_313068382451924992110420.zip",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_313068382451924992110420-latest",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_313068382451924992110420-latest",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068382451924992110420/short-answer-type-questions-on-basic-terms-of-accountancy_1721708000429_do_313068382451924992110420_3.ecar",
+         "size": 347774,
+         "pkgVersion": 3,
+         "lastPublishedOn": "2024-07-23T04:13:16.674+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013088256014851",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        },
+        {
+         "identifier": "do_31307750920119091217833",
+         "name": "INTRODUCTION TO ACCOUNTING",
+         "mimeType": "application/vnd.ekstep.ecml-archive",
+         "primaryCategory": "Practice Question Set",
+         "contentType": "PracticeQuestionSet",
+         "objectType": "Content",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY 4.0",
+         "author": "DDN ARVIND NATH DAS",
+         "creator": "DDN ARVIND NATH DAS",
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31307750920119091217833/artifact/1721707428978_do_31307750920119091217833.zip",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_31307750920119091217833-latest",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_31307750920119091217833-latest",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31307750920119091217833/introduction-to-accounting_1721707434150_do_31307750920119091217833_3.ecar",
+         "size": 348133,
+         "pkgVersion": 3,
+         "lastPublishedOn": "2024-07-23T04:03:50.924+0000",
+         "index": 2,
+         "depth": 3,
+         "parent": "do_31307361013088256014851",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_31307361013089075214853",
+       "name": "Teacher Resource",
+       "description": "Teacher Resource",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 0,
+       "index": 6,
+       "depth": 2,
+       "parent": "do_31307361013093990414867",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": []
+      }
+     ]
+    },
+    {
+     "identifier": "do_31307361013093171214865",
+     "name": "2-Theory Base of Accounting",
+     "description": "2-Theory Base of Accounting",
+     "mimeType": "application/vnd.ekstep.content-collection",
+     "primaryCategory": "Textbook Unit",
+     "contentType": "TextBookUnit",
+     "objectType": "Content",
+     "license": "CC BY 4.0",
+     "attributions": [],
+     "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+     "pkgVersion": 44,
+     "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+     "leafNodesCount": 10,
+     "index": 2,
+     "depth": 1,
+     "parent": "do_31307361012977664013161",
+     "status": "Live",
+     "visibility": "Parent",
+     "channel": "0125196274181898243",
+     "framework": "ncert_k-12",
+     "children": [
+      {
+       "identifier": "do_31307361013111193614921",
+       "name": "e-Textbook",
+       "description": "e-Textbook",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 1,
+       "index": 1,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_431359533151642419211287",
+         "name": "2- Theory Base of Accounting",
+         "description": "This resource is based on Theory Base of Accounting.",
+         "mimeType": "application/pdf",
+         "primaryCategory": "eTextbook",
+         "contentType": "eTextBook",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151642419211287/artifact/keac1cc.thumb.jpg",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151642419211287/artifact/keac1cc.jpg",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-NC-ND 4.0",
+         "author": "NCERT",
+         "creator": "ALOK KUMAR",
+         "attributions": [
+          "NCERT"
+         ],
+         "copyright": "NCERT",
+         "copyrightYear": 2024,
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151642419211287/keac1021.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151642419211287/keac1021.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_431359533151642419211287/keac1021.pdf",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_431359533151642419211287/2-theory-base-of-accounting_1726831977896_do_431359533151642419211287_4.ecar",
+         "size": 1838150,
+         "pkgVersion": 4,
+         "lastPublishedOn": "2024-09-20T11:32:57.808+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013111193614921",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_314192911616974848119966",
+       "name": "Text Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 0,
+       "index": 2,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "children": []
+      },
+      {
+       "identifier": "do_31307361013098905614883",
+       "name": "Video Content",
+       "description": "Video Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 7,
+       "index": 3,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_313080212004364288110589",
+         "name": "Accounting Concept & Conventions",
+         "description": "This video introduces and elobrate  concepts and convention used in record keeping of accounts",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "ExplanationResource",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_313080212004364288110589/artifact/tv-icon.thumb.png",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_313080215149772800113963/artifact/tv-icon.png",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-SA 4.0",
+         "author": "NIOS",
+         "creator": "Creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2020,
+         "organisation": [
+          "NCERT"
+         ],
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_313080212004364288110589/ch27secondaryday8ch27wk02secondarycourse224lec5.mp4.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyasvz3bbp2dpveflp4hpzu3dqb2tmdlltkvps4r7etdb4q/master.m3u8",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_313080212004364288110589/ch27secondaryday8ch27wk02secondarycourse224lec5.mp4.mp4",
+         "downloadUrl": "",
+         "pkgVersion": 2,
+         "lastPublishedOn": "2023-03-14T18:39:36.172+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013098905614883",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        },
+        {
+         "identifier": "do_31308788993549926412276",
+         "name": "Ch. 2. Theory Base of Accounting II",
+         "description": "Class 11, Ch. 2. Theory Base of Accounting II",
+         "mimeType": "video/mp4",
+         "primaryCategory": "Explanation Content",
+         "contentType": "ExplanationResource",
+         "objectType": "Content",
+         "appIcon": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308788993549926412276/artifact/206ee204-bf15-495c-97a4-1fc462291dbf.thumb.png",
+         "posterImage": "https://obj.diksha.gov.in/ntp-content-production/content/do_31308581324555059213642/artifact/206ee204-bf15-495c-97a4-1fc462291dbf.png",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY-SA 4.0",
+         "author": "CIET, NCERT",
+         "creator": "Creator",
+         "copyright": "NCERT",
+         "copyrightYear": 2020,
+         "organisation": [
+          "NCERT"
+         ],
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31308788993549926412276/video-4-accountancy-xi-ch2-ep2-b1.mp4",
+         "streamingUrl": "https://mibm2gd4gvfa5jjuaizursbvvi.apigateway.ap-mumbai-1.oci.customer-oci.com/ocid1.mediaasset.oc1.ap-mumbai-1.amaaaaaadut4dhyaxdan4c54upwuvfx5cn7h4fbpqrn2ly3du7ydmpca6ooa/master.m3u8",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/assets/do_31308788993549926412276/video-4-accountancy-xi-ch2-ep2-b1.mp4",
+         "downloadUrl": "",
+         "pkgVersion": 2,
+         "lastPublishedOn": "2023-03-15T18:15:00.254+0000",
+         "index": 2,
+         "depth": 3,
+         "parent": "do_31307361013098905614883",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_314192911616974848119968",
+       "name": "Audio Content",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 0,
+       "index": 4,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "children": []
+      },
+      {
+       "identifier": "do_31307361013107097614909",
+       "name": "Practice Set",
+       "description": "Practice Set",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 1,
+       "index": 5,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_313068397157711872110958",
+         "name": "Multiple Choice Questions",
+         "mimeType": "application/vnd.ekstep.ecml-archive",
+         "primaryCategory": "Practice Question Set",
+         "contentType": "PracticeQuestionSet",
+         "objectType": "Content",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY 4.0",
+         "author": "Dr. Sankar Prasad Dutta",
+         "creator": "Dr. Sankar Prasad Dutta",
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068397157711872110958/artifact/1721659232241_do_313068397157711872110958.zip",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_313068397157711872110958-latest",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/ecml/do_313068397157711872110958-latest",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_313068397157711872110958/multiple-choice-questions_1721659238311_do_313068397157711872110958_3.ecar",
+         "size": 345920,
+         "pkgVersion": 3,
+         "lastPublishedOn": "2024-07-22T14:40:34.450+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013107097614909",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      },
+      {
+       "identifier": "do_31307361013083340814839",
+       "name": "Teacher Resource",
+       "description": "Teacher Resource",
+       "mimeType": "application/vnd.ekstep.content-collection",
+       "primaryCategory": "Textbook Unit",
+       "contentType": "TextBookUnit",
+       "objectType": "Content",
+       "license": "CC BY 4.0",
+       "attributions": [],
+       "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31310347535505817611436/new-accountancy-financial-accounting-i_1754633665192_do_31310347535505817611436_44_SPINE.ecar",
+       "pkgVersion": 44,
+       "lastPublishedOn": "2025-08-08T06:14:25.064+0000",
+       "leafNodesCount": 1,
+       "index": 6,
+       "depth": 2,
+       "parent": "do_31307361013093171214865",
+       "status": "Live",
+       "visibility": "Parent",
+       "channel": "0125196274181898243",
+       "framework": "ncert_k-12",
+       "children": [
+        {
+         "identifier": "do_31306839539979059218793",
+         "name": "Theory Base of Accounting",
+         "mimeType": "application/pdf",
+         "primaryCategory": "Teacher Resource",
+         "contentType": "LessonPlanResource",
+         "objectType": "Content",
+         "se_boards": [
+          "NCERT"
+         ],
+         "se_gradeLevels": [
+          "Class 11"
+         ],
+         "se_subjects": [
+          "Accountancy"
+         ],
+         "se_mediums": [
+          "English"
+         ],
+         "board": "NCERT",
+         "gradeLevel": [
+          "Class 11"
+         ],
+         "subject": [
+          "Accountancy"
+         ],
+         "medium": [
+          "English"
+         ],
+         "license": "CC BY 4.0",
+         "creator": "Meenu Bhatia",
+         "copyright": "Sadhu Vaswani International School for Girls, New Delhi(2020)",
+         "artifactUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31306839539979059218793/artifact/chap-2_1595263110373.pdf",
+         "streamingUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31306839539979059218793/artifact/chap-2_1595263110373.pdf",
+         "previewUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31306839539979059218793/artifact/chap-2_1595263110373.pdf",
+         "downloadUrl": "https://obj.diksha.gov.in/ntp-content-production/content/do_31306839539979059218793/theory-base-of-accounting_1721708023325_do_31306839539979059218793_3.ecar",
+         "size": 313361,
+         "pkgVersion": 3,
+         "lastPublishedOn": "2024-07-23T04:13:43.325+0000",
+         "index": 1,
+         "depth": 3,
+         "parent": "do_31307361013083340814839",
+         "status": "Live",
+         "visibility": "Default",
+         "channel": "0125196274181898243",
+         "framework": "ncert_k-12"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

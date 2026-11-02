@@ -153,3 +153,29 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Indian scripts on translated screens: Inter keeps Latin text; Noto (loaded on demand by src/i18n) covers the script. */
+:lang(hi) { font-family: "Inter", "Noto Sans Devanagari", "Nirmala UI", sans-serif; }
+:lang(kn) { font-family: "Inter", "Noto Sans Kannada", "Nirmala UI", sans-serif; }
+:lang(ta) { font-family: "Inter", "Noto Sans Tamil", "Nirmala UI", sans-serif; }
+:lang(hi) :is(h1, h2, h3, h4) { font-family: "Outfit", "Noto Sans Devanagari", sans-serif; }
+:lang(kn) :is(h1, h2, h3, h4) { font-family: "Outfit", "Noto Sans Kannada", sans-serif; }
+:lang(ta) :is(h1, h2, h3, h4) { font-family: "Outfit", "Noto Sans Tamil", sans-serif; }
+
+/* Admission assessment report: clean A4 print / Save as PDF (running header + page numbers). */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm 18mm;
+    @top-left { content: "Admission Assessment Report"; font: 9pt system-ui, sans-serif; color: #555; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 9pt system-ui, sans-serif; color: #555; }
+  }
+  html, body, #root { height: auto !important; overflow: visible !important; background: #fff !important; }
+  main, .h-full, .overflow-y-auto { height: auto !important; overflow: visible !important; }
+  .adm-report { max-width: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box; }
+  * { scrollbar-width: none !important; }
+  .adm-report .glass { background: #fff !important; box-shadow: none !important; backdrop-filter: none !important; border: 1px solid #dcdfe6 !important; }
+  .adm-report .print-break { break-before: page; }
+  .adm-report li, .adm-report tr { break-inside: avoid; }
+  .exam-root { display: none !important; }
+}
