@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; title?: stri
       <div role="alert" className="grid h-full min-h-40 place-items-center p-6 text-center">
         <div className="max-w-sm">
           <TriangleAlert className="mx-auto mb-2 h-8 w-8 text-warn" />
-          <p className="font-medium text-fg">{offline ? 'This page could not be loaded' : this.props.title ?? 'Something went wrong here'}</p>
+          <p className="font-medium text-fg">{this.props.title ?? (offline ? 'This page could not be loaded' : 'Something went wrong here')}</p>
           <p className="mt-1 text-sm text-ink-300">{offline ? 'Check your internet connection, then try again.' : this.state.error.message || 'Please try again.'}</p>
           <button onClick={this.retry} className="mt-3 cursor-pointer text-sm font-medium text-brand-600 hover:underline">Try again</button>
         </div>

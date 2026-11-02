@@ -16,7 +16,7 @@ const VARIANTS: [RegExp, Variant][] = [
 export function RouteFallback() {
   const { pathname } = useLocation()
   useLoadingSignal(true)
-  if (pathname.startsWith('/student/classroom/textbook')) return <PageLoader message="Opening your AI classroom…" className="min-h-[60vh]" />
+  if (pathname.startsWith('/student/classroom/textbook')) return <PageLoader message="Getting your AI classroom ready…" className="min-h-[70vh]" />
   const variant = VARIANTS.find(([re]) => re.test(pathname))?.[1] ?? 'dashboard'
   return <SkeletonPage variant={variant} className="mx-auto max-w-7xl p-4 md:p-8" />
 }

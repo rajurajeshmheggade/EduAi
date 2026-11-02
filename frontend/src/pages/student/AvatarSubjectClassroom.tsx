@@ -86,9 +86,9 @@ export default function AvatarSubjectClassroom() {
 
   if (!subject) return <Empty title="No subjects assigned" body="Ask your teacher to enrol you in a subject." />
   if (error) return <div className="mx-auto max-w-xl p-8"><ErrorState title="Couldn't load your library" message={error} onRetry={() => setReload((n) => n + 1)} /></div>
-  if (!books) return <PageLoader message="Opening your AI classroom…" detail="Finding your textbooks." />
-  if (!book) return <Empty title={`No textbook published for ${subject} yet`} body="Your teacher hasn't published a chapter for this subject. Check back soon." action={<SubjectPicker className="mx-auto mt-4 w-48" />} />
-  if (!entered) return <ClassroomLoader readiness={readiness} onSkip={enter} />
+  if (books && !book) return <Empty title={`No textbook published for ${subject} yet`} body="Your teacher hasn't published a chapter for this subject. Check back soon." action={<SubjectPicker className="mx-auto mt-4 w-48" />} />
+  // One loader from "finding your textbook" to "first page ready", so it never flickers between phases.
+  if (!books || !book || !entered) return <ClassroomLoader readiness={books ? readiness : null} onSkip={books ? enter : undefined} />
 
   return (
     <div className="flex h-full min-h-[34rem] flex-col gap-3 p-4 md:p-6 animate-fade-up">
@@ -129,14 +129,15 @@ export default function AvatarSubjectClassroom() {
 const STEP_ICON: Partial<Record<StepState, typeof Loader2>> = { running: Loader2, done: CheckCircle2, failed: CircleAlert, timeout: CircleAlert, skipped: CircleAlert }
 
 /** Entry loader: what is being prepared, with real progress (the 3D model's download counts most). */
-function ClassroomLoader({ readiness, onSkip }: { readiness: ReadinessSnapshot | null; onSkip: () => void }) {
+function ClassroomLoader({ readiness, onSkip }: { readiness: ReadinessSnapshot | null; onSkip?: () => void }) {
   const [canSkip, setCanSkip] = useState(false)
   useEffect(() => {
     const t = window.setTimeout(() => setCanSkip(true), 5000)
     return () => window.clearTimeout(t)
   }, [])
   return (
-    <PageLoader message="Getting your AI classroom ready…" detail="Your teacher's avatar, voice and the first page are being prepared."
+    <PageLoader message="Getting your AI classroom ready…"
+      detail={readiness ? "Your teacher's avatar, voice and the first page are being prepared." : 'Finding your textbook…'}
       progress={readiness?.progress ?? 0} slowAfterMs={15_000} className="min-h-[70vh]">
       <ul className="mt-4 space-y-1.5 text-left text-xs" aria-label="Classroom preparation">
         {(readiness?.steps ?? []).map((s) => {
@@ -153,7 +154,7 @@ function ClassroomLoader({ readiness, onSkip }: { readiness: ReadinessSnapshot |
           )
         })}
       </ul>
-      {canSkip && <Button size="sm" variant="ghost" className="mt-3" onClick={onSkip}>Open the classroom now</Button>}
+      {canSkip && onSkip && <Button size="sm" variant="ghost" className="mt-3" onClick={onSkip}>Open the classroom now</Button>}
     </PageLoader>
   )
 }
