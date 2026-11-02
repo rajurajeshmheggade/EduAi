@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/toast'
 import { KnowledgeBadge } from '@/components/wellness/AcademicProfile'
 import { Onboarding } from '@/components/wellness/Onboarding'
+import { LEGACY_GAME_TABS } from '@/components/wellness/games/routing'
 import { WellnessContext, celebrate, type WellnessCtx } from '@/components/wellness/WellnessContext'
 import { cn } from '@/lib/utils'
 import { errorMessage } from '@/services/apiClient'
@@ -18,7 +19,7 @@ const JournalTab = lazy(() => import('@/components/wellness/journal/JournalTab')
 const ChatTab = lazy(() => import('@/components/wellness/chat/ChatTab').then((m) => ({ default: m.ChatTab })))
 const AuraLiveTab = lazy(() => import('@/components/wellness/live/AuraLiveTab').then((m) => ({ default: m.AuraLiveTab })))
 const BreathingTab = lazy(() => import('@/components/wellness/breathing/BreathingTab').then((m) => ({ default: m.BreathingTab })))
-const StressBusterTab = lazy(() => import('@/components/wellness/stress/StressBusterTab').then((m) => ({ default: m.StressBusterTab })))
+const GameZoneTab = lazy(() => import('@/components/wellness/games/GameZoneTab').then((m) => ({ default: m.GameZoneTab })))
 const Particles = lazy(() => import('@/components/wellness/three/ThreeDimensionalParticles'))
 
 const TABS = [
@@ -27,7 +28,7 @@ const TABS = [
   { id: 'chat', label: 'Aura Chat', icon: MessageSquare },
   { id: 'aura-live', label: 'Aura Live', icon: Video },
   { id: 'breathing', label: 'Breathing', icon: Wind },
-  { id: 'stress-buster', label: 'Stress Buster', icon: Gamepad2 },
+  { id: 'games', label: 'Game Zone', icon: Gamepad2 },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -43,8 +44,10 @@ export default function Wellness() {
   const [modal, setModal] = useState<ModalState | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [params, setParams] = useSearchParams()
-  const tab: TabId = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'dashboard')
-  const setTab = (id: TabId) => setParams((p) => { const n = new URLSearchParams(p); n.set('tab', id); return n }, { replace: true })
+  // Old ?tab=stress-buster links land in the Game Zone (which opens the balloon game)
+  const rawTab = params.get('tab') ?? ''
+  const tab: TabId = Object.hasOwn(LEGACY_GAME_TABS, rawTab) ? 'games' : (TABS.find((t) => t.id === rawTab)?.id ?? 'dashboard')
+  const setTab = (id: TabId) => setParams((p) => { const n = new URLSearchParams(p); n.set('tab', id); n.delete('game'); return n }, { replace: true })
 
   const refresh = useCallback(async () => {
     try { setMe(await wellnessService.me()); setError(null) } catch (e) { setError(errorMessage(e, 'Could not load your wellness space')) }
@@ -145,7 +148,7 @@ export default function Wellness() {
               {tab === 'chat' && <ChatTab />}
               {tab === 'aura-live' && <AuraLiveTab />}
               {tab === 'breathing' && <BreathingTab />}
-              {tab === 'stress-buster' && <StressBusterTab />}
+              {tab === 'games' && <GameZoneTab />}
             </div>
           </Suspense>
 

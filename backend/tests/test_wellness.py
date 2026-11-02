@@ -159,6 +159,28 @@ def test_activity_caps_and_levels(client, student, onboarded):
     assert me["level"] >= 2 and me["levelTitle"] != "Mindful Rookie"
 
 
+def test_game_zone_completion_xp_is_validated_and_capped(client, student, onboarded):
+    """Game Zone: finishing a game earns a fixed award for a known game id only, up to a daily cap."""
+    from app import db
+    from app.services.wellness import xp
+    amount, cap = xp.XP_RULES["game_complete"]
+    assert client.get(f"{W}/meta", headers=student).json()["xpRules"]["game_complete"] == amount
+    for bad in ({"activity": "game_complete"}, {"activity": "game_complete", "details": "not-a-game"},
+                {"activity": "game_complete", "details": "stress-buster"}):    # the balloon game has its own awards
+        assert client.post(f"{W}/me/activity", json=bad, headers=student).status_code == 422
+    org = db.fetch_one("SELECT org_code FROM public.app_users WHERE user_code = 'REG2026001'")["org_code"]
+    db.execute("DELETE FROM public.wellness_xp_events WHERE org_code = %s AND student_code = 'REG2026001' "
+               "AND activity = 'game_complete'", (org,))
+    games = sorted(xp.GAME_IDS)
+    results = [client.post(f"{W}/me/activity", json={"activity": "game_complete", "details": games[i % len(games)]},
+                           headers=student).json()["xpResult"] for i in range(cap + 1)]
+    assert all(r["awarded"] == amount and not r["capped"] for r in results[:cap])
+    assert results[-1]["capped"] and results[-1]["awarded"] == 0
+    rows = db.fetch_all("SELECT details, xp FROM public.wellness_xp_events WHERE org_code = %s AND student_code = 'REG2026001' "
+                        "AND activity = 'game_complete'", (org,))
+    assert len(rows) == cap and {r["details"] for r in rows} <= xp.GAME_IDS and {r["xp"] for r in rows} == {amount}
+
+
 def test_transcribe_needs_provider_and_validates(client, student, onboarded):
     assert client.post(f"{W}/me/transcribe", content=b"RIFF", headers={**student, "Content-Type": "text/plain"}).status_code == 415
     assert client.post(f"{W}/me/transcribe", content=b"RIFF....", headers={**student, "Content-Type": "audio/wav"}).status_code == 503

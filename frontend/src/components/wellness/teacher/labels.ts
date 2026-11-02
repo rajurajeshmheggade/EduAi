@@ -8,6 +8,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   pomodoro: 'Focus sessions',
   balloon_pop: 'Stress Buster pops',
   stress_quest: 'Stress Buster quests',
+  game_complete: 'Game Zone games',
   quiz_correct: 'Quiz',
   quiz_participation: 'Quiz',
 }
