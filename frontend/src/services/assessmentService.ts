@@ -21,7 +21,7 @@ export const assessmentService = {
   async submit(id: string, answers: Record<string, string>, flagged: string[]): Promise<StudentAssessment> {
     return (await api.post<StudentAssessment>(`${B}/my/${id}/submit`, { answers, flagged })).data
   },
-  /** A light camera/mic check (see LiveCameraCheck) flagged something; only a running count is kept server-side. */
+  /** Legacy count-only flag endpoint (kept for compatibility): unified proctoring (proctoringService) now updates this count itself. */
   async proctorFlag(id: string): Promise<{ flag_count: number }> {
     return (await api.post<{ flag_count: number }>(`${B}/my/${id}/proctor-flag`)).data
   },

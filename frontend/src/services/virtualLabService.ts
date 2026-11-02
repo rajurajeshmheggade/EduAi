@@ -137,7 +137,7 @@ export interface LabAttempt extends LabWork {
   updated_at: string
   teacher_feedback: string | null
   result: LabResult | null
-  /** Running count from the light on-device camera/mic check (see LiveCameraCheck) — no detail, just a count. */
+  /** Legacy count-only flag endpoint (kept for compatibility): unified proctoring (proctoringService) now updates this count itself. */
   proctor_flag_count: number
 }
 

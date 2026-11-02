@@ -86,7 +86,6 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
   const [a, setA] = useState<StudentAssessment | null>(null)
   const [report, setReport] = useState<EvalReport | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
   const [pct, setPct] = useState<number | null>(null)
   const timer = useRef<number | undefined>(undefined)
 
@@ -110,11 +109,9 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
     return () => window.clearInterval(timer.current)
   }, [a?.my.status, load])
 
-  async function start() {
-    if (!a) return
-    if (a.my.status === 'NOT_STARTED' && !confirm(`Start "${a.test_title}" now? The ${a.duration_minutes}-minute timer starts immediately and you get one attempt.`)) return
-    setBusy(true); setError(null)
-    try { await assessmentService.start(id); nav(`${BASE.ONLINE_TEST}/${id}/take`) } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
+  // The test runner opens the full-screen proctoring preparation window first; the timer starts only after it.
+  function start() {
+    if (a) nav(`${BASE.ONLINE_TEST}/${id}/take`)
   }
 
   async function upload(file: File | undefined) {
@@ -151,8 +148,8 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
         {kind === 'ONLINE_TEST' && (a.my.status === 'NOT_STARTED' || a.my.status === 'IN_PROGRESS') && (
           <div className="mt-4">
             {a.window.open || a.my.status === 'IN_PROGRESS' ? (
-              <Button size="lg" onClick={start} disabled={busy} id="start-test">
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{a.my.status === 'IN_PROGRESS' ? `Resume test (${Math.ceil((a.my.seconds_left ?? 0) / 60)} min left)` : 'Start test'}
+              <Button size="lg" onClick={start} id="start-test">
+                <Play className="h-4 w-4" />{a.my.status === 'IN_PROGRESS' ? `Resume test (${Math.ceil((a.my.seconds_left ?? 0) / 60)} min left)` : 'Start test'}
               </Button>
             ) : <p className="flex items-center gap-2 text-sm text-ink-300"><Lock className="h-4 w-4" /> {a.window.reason}{a.window.opens_at ? ` — opens ${fmtDateTime(a.window.opens_at)}` : ''}</p>}
           </div>

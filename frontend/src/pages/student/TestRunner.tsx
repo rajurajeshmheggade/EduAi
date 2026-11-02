@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CloudCheck, Flag, Loader2, Send, Timer } from 'lucide-react'
-import { LiveCameraCheck } from '@/components/proctor/LiveCameraCheck'
+import { ChevronLeft, ChevronRight, CloudCheck, Flag, Loader2, PencilRuler, Send, Timer } from 'lucide-react'
+import { ProctorGate } from '@/components/proctoring/ProctorGate'
+import { useProctor } from '@/components/proctoring/proctorContext'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
+import { ErrorState, PageLoader } from '@/components/ui/loading'
 import { Textarea } from '@/components/ui/field'
 import { toast } from '@/components/ui/toast'
 import { errorMessage } from '@/services/apiClient'
@@ -14,10 +16,57 @@ import { num, type StudentAssessment } from '@/types'
 
 const AUTOSAVE_MS = 4000
 
-/** FR-TST-03: timed online test with SL.No palette, autosave and auto-submit at time-up. */
+/**
+ * FR-TST-03: timed online test with SL.No palette, autosave and auto-submit at time-up — behind the unified proctoring
+ * gate: Start opens the full-screen preparation window (rules, acknowledgement, camera / microphone checks) and the
+ * timer starts only when the student presses Begin. Reloading an attempt in progress goes through the window again.
+ */
 export default function TestRunner() {
   const { id = '' } = useParams()
   const nav = useNavigate()
+  const [test, setTest] = useState<StudentAssessment | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [nonce, setNonce] = useState(0)
+
+  useEffect(() => {
+    assessmentService.get(id).then((t) => {
+      if (t.my.status !== 'NOT_STARTED' && t.my.status !== 'IN_PROGRESS') { nav(`/student/tests/${id}`, { replace: true }); return }
+      setTest(t)
+    }).catch((e) => setError(errorMessage(e)))
+  }, [id, nav, nonce])
+
+  if (error) return <div className="mx-auto max-w-3xl p-4 md:p-8"><ErrorState title="Could not open the test" message={error} onRetry={() => { setError(null); setNonce((n) => n + 1) }} /></div>
+  if (!test) return <PageLoader message="Opening your test…" />
+  const resume = test.my.status === 'IN_PROGRESS'
+  return (
+    <ProctorGate module="ONLINE_TEST" refId={id} title={test.test_title} autoOpen resume={resume}
+      startLabel={resume ? 'Resume test' : 'Start test'} beginLabel={resume ? 'Resume test' : 'Begin test'}
+      beginNote={resume ? 'Your timer has kept running while you were away.'
+        : `The ${test.duration_minutes ?? ''}-minute timer starts when you press Begin test. You get one attempt.`}
+      intro={<TestIntro test={test} />}
+      onBegin={resume ? undefined : async () => { await assessmentService.start(id) }}
+      onCancel={() => nav(`/student/tests/${id}`)}>
+      <Runner id={id} />
+    </ProctorGate>
+  )
+}
+
+function TestIntro({ test }: { test: StudentAssessment }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/10"><PencilRuler className="h-6 w-6 text-brand-600" /></div>
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-brand-600">{test.subject_name}</div>
+        <h1 className="font-display text-xl font-bold text-fg">{test.test_title}</h1>
+        <p className="text-sm text-ink-300">{test.total_questions} questions · {num(test.total_max_marks)} marks{test.duration_minutes ? ` · ${test.duration_minutes} minutes` : ''}</p>
+      </div>
+    </div>
+  )
+}
+
+function Runner({ id }: { id: string }) {
+  const nav = useNavigate()
+  const proctor = useProctor()
   const [test, setTest] = useState<StudentAssessment | null>(null)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [flagged, setFlagged] = useState<string[]>([])
@@ -27,8 +76,6 @@ export default function TestRunner() {
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Gates manual submit only (see LiveCameraCheck) — auto-submit at time-up must never be blocked by this.
-  const [cameraReady, setCameraReady] = useState(false)
   const latest = useRef({ answers, flagged })  // read by autosave / submit without re-subscribing timers
   useEffect(() => { latest.current = { answers, flagged } }, [answers, flagged])
   const done = useRef(false)
@@ -50,8 +97,9 @@ export default function TestRunner() {
     } catch (e) {
       if (!auto) { done.current = false; setSubmitting(false); setError(errorMessage(e)); return }
     }
+    await proctor.finish('submitted')
     nav(`/student/tests/${id}`, { replace: true })
-  }, [id, nav])
+  }, [id, nav, proctor])
 
   // Countdown from the server's remaining seconds; auto-submit at zero.
   useEffect(() => {
@@ -154,9 +202,6 @@ export default function TestRunner() {
         </Card>
 
         <div className="space-y-4">
-          <LiveCameraCheck title="Test camera check" totalQuestions={qs.length} answered={qs.length - unanswered}
-            reportFlag={() => assessmentService.proctorFlag(id)} onReady={setCameraReady} />
-
         <Card className="h-fit p-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Questions</div>
           <div className="grid grid-cols-5 gap-1.5" role="list" aria-label="Question palette">
@@ -181,10 +226,9 @@ export default function TestRunner() {
       <Dialog open={confirming} onClose={() => setConfirming(false)} title="Submit your test?" description="You can’t change your answers after submitting.">
         <div className="space-y-4 text-sm">
           <p>{qs.length - unanswered} of {qs.length} answered.{unanswered > 0 && <b className="text-warn"> {unanswered} unanswered question{unanswered === 1 ? '' : 's'} will score 0.</b>}{flagged.length > 0 && ` ${flagged.length} flagged for review.`}</p>
-          {!cameraReady && <p className="text-warn">Turn on the camera check in the sidebar before submitting.</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirming(false)}>Keep working</Button>
-            <Button onClick={() => submit(false)} disabled={submitting || !cameraReady} id="confirm-submit">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit test</Button>
+            <Button onClick={() => submit(false)} disabled={submitting} id="confirm-submit">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Submit test</Button>
           </div>
         </div>
       </Dialog>

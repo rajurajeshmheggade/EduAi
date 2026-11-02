@@ -15,7 +15,15 @@ vi.mock('@/services/virtualLabService', () => ({
 }))
 const svc = vi.mocked(virtualLabService)
 
-// jsdom has no camera/mic/worker: LiveCameraCheck's camera check is faked as an instant no-op success.
+// Proctoring switched off for Virtual Labs here: these tests cover the workspace itself (the proctored flow is tested in
+// components/proctoring/*.test.tsx).
+vi.mock('@/services/proctoringService', async (orig) => {
+  const real = await orig<typeof import('@/services/proctoringService')>()
+  const { proctorConfig } = await import('@/test/proctoring')
+  return { ...real, proctoringService: { ...real.proctoringService, config: vi.fn(async () => proctorConfig(false, 'VIRTUAL_LAB')) } }
+})
+
+// jsdom has no camera/mic/worker.
 vi.mock('@/lib/proctor/media', () => ({
   ProctorMedia: class {
     floorDb = -100
@@ -156,8 +164,6 @@ describe('Student workspace', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Viva/ }))
     fireEvent.click(screen.getByLabelText('Exothermic'))
     fireEvent.change(screen.getByLabelText(/Why does it get warm/), { target: { value: 'Heat is released.' } })
-    fireEvent.click(screen.getByRole('button', { name: /Turn on camera/ }))
-    expect(await screen.findByText(/Camera check complete/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: /Conclude/ }))
     fireEvent.change(screen.getByLabelText('What do you conclude?'), { target: { value: 'NaOH dissolving is exothermic.' } })
     expect(screen.getByText(/Viva: 2 of 2 answered/)).toBeInTheDocument()

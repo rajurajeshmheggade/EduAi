@@ -40,7 +40,7 @@ export interface EvalTest {
   assigned_at: string | null
   class_students: number
   submitted: number
-  /** Sum of proctor_flags across every attempt (see LiveCameraCheck) — a count, never a video/image/detail. */
+  /** Sum of proctor_flag_count across every attempt, kept up to date by unified proctoring (flags only, never a video/image). */
   proctor_flags: number
   window?: AssessmentWindow | null
   question_paper_name?: string | null

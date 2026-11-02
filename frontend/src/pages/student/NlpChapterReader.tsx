@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Bot, Loader2, MessageCircleQuestion, Sparkles } from 'lucide-react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SplitScreenPDFReader } from '@/components/pdf-avatar/SplitScreenPDFReader'
-import { LiveCameraCheck } from '@/components/proctor/LiveCameraCheck'
+import { ProctorGate } from '@/components/proctoring/ProctorGate'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/field'
@@ -12,16 +12,39 @@ import { aiClassroomService, type ChatTurn } from '@/services/aiClassroomService
 import { errorMessage } from '@/services/apiClient'
 
 /**
- * AI Classroom's chapter-library reader: the chapter PDF (backend/nlp/) on the left, on the right a live camera
- * check, an auto-prepared explanation of the current page (queued one page ahead so it's ready when the
- * student turns the page), and a chat grounded in whatever page is currently open.
+ * AI Classroom's chapter-library reader: the chapter PDF (backend/nlp/) on the left, on the right an auto-prepared
+ * explanation of the current page (queued one page ahead so it's ready when the student turns the page) and a chat
+ * grounded in whatever page is currently open. Reading a chapter is a proctored classroom session (the unified
+ * proctoring gate: rules, device checks, flags only); leaving the reader closes the session.
  */
 export default function NlpChapterReader() {
   const { classLabel = '', subject = '', chapter = '' } = useParams()
+  const nav = useNavigate()
   const cls = decodeURIComponent(classLabel)
   const subj = decodeURIComponent(subject)
   const ch = decodeURIComponent(chapter)
+  const header = <ChapterHeader cls={cls} subj={subj} ch={ch} />
+  return (
+    <ProctorGate key={`${cls}/${subj}/${ch}`} module="AI_CLASSROOM" refId={`nlp/${cls}/${subj}/${ch}`} title={ch} intro={header}
+      startLabel="Start classroom session" beginLabel="Begin session" onCancel={() => nav('/student/classroom')}>
+      <ChapterReader cls={cls} subj={subj} ch={ch} header={header} />
+    </ProctorGate>
+  )
+}
 
+function ChapterHeader({ cls, subj, ch }: { cls: string; subj: string; ch: string }) {
+  return (
+    <header className="flex items-start gap-3">
+      <Link to="/student/classroom" className="mt-1 rounded-lg p-1.5 text-ink-300 hover:bg-ink-800 hover:text-fg" aria-label="Back to AI Classroom"><ArrowLeft className="h-5 w-5" /></Link>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-medium uppercase tracking-wide text-brand-600">{subj} · {cls.length <= 3 ? `Class` : cls}</div>
+        <h1 className="truncate font-display text-xl font-bold text-fg">{ch}</h1>
+      </div>
+    </header>
+  )
+}
+
+function ChapterReader({ cls, subj, ch, header }: { cls: string; subj: string; ch: string; header: React.ReactNode }) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -58,13 +81,7 @@ export default function NlpChapterReader() {
 
   return (
     <div className="mx-auto max-w-[96rem] space-y-4 p-4 md:p-6">
-      <header className="flex items-start gap-3">
-        <Link to="/student/classroom" className="mt-1 rounded-lg p-1.5 text-ink-300 hover:bg-ink-800 hover:text-fg" aria-label="Back to AI Classroom"><ArrowLeft className="h-5 w-5" /></Link>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium uppercase tracking-wide text-brand-600">{subj} · {cls.length <= 3 ? `Class` : cls}</div>
-          <h1 className="truncate font-display text-xl font-bold text-fg">{ch}</h1>
-        </div>
-      </header>
+      {header}
 
       {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
@@ -78,8 +95,6 @@ export default function NlpChapterReader() {
         </Card>
 
         <div className="min-w-0 space-y-3">
-          <LiveCameraCheck title="AI Classroom camera check" />
-
           <Card className="space-y-2 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-fg"><Sparkles className="h-4 w-4 text-brand-600" /> This page, explained</div>
             {explainBusy ? (

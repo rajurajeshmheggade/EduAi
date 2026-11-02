@@ -40,6 +40,8 @@ const VirtualLabWorkspace = lazy(() => import('@/pages/student/VirtualLabWorkspa
 const TeacherAdmissions = lazy(() => import('@/pages/teacher/TeacherAdmissions'))
 const AdmissionTestEditor = lazy(() => import('@/pages/teacher/AdmissionTestEditor'))
 const AdmissionReport = lazy(() => import('@/pages/admissions/AdmissionReport'))
+const TeacherProctoring = lazy(() => import('@/pages/teacher/TeacherProctoring'))
+const ProctoringExam = lazy(() => import('@/pages/teacher/ProctoringExam'))
 // The exam view renders without AppShell (no portal chrome or teacher data) and carries the proctoring code.
 const ExamView = lazy(() => import('@/pages/exam/ExamView'))
 
@@ -71,6 +73,8 @@ export default function App() {
             <Route path="/teacher/admissions/reports/:sessionId" element={<AdmissionReport />} />
             <Route path="/teacher/lesson-plans" element={<LessonPlans />} />
             <Route path="/teacher/wellbeing" element={<Wellbeing />} />
+            <Route path="/teacher/proctoring" element={<TeacherProctoring />} />
+            <Route path="/teacher/proctoring/exam" element={<ProctoringExam />} />
             <Route path="/teacher/mindset" element={<Navigate to="/teacher/wellbeing" replace />} />
           </Route>
         </Route>
