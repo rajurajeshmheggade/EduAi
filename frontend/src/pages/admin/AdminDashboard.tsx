@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Building2, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
+import { AdmissionFormsPanel } from '@/components/admin/admissions/AdmissionFormsPanel'
 import { AdmissionTeamPanel } from '@/components/admin/admissions/AdmissionTeamPanel'
 import { AdmissionTestsPanel } from '@/components/admin/admissions/AdmissionTestsPanel'
 import { AdmissionsHome } from '@/components/admin/admissions/AdmissionsHome'
@@ -106,6 +107,7 @@ export default function AdminDashboard() {
           {tab === 'admissions-team' && <AdmissionTeamPanel org={scope} />}
           {tab === 'privacy' && <PrivacyPanel org={scope} />}
           {tab === 'admission-tests' && <AdmissionTestsPanel org={scope} />}
+          {tab === 'admission-forms' && <AdmissionFormsPanel org={scope} />}
         </div>}
         {!platformPage && isSuper && orgs?.length === 0 && (
           <p className="rounded-xl border border-line bg-ink-900 p-6 text-center text-sm text-ink-300">Onboard an institution first from <b>Institutions</b> in the sidebar.</p>

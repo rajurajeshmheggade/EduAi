@@ -61,6 +61,8 @@ export interface StatusInfo {
   server_time: string
   ended: boolean
   locked: boolean
+  /** 'applicant' when the test was started from the standalone admission application. */
+  origin?: 'teacher' | 'applicant'
 }
 export interface FlagRule { enabled: boolean; label: string; severity: 'Info' | 'Low' | 'Med' | 'High' | 'Crit'; warn: 'always' | 'third' | 'never'; pause: boolean; evidence: 'webcam' | 'screen' | 'webcam_first' | null; duration_ms: number }
 export interface ClientRules {
