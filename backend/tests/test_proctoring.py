@@ -305,6 +305,38 @@ def test_virtual_lab_interruption_resume_and_teacher_end(client, u):
                         (aid, "REG2026003"))["status"] == "submitted"
 
 
+def test_finished_sessions_tell_the_device_to_switch_off(client, u):
+    """Handed in or closed: every reply says `ended`, so the device stops its camera / microphone / detectors; a beat
+    still in flight when the student left or handed in never brings the session back to ACTIVE."""
+    aid = _lab("Hand-in lab")
+    h = u["ishaan"]
+    hb = {"camera_live": True, "online": True}
+    sid = _prepare(client, h, "VIRTUAL_LAB", aid)["session_id"]
+    assert _start(client, h, sid, {"camera": True, "face": True}).status_code == 200
+    assert client.post(f"/ICMELive/api/v1/virtual-labs/my/{aid}/start", headers=h).status_code == 200
+    r = client.post(f"{P}/student/sessions/{sid}/heartbeat", headers=h, json=hb).json()
+    assert r["status"] == "ACTIVE" and not r["ended"]
+
+    # the student leaves while a heartbeat (read as ACTIVE) is still being processed: it must not resume the session
+    in_flight = sessions.load(sid)
+    assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "left"}).json()["status"] == "INTERRUPTED"
+    late = sessions.heartbeat(in_flight, hb)
+    assert late["status"] == "INTERRUPTED" and not late["ended"] and sessions.load(sid)["status"] == "INTERRUPTED"
+    assert db.fetch_one("SELECT COUNT(*) AS n FROM public.proctor_events WHERE session_id = %s AND code = 'SESSION_RESUMED'", (sid,))["n"] == 0
+
+    # resumed, then handed in: every later reply tells the device the session is over
+    _prepare(client, h, "VIRTUAL_LAB", aid)
+    assert _start(client, h, sid, {"camera": True, "face": True}).json()["status"] == "ACTIVE"
+    in_flight = sessions.load(sid)
+    assert client.post(f"/ICMELive/api/v1/virtual-labs/my/{aid}/submit", headers=h, json={}).status_code == 200
+    assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "submitted"}).json()["status"] == "SUBMITTED"
+    assert sessions.heartbeat(in_flight, hb)["ended"] and sessions.load(sid)["status"] == "SUBMITTED"
+    r = client.post(f"{P}/student/sessions/{sid}/heartbeat", headers=h, json=hb).json()
+    assert r["ended"] and r["status"] == "SUBMITTED" and r["end_reason"] == "SUBMITTED"
+    r = client.post(f"{P}/student/sessions/{sid}/events", headers=h, json={"events": [_event(9, "NO_FACE")]}).json()
+    assert r["ended"] and r["accepted"] == []
+
+
 def test_teacher_can_end_switch_and_disabled_module(client, u):
     aid = _lab("Switch test lab")
     try:
@@ -350,6 +382,8 @@ def test_ai_classroom_sessions(client, u, nlp_root):
     assert me["fullscreen"] is None and me["mic"]["live"] is None              # not required here: not shown as a problem
     assert client.get(f"{P}/teacher/exam", headers=u["kavya"], params={"module": "AI_CLASSROOM", "ref_id": "nlp/X/Physics/Motion"}).status_code == 404
     assert client.post(f"{P}/student/sessions/{sid}/finish", headers=h, json={"reason": "closed"}).json()["status"] == "CLOSED"
+    r = client.post(f"{P}/student/sessions/{sid}/heartbeat", headers=h, json={"camera_live": True})
+    assert r.json()["ended"] and r.json()["status"] == "CLOSED"           # a closed classroom switches the device off too
 
     tb = _prepare(client, h, "AI_CLASSROOM", "textbook/PHY101")
     assert tb["title"] == "AI Classroom · Physics textbook"
