@@ -1,5 +1,7 @@
 /* Ambient sounds synthesised with the Web Audio API (no audio files to download).
-   Shared by the Focus timer and the breathing guide (MindAlign utils/ambientAudio.js).
+   Shared by the Focus timer and the breathing guide (MindAlign utils/ambientAudio.js). The floating Focus Timer
+   (components/study) adds rain, white and brown noise, and plays them through its own volume control: every
+   generator takes an optional `destination` node (the context's speakers by default).
 
    Lifecycle: an AudioContext is only created inside a user gesture (the first sound toggle / Start click), one per
    component, and it is closed when that component unmounts — the Wellness shell unmounts a tab when the student
@@ -15,15 +17,20 @@ export const WAVES_SWELL_HZ = 0.1 // one wave every 10 seconds
 export const BINAURAL_LEFT_HZ = 200
 export const BINAURAL_RIGHT_HZ = 210 // 10 Hz apart → alpha "focus" beat
 export const BINAURAL_TONE_GAIN = 0.12
+export const RAIN_GAIN = 0.55
+export const WHITE_NOISE_GAIN = 0.12
+export const BROWN_NOISE_GAIN = 0.7
 const FADE_IN_SECONDS = 0.4
 const FADE_OUT_SECONDS = 0.15
 
 export type AmbientSoundId = 'waves' | 'binaural'
+/** Every sound the floating Focus Timer offers. */
+export type FocusSoundId = AmbientSoundId | 'rain' | 'white' | 'brown'
 /** Stops a running sound and releases its nodes. */
 export type StopSound = () => void
 
 // Output stage that fades the sound in, so starting it never clicks
-function createFadeIn(ctx: BaseAudioContext): GainNode {
+function createFadeIn(ctx: BaseAudioContext, destination: AudioNode = ctx.destination): GainNode {
   const fade = ctx.createGain()
   fade.gain.value = 0
   if (typeof fade.gain.setValueAtTime === 'function' && typeof fade.gain.linearRampToValueAtTime === 'function') {
@@ -33,7 +40,7 @@ function createFadeIn(ctx: BaseAudioContext): GainNode {
   } else {
     fade.gain.value = 1
   }
-  fade.connect(ctx.destination)
+  fade.connect(destination)
   return fade
 }
 
@@ -66,7 +73,7 @@ function stopGracefully(ctx: BaseAudioContext, output: GainNode, sources: AudioS
  * Ocean waves: looped white noise through a low-pass filter, with a slow LFO swelling the volume.
  * @returns Call to stop the sound.
  */
-export function startOceanWaves(ctx: BaseAudioContext): StopSound {
+export function startOceanWaves(ctx: BaseAudioContext, destination?: AudioNode): StopSound {
   const bufferSize = ctx.sampleRate * 2
   const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
   const output = noiseBuffer.getChannelData(0)
@@ -93,7 +100,7 @@ export function startOceanWaves(ctx: BaseAudioContext): StopSound {
   lfo.connect(lfoGain)
   lfoGain.connect(waveGain.gain)
 
-  const fadeIn = createFadeIn(ctx)
+  const fadeIn = createFadeIn(ctx, destination)
   noiseSource.connect(lowpass)
   lowpass.connect(waveGain)
   waveGain.connect(fadeIn)
@@ -108,7 +115,7 @@ export function startOceanWaves(ctx: BaseAudioContext): StopSound {
  * Binaural beats: 200 Hz in the left ear and 210 Hz in the right, heard as a 10 Hz alpha beat (needs headphones).
  * @returns Call to stop the sound.
  */
-export function startBinauralBeats(ctx: BaseAudioContext): StopSound {
+export function startBinauralBeats(ctx: BaseAudioContext, destination?: AudioNode): StopSound {
   const merger = ctx.createChannelMerger(2)
 
   const oscL = ctx.createOscillator()
@@ -129,7 +136,7 @@ export function startBinauralBeats(ctx: BaseAudioContext): StopSound {
   gainL.connect(merger, 0, 0)
   gainR.connect(merger, 0, 1)
 
-  const fadeIn = createFadeIn(ctx)
+  const fadeIn = createFadeIn(ctx, destination)
   merger.connect(fadeIn)
 
   oscL.start()
@@ -138,13 +145,83 @@ export function startBinauralBeats(ctx: BaseAudioContext): StopSound {
   return () => stopGracefully(ctx, fadeIn, [oscL, oscR], [gainL, gainR, merger])
 }
 
-export const AMBIENT_SOUNDS: Record<AmbientSoundId, (ctx: BaseAudioContext) => StopSound> = {
+const clip = (x: number) => (x > 1 ? 1 : x < -1 ? -1 : x)
+
+/** Loops a generated mono buffer through optional filters and a level, with the usual fade in / graceful stop. */
+function loopNoise(ctx: BaseAudioContext, destination: AudioNode | undefined, seconds: number, fill: (out: Float32Array) => void,
+  level: number, filters: { type: BiquadFilterType; hz: number }[] = []): StopSound {
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate)
+  fill(buffer.getChannelData(0))
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+  source.loop = true
+  const chain: AudioNode[] = filters.map((f) => {
+    const node = ctx.createBiquadFilter()
+    node.type = f.type
+    node.frequency.value = f.hz
+    return node
+  })
+  const gain = ctx.createGain()
+  gain.gain.value = level
+  const fadeIn = createFadeIn(ctx, destination)
+  const path: AudioNode[] = [source, ...chain, gain, fadeIn]
+  for (let i = 1; i < path.length; i++) path[i - 1].connect(path[i])
+  source.start()
+  return () => stopGracefully(ctx, fadeIn, [source], [...chain, gain])
+}
+
+/** White noise: an even hiss across all frequencies, softened slightly at the very top. */
+export function startWhiteNoise(ctx: BaseAudioContext, destination?: AudioNode): StopSound {
+  return loopNoise(ctx, destination, 2, (out) => { for (let i = 0; i < out.length; i++) out[i] = Math.random() * 2 - 1 },
+    WHITE_NOISE_GAIN, [{ type: 'lowpass', hz: 9000 }])
+}
+
+/** Brown noise: a deep, soft rumble (integrated white noise); the loop seam is levelled so it never clicks. */
+export function startBrownNoise(ctx: BaseAudioContext, destination?: AudioNode): StopSound {
+  return loopNoise(ctx, destination, 4, (out) => {
+    let last = 0
+    for (let i = 0; i < out.length; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02
+      out[i] = last * 3.5
+    }
+    const n = out.length, drift = n > 1 ? out[n - 1] - out[0] : 0
+    for (let i = 0; i < n; i++) out[i] = clip(out[i] - (drift * i) / Math.max(1, n - 1))
+  }, BROWN_NOISE_GAIN)
+}
+
+/** Rain: a steady pink-noise hiss with sparse, quickly fading droplets, band-limited like rain on a window. */
+export function startRain(ctx: BaseAudioContext, destination?: AudioNode): StopSound {
+  return loopNoise(ctx, destination, 3, (out) => {
+    let b0 = 0, b1 = 0, b2 = 0, drop = 0
+    for (let i = 0; i < out.length; i++) {
+      const white = Math.random() * 2 - 1
+      b0 = 0.99765 * b0 + white * 0.099046
+      b1 = 0.963 * b1 + white * 0.2965164
+      b2 = 0.57 * b2 + white * 1.0526913
+      const pink = (b0 + b1 + b2 + white * 0.1848) * 0.11
+      if (Math.random() < 0.0004) drop = 0.4 + Math.random() * 0.6
+      drop *= 0.995
+      out[i] = clip(pink + white * drop * 0.45)
+    }
+  }, RAIN_GAIN, [{ type: 'highpass', hz: 400 }, { type: 'lowpass', hz: 7000 }])
+}
+
+export const AMBIENT_SOUNDS: Record<AmbientSoundId, (ctx: BaseAudioContext, destination?: AudioNode) => StopSound> = {
   waves: startOceanWaves,
   binaural: startBinauralBeats,
 }
 
+/** The floating Focus Timer's sounds, in the order it lists them. */
+export const FOCUS_SOUNDS: Record<FocusSoundId, (ctx: BaseAudioContext, destination?: AudioNode) => StopSound> = {
+  waves: startOceanWaves,
+  rain: startRain,
+  white: startWhiteNoise,
+  brown: startBrownNoise,
+  binaural: startBinauralBeats,
+}
+
 type AudioContextCtor = typeof AudioContext
-function audioContextCtor(): AudioContextCtor | undefined {
+export function audioContextCtor(): AudioContextCtor | undefined {
   if (typeof window === 'undefined') return undefined
   const w = window as typeof window & { webkitAudioContext?: AudioContextCtor }
   return w.AudioContext ?? w.webkitAudioContext

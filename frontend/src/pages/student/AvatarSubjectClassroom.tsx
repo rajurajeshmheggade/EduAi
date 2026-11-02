@@ -16,6 +16,7 @@ import { ErrorState, PageLoader, Skeleton } from '@/components/ui/loading'
 import { loadAvatarModel } from '@/lib/avatarModel'
 import { AVATAR_MODELS, hasWebGL, loadAvatar3D } from '@/lib/avatars'
 import { parseClassroomLink, pickStart, readyTextbooks } from '@/lib/classroomLink'
+import { useStudyPulse } from '@/lib/studyFlow/activity'
 import { useReadiness, type ReadinessSnapshot, type ReadinessStep, type StepState } from '@/lib/readiness'
 import { cn } from '@/lib/utils'
 import { curriculumService } from '@/services/curriculumService'
@@ -105,6 +106,8 @@ function TextbookClassroom({ subject, startBook, startPage, onSubjectChange }: {
   const turnPage = useCallback((p: number) => { setPage(p); setHighlight(null) }, [])
   const reader = useReadAloud(book?.textbook_id ?? '', turnPage, page)
   const { followPage } = reader
+  // Listening to the tutor is study time even without touching the keyboard (the study-break cycle counts it).
+  useStudyPulse(reader.reading)
   const jump = useCallback((p: number, snippet?: string) => { setPage(p); setHighlight(snippet ?? null); followPage(p) }, [followPage])
   // While the tutor speaks, the PDF highlights what it is talking about: the key point's words when explaining,
   // the sentence when reading word for word.

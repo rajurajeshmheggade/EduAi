@@ -11,14 +11,14 @@ interface ToneSpec {
   seconds: number
 }
 
-/** Plays one tone and disconnects its nodes when it ends. Returns false when it could not be played. */
-export function playTone(ctx: BaseAudioContext, tone: ToneSpec): boolean {
+/** Plays one tone (to the speakers, or to `destination`) and disconnects its nodes when it ends. Returns false when it could not be played. */
+export function playTone(ctx: BaseAudioContext, tone: ToneSpec, destination?: AudioNode): boolean {
   try {
     const t = ctx.currentTime
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
-    gain.connect(ctx.destination)
+    gain.connect(destination ?? ctx.destination)
     osc.type = tone.type
     osc.frequency.setValueAtTime(tone.fromHz, t)
     if (tone.toHz) osc.frequency.exponentialRampToValueAtTime(tone.toHz, t + tone.seconds)

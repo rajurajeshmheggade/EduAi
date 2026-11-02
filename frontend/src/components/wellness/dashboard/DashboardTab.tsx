@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from '@/components/ui/toast'
 import { AcademicProfileCard } from '@/components/wellness/AcademicProfile'
 import { FocusMode } from '@/components/wellness/focus/FocusMode'
 import { useWellness } from '@/components/wellness/WellnessContext'
-import { errorMessage } from '@/services/apiClient'
 import { wellnessService } from '@/services/wellnessService'
 import type { DailyTips } from '@/types/wellness'
 import { CopingToolkit } from './CopingToolkit'
@@ -21,9 +19,10 @@ const FALLBACK_TIPS: DailyTips = {
 }
 
 /** Wellness ▸ Dashboard (MindAlign `activeTab === 'dashboard'`): AI tips, stats, mood trend, daily check-in,
-    Zen Brain quiz, the student's learning profile and Focus Mode. XP, stats and the quiz answer are all decided server-side. */
+    Zen Brain quiz, the student's learning profile and Focus Mode (its timer is the student's floating Focus Timer).
+    XP, stats and the quiz answer are all decided server-side. */
 export function DashboardTab() {
-  const { context, applyXp } = useWellness()
+  const { context } = useWellness()
   const [tips, setTips] = useState<DailyTips | null>(null)
   const [refreshingTips, setRefreshingTips] = useState(false)
 
@@ -35,12 +34,6 @@ export function DashboardTab() {
     .finally(() => setRefreshingTips(false)), [])
   useEffect(() => { void fetchTips() }, [fetchTips])
   const refreshTips = () => { setRefreshingTips(true); void fetchTips() }
-
-  const onFocusComplete = useCallback(() => {
-    wellnessService.activity('pomodoro')
-      .then((r) => applyXp(r, 'Focus Session Complete'))
-      .catch((e: unknown) => toast(errorMessage(e, 'Could not record your focus session'), 'error'))
-  }, [applyXp])
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
@@ -54,7 +47,7 @@ export function DashboardTab() {
 
       <aside className="flex min-w-0 flex-col gap-6 lg:col-span-4" aria-label="Learning profile, focus and coping">
         <AcademicProfileCard ctx={context} />
-        <FocusMode countdown={context.countdown} onSessionComplete={onFocusComplete} />
+        <FocusMode countdown={context.countdown} />
         <CopingToolkit />
       </aside>
     </div>

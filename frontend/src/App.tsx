@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { HomeRedirect, FullPageSpinner, RequireRole } from '@/auth/RequireRole'
 import { AppShell } from '@/components/AppShell'
 import { ExamLockGate } from '@/components/exam/ExamLockGate'
+import { StudyFlowProvider } from '@/components/study/StudyFlowProvider'
 import Landing from '@/pages/Landing'
 import Login from '@/pages/auth/Login'
 // Every route's `lazy` retries a failed download and reloads once on a stale chunk (see lib/lazyWithRetry).
@@ -56,6 +57,8 @@ export default function App() {
   return (
     <Suspense fallback={<FullPageSpinner />}>
       <ExamLockGate>
+      {/* Students only: the floating Focus Timer and the 25 / 5 study-break reminders (inert for other roles). */}
+      <StudyFlowProvider>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -153,6 +156,7 @@ export default function App() {
         <Route path="/apply/:slug/*" element={<Suspense fallback={<FullPageSpinner />}><ApplyApp /></Suspense>} />
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
+      </StudyFlowProvider>
       </ExamLockGate>
     </Suspense>
   )
