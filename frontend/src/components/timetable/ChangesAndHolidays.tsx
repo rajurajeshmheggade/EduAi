@@ -5,6 +5,9 @@ import { formatShort } from '@/lib/calendar'
 import { DAY_NAMES } from '@/lib/timetable'
 import type { Holiday, TimetableChange } from '@/types'
 
+/** TIME values arrive as "HH:MM:SS"; show "HH:MM". */
+const t = (v: string | null) => (v ? v.slice(0, 5) : '')
+
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 }
@@ -35,13 +38,13 @@ export function RecentTimetableChanges({ changes }: { changes: TimetableChange[]
             <div className="mt-1.5 space-y-0.5 text-xs text-ink-300">
               {c.change_kind === 'UPDATED' || c.change_kind === 'RESTORED' ? (
                 <>
-                  {c.old_start_time && <div>Previous: {c.old_subject_name && c.old_subject_name !== c.new_subject_name ? `${c.old_subject_name} · ` : ''}{c.old_start_time}–{c.old_end_time}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>}
-                  <div>{c.change_kind === 'RESTORED' ? 'Now' : 'Updated'}: {c.new_start_time}–{c.new_end_time}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
+                  {c.old_start_time && <div>Previous: {c.old_subject_name && c.old_subject_name !== c.new_subject_name ? `${c.old_subject_name} · ` : ''}{t(c.old_start_time)}–{t(c.old_end_time)}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>}
+                  <div>{c.change_kind === 'RESTORED' ? 'Now' : 'Updated'}: {t(c.new_start_time)}–{t(c.new_end_time)}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
                 </>
               ) : c.change_kind === 'ADDED' ? (
-                <div>{c.new_start_time}–{c.new_end_time}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
+                <div>{t(c.new_start_time)}–{t(c.new_end_time)}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
               ) : (
-                <div>Was: {c.old_start_time}–{c.old_end_time}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>
+                <div>Was: {t(c.old_start_time)}–{t(c.old_end_time)}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>
               )}
               {c.reason && <div>Reason: {c.reason}</div>}
               <div className="text-ink-500">Changed by {c.changed_by_name ?? 'the admin'} on {when(c.changed_at)}</div>

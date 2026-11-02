@@ -94,23 +94,20 @@ export default function TeacherAttendance() {
 
 function MarkSession({ klass, subject, initialSlot, initialDay }: { klass: string; subject: string; initialSlot: string; initialDay?: string }) {
   const [day, setDay] = useState(initialDay ?? isoDay())
-  const [slot, setSlot] = useState(initialSlot)
+  const [slotPick, setSlot] = useState(initialSlot)
   // Period choices come from the institution's bell for that weekday and the day's actual (dated) timetable.
   const tt = useAsync((signal) => classroomService.myTimetable({ start: day, end: day }, signal), [day])
   const daySessions = useMemo(() => (tt.data?.sessions ?? []).filter((s) => s.session_date === day), [tt.data, day])
   const scheduled = useMemo(() => new Set(daySessions.filter((s) => s.class_code === klass && s.subject_code === subject
     && s.status === 'SCHEDULED' && s.is_mine !== false).map((s) => s.period_number)), [daySessions, klass, subject])
-  const options = useMemo(() => {
-    const opts = tt.data
-      ? periodOptions(bellForDay(tt.data.bell_schedule, isoWeekday(day)), daySessions, scheduled)
-      : PERIODS.map((v, i) => ({ value: v, period: i + 1, label: v.replace('-', ' '), scheduled: false }))
-    if (slot && !opts.some((o) => o.value === slot)) opts.push({ value: slot, period: Number(slot.split('-')[1]) || 0, label: slot.replace('-', ' '), scheduled: false })
-    return opts
-  }, [tt.data, day, daySessions, scheduled, slot])
-  useEffect(() => {
-    if (slot || !tt.data) return
-    setSlot((options.find((o) => o.scheduled) ?? options[0])?.value ?? 'Period-1')
-  }, [slot, tt.data, options])
+  const baseOptions = useMemo(() => (tt.data
+    ? periodOptions(bellForDay(tt.data.bell_schedule, isoWeekday(day)), daySessions, scheduled)
+    : PERIODS.map((v, i) => ({ value: v, period: i + 1, label: v.replace('-', ' '), scheduled: false }))), [tt.data, day, daySessions, scheduled])
+  // Not linked to a period: default to the teacher's own period of the day once the timetable is known.
+  const slot = slotPick || (tt.data ? (baseOptions.find((o) => o.scheduled) ?? baseOptions[0])?.value ?? 'Period-1' : '')
+  const options = slot && !baseOptions.some((o) => o.value === slot)
+    ? [...baseOptions, { value: slot, period: Number(slot.split('-')[1]) || 0, label: slot.replace('-', ' '), scheduled: false }]
+    : baseOptions
   const [rows, setRows] = useState<DayRosterRow[] | null>(null)
   const [marks, setMarks] = useState<Record<string, { status: AttendanceStatus | null; remarks: string }>>({})
   const [saved, setSaved] = useState<string>('')
@@ -156,9 +153,9 @@ function MarkSession({ klass, subject, initialSlot, initialDay }: { klass: strin
         <div className="flex flex-wrap items-end gap-3">
           <div><Label htmlFor="a-date">Date</Label><Input id="a-date" type="date" className="w-44" max={isoDay()} value={day} onChange={(e) => e.target.value && setDay(e.target.value)} /></div>
           <div><Label htmlFor="a-slot">Period</Label>
-            <Select id="a-slot" className="w-64" value={slot} onChange={(e) => setSlot(e.target.value)} disabled={!slot}>
+            <Select id="a-slot" className="w-72" value={slot} onChange={(e) => setSlot(e.target.value)} disabled={!slot}>
               {!slot && <option value="">Loading periods…</option>}
-              {options.map((o) => <option key={o.value} value={o.value}>{o.label}{o.scheduled ? ' · your period' : ''}</option>)}
+              {options.map((o) => <option key={o.value} value={o.value}>{o.label}{o.scheduled ? ' (yours)' : ''}</option>)}
             </Select>
           </div>
           <div className="flex flex-wrap gap-1.5 pb-1">

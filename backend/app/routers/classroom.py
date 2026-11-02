@@ -456,7 +456,11 @@ def my_timetable(start: date | None = Query(default=None, description="Dated cal
         sessions = tt.resolve(user.org_code, lo, hi, None, user.user_code, student_view=True)
         for s in sessions:  # a weekly period of mine covered by someone else on that date
             s["is_mine"] = s["teacher_code"] == user.user_code
-        my_classes = sorted({s["class_code"] for s in slots} | {s["class_code"] for s in sessions})
+        # classes I teach weekly, plus any I'm scheduled into on a recent / upcoming date (e.g. as a substitute)
+        dated = {r["class_code"] for r in db.fetch_all(
+            "SELECT DISTINCT class_code FROM public.timetable_dated_entries WHERE org_code = %s AND teacher_code = %s "
+            "AND entry_kind = 'SESSION' AND session_date >= %s", (user.org_code, user.user_code, today - timedelta(days=14)))}
+        my_classes = sorted({s["class_code"] for s in slots} | {s["class_code"] for s in sessions} | dated)
         holidays = db.call_rows("usp_list_holidays", user.org_code, None, today, window_end, True,
                                 casts=[None, None, None, None, "boolean"])
         range_holidays = db.call_rows("usp_list_holidays", user.org_code, None, lo, hi, True,

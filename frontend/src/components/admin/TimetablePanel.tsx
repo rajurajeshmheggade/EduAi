@@ -18,6 +18,7 @@ import { errorMessage } from '@/services/apiClient'
 import { conflictsOf, timetableService } from '@/services/timetableService'
 import { bellForDay } from '@/lib/calendar'
 import { DAY_NAMES, defaultPeriodTimes } from '@/lib/timetable'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 import type { BellSchedule, Holiday, Member, Room, SchoolClass, TimetableConflict, TimetableSlot } from '@/types'
 
@@ -89,16 +90,14 @@ function WeeklyPatternPanel({ org, classes, teachers, rooms, bell, onClassesChan
 }) {
   const [klass, setKlass] = useState(classes[0]?.class_code ?? '')
   const [view, setView] = useState<'class' | 'teacher'>('class')
-  const [teacher, setTeacher] = useState(teachers[0]?.user_code ?? '')
+  const [teacherPick, setTeacher] = useState('')
+  const teacher = teacherPick || teachers[0]?.user_code || ''
   const [slots, setSlots] = useState<TimetableSlot[] | null>(null)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [publishBusy, setPublishBusy] = useState(false)
-  const [workingDays, setWorkingDays] = useState<number[] | undefined>(undefined)
   const [today] = useState(() => new Date().getDay() || 7)  // ISO weekday
-
-  useEffect(() => { if (!teacher && teachers[0]) setTeacher(teachers[0].user_code) }, [teachers, teacher])
-  useEffect(() => { timetableService.workingDays(org).then((w) => setWorkingDays(w.working_days)).catch(() => undefined) }, [org])
+  const workingDays = useAsync(() => timetableService.workingDays(org), [org]).data?.working_days
 
   const load = useCallback(async () => {
     const filter = view === 'class' ? { class_code: klass } : { teacher_code: teacher }

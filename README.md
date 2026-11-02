@@ -360,6 +360,40 @@ command palette everywhere.
 
 Details, screens, decisions and risks: [`docs/PRAVESH_M1.md`](docs/PRAVESH_M1.md). Migration `015_admission_foundation.sql`.
 
+## Date-level timetable (Admin console → Timetable; Teacher / Student → Timetable)
+
+The weekly pattern stays the recurring timetable; on top of it admins schedule **real dates**. Tabs: **Calendar**,
+**Weekly pattern**, **Bell & working days**, **Rooms**, **Holidays** (super-admin and institution admins alike).
+
+* **Calendar** — day / week / month views, **class-wise**, **teacher-wise** or the **whole institution** (day view =
+  classes × periods grid), date picker + previous / next / today. Click a session to change it for that date only
+  (subject, teacher — e.g. a substitute —, times, room, online link, period), cancel it for that date, or restore the
+  weekly period; click a free period to add an extra session. Colours: weekly, changed for the date, extra, cancelled /
+  holiday. **Copy from date**: one day (to specific dates or every working day in a range) or a whole week (into up to
+  8 following weeks), for selected classes, one teacher or the whole institution; keep or replace taken periods,
+  optionally make the target day identical; *Preview* is a dry run. Clashing periods are skipped and listed.
+* **Conflicts** — teacher, class (overlapping periods) and room clashes, date- and effective-range-aware, for weekly and
+  dated edits alike (a weekly period also checks upcoming dated sessions on that weekday). A save answers 409 with
+  `detail` + the full `conflicts` list; *Check conflicts* runs the same rules without saving. Holidays and bell breaks
+  are warnings only. Rooms compare case-insensitively; online sessions need no room.
+* **Working days** — Monday–Sunday all selectable (Saturday / Sunday optional; default: every day, as before). Weekly
+  periods on a closed day are kept but don't run; nothing new can be scheduled on it.
+* **Bell schedule** — numbered periods and named breaks, a default bell plus optional per-weekday bells (e.g. a half
+  Saturday). Without one the built-in bell applies (8 × 45 min from 09:00, break after period 3). New sessions take
+  their times from it, the calendars draw it, and attendance offers its periods (marking the teacher's own).
+* **Consistency** — one resolver (`usp_resolve_timetable`: weekly pattern within its effective range on working days +
+  dated entries + published full-day holidays; drafts hidden from teachers / students) feeds the admin calendar,
+  teacher and student timetables, both dashboards' "today", Copilot's student snapshot and attendance. A teacher
+  scheduled by a dated session may mark that class's attendance. Changes to published classes are logged with their
+  date and notified to the class, the old / new teacher and the admins (copies: one notification per class).
+
+API (`/ICMELive/api/v1/admin`, `?org_code=` for the super-admin): `timetable/calendar?start=&end=[&class_code|&teacher_code]`
+(≤ 92 days) · `PUT timetable/sessions` · `POST timetable/sessions/cancel` · `DELETE timetable/sessions/{entry_id}` (restore) ·
+`POST timetable/check-conflicts` · `POST timetable/copy` · `POST timetable/copy-week` · `GET|PUT timetable/working-days` ·
+`GET|PUT timetable/bell-schedule` · `rooms` (GET / POST / PUT / DELETE). `GET /classroom/my-timetable?start=&end=` adds
+`sessions`, `range`, `range_holidays`, `bell_schedule`, `working_days` (default range: this week; older fields unchanged).
+Migration `028_dated_timetable.sql`; tests `backend/tests/test_timetable_dated.py`, `frontend/src/lib/calendar.test.ts`.
+
 ## Modes
 
 | Setting | Dev default | Production |

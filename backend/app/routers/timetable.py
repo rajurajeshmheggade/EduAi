@@ -320,7 +320,7 @@ def _after_copy(org: str, report: dict, user: CurrentUser) -> dict:
                                  "Replaced by a copied timetable", user, session_date=c["date"], notify=False)
         per_class.setdefault(c["class_code"], []).append(c["date"])
     today = date.today()
-    for class_code, dates in per_class.items():
+    for n, (class_code, dates) in enumerate(per_class.items()):
         upcoming = sorted({d for d in dates if d >= today})
         if not upcoming:
             continue
@@ -329,7 +329,7 @@ def _after_copy(org: str, report: dict, user: CurrentUser) -> dict:
                            if x["class_code"] == class_code and x.get("teacher_code")})
         notify_timetable_change(org, class_code, teachers, f"Timetable updated for {{cls}} ({span})",
                                 f"The timetable for {span} was updated by copying another day's timetable.",
-                                f"TTCOPY:{class_code}:{upcoming[0]}:{upcoming[-1]}:{report['batch']}")
+                                f"TTCOPY:{report['batch']}:{n}")  # unique per copy and class; fits dedup_key(160)
     return report
 
 

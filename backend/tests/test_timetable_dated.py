@@ -69,6 +69,11 @@ def test_resolver_merges_template_dated_entries_holidays_and_draft(client, admin
     assert sub.status_code == 200, sub.text
     s = sub.json()["session"]
     assert s["source"] == "OVERRIDE" and s["teacher_code"] == "EMP1002" and s["template_teacher_code"] == "EMP1001"
+    # the substitute is notified, and sees the change although Grade-10-A isn't one of her weekly classes
+    kav = _login(client, "kavya@demo.edu")
+    assert any("Priya at a workshop" in (n["body"] or "") for n in client.get(N, headers=kav).json()["notifications"])
+    kchanges = client.get(f"{C}/my-timetable", headers=kav).json()["recent_changes"]
+    assert any(c["class_code"] == "Grade-10-A" and c["session_date"] == mon.isoformat() for c in kchanges)
     cancel = client.post(f"{A}/timetable/sessions/cancel", headers=admin,
                          json={"class_code": "Grade-10-A", "session_date": mon.isoformat(), "period_number": 1,
                                "reason": "Assembly"})

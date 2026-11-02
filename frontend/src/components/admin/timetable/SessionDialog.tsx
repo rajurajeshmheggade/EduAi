@@ -120,7 +120,7 @@ export function SessionDialog({ target, classes, teachers, rooms, bell, org, fix
 
   const title = s ? `${s.subject_name ?? 'Session'} · ${s.class_name}` : 'Add a session'
   return (
-    <Dialog open onClose={onClose} title={title} description={`${formatDay(form.session_date)} · Period ${form.period_number}`} className="w-[min(40rem,calc(100vw-2rem))]">
+    <Dialog open onClose={onClose} title={title} description={`${formatDay(form.session_date)} · Period ${form.period_number}`} className="w-[min(44rem,calc(100vw-2rem))]">
       {s && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {s.status === 'CANCELLED' && <Badge tone="bad">Cancelled on this date</Badge>}
@@ -192,25 +192,29 @@ export function SessionDialog({ target, classes, teachers, rooms, bell, org, fix
         <ConflictList conflicts={conflicts} checked={checked} className="sm:col-span-2" />
         {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad sm:col-span-2">{error}</p>}
 
-        <div className="flex flex-wrap gap-2 sm:col-span-2">
-          {s && live && (
-            <Button variant="danger" onClick={cancel} disabled={!!busy} id="cancel-session">
-              {busy === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : s.source === 'DATED' ? <Trash2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-              {s.source === 'DATED' ? 'Remove session' : 'Cancel on this date'}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+          <div className="flex flex-wrap gap-2">
+            {s && live && (
+              <Button variant="danger" onClick={cancel} disabled={!!busy} id="cancel-session">
+                {busy === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : s.source === 'DATED' ? <Trash2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                {s.source === 'DATED' ? 'Remove session' : 'Cancel on this date'}
+              </Button>
+            )}
+            {s?.entry_id && s.source !== 'DATED' && (
+              <Button variant="secondary" onClick={restore} disabled={!!busy} id="restore-session">
+                {busy === 'restore' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Restore weekly period
+              </Button>
+            )}
+          </div>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button variant="ghost" onClick={onClose}>Close</Button>
+            <Button variant="secondary" onClick={check} disabled={!!busy || !cls?.subjects.length} id="check-session">
+              {busy === 'check' ? <Loader2 className="h-4 w-4 animate-spin" /> : <SearchCheck className="h-4 w-4" />} Check conflicts
             </Button>
-          )}
-          {s?.entry_id && s.source !== 'DATED' && (
-            <Button variant="secondary" onClick={restore} disabled={!!busy} id="restore-session">
-              {busy === 'restore' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Restore weekly period
+            <Button type="submit" disabled={!!busy || !cls?.subjects.length} id="save-session">
+              {busy === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save for this date
             </Button>
-          )}
-          <Button variant="ghost" className="ml-auto" onClick={onClose}>Close</Button>
-          <Button variant="secondary" onClick={check} disabled={!!busy || !cls?.subjects.length} id="check-session">
-            {busy === 'check' ? <Loader2 className="h-4 w-4 animate-spin" /> : <SearchCheck className="h-4 w-4" />} Check conflicts
-          </Button>
-          <Button type="submit" disabled={!!busy || !cls?.subjects.length} id="save-session">
-            {busy === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save for this date
-          </Button>
+          </div>
         </div>
       </form>
     </Dialog>
