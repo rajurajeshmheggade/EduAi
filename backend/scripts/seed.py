@@ -29,6 +29,8 @@ USERS = [
     ("REG2026102", "Sara Khan", "sara@demo.edu", "student", "Grade-9-B", ["PHY101", "ENG-9"], "2"),
 ]
 
+TEACHER_GENDER = {"EMP1001": "female", "EMP1002": "female"}
+
 CLASSES = [
     # class_code, name, class teacher, [(subject, name, subject teacher)]
     ("Grade-10-A", "Grade 10 — Section A", "EMP1001",
@@ -65,6 +67,10 @@ def run(demo_attendance: bool = False, demo_breadth: bool = False) -> None:
         )
         if roll:
             db.execute("UPDATE public.app_users SET roll_number = %s WHERE user_code = %s", (roll, code))
+    # The AI Classroom avatar and its voice follow the subject teacher's gender (only the female 3D model ships);
+    # set it for the demo teachers unless an admin already chose one.
+    for code, gender in TEACHER_GENDER.items():
+        db.execute("UPDATE public.app_users SET gender = COALESCE(gender, %s) WHERE org_code = %s AND user_code = %s", (gender, ORG, code))
 
     # Direct inserts (not usp_upsert_class_subject) so re-seeding never widens a student's explicit subjects.
     for klass, name, class_teacher, subjects in CLASSES:
