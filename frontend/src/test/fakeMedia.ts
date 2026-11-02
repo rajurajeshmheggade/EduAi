@@ -72,8 +72,8 @@ export interface MediaEnv {
   audioContexts: FakeAudioContext[]
   getUserMedia: ReturnType<typeof vi.fn>
   getDisplayMedia: ReturnType<typeof vi.fn>
-  /** The next getUserMedia call waits (an open permission prompt) until `release()`. */
-  holdNext(): { release(): void }
+  /** The next getUserMedia call (for that kind of device, if given) waits — an open permission prompt — until `release()`. */
+  holdNext(kind?: 'video' | 'audio'): { release(): void }
   /** Tracks still running (the camera light would be on). */
   live(): FakeTrack[]
   exitFullscreen: ReturnType<typeof vi.fn>
@@ -86,12 +86,12 @@ export function installMediaEnv(opts: { screenSurface?: string } = {}): MediaEnv
   FakeAudioContext.instances = []
   const tracks: FakeTrack[] = []
   let held: { resolve: () => void } | null = null
-  let holdNext = false
+  let holdNext: 'video' | 'audio' | 'any' | null = null
   const devices = new EventTarget() as EventTarget & Record<string, unknown>
 
   const getUserMedia = vi.fn(async (c: MediaStreamConstraints) => {
-    if (holdNext) {
-      holdNext = false
+    if (holdNext && (holdNext === 'any' || c[holdNext])) {
+      holdNext = null
       await new Promise<void>((resolve) => { held = { resolve } })
     }
     const out: FakeTrack[] = []
@@ -143,8 +143,8 @@ export function installMediaEnv(opts: { screenSurface?: string } = {}): MediaEnv
 
   return {
     tracks, workers: FakeWorker.instances, audioContexts: FakeAudioContext.instances, getUserMedia, getDisplayMedia, exitFullscreen,
-    holdNext() {
-      holdNext = true
+    holdNext(kind) {
+      holdNext = kind ?? 'any'
       return { release: () => { held?.resolve(); held = null } }
     },
     live: () => tracks.filter((t) => t.readyState === 'live'),

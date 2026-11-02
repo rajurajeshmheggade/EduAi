@@ -194,14 +194,19 @@ describe('ProctorGate switches everything off when the session ends', () => {
     await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'left'))
   })
 
-  it('closing the preparation window in the middle of the checks', async () => {
+  it('closing the preparation window while the microphone prompt is open: no microphone, no detector afterwards', async () => {
     mount()
+    const prompt = env.holdNext('audio')
     await toDeviceCheck()
-    await waitFor(() => expect(document.querySelector('[data-check="camera"]')).toHaveAttribute('data-status', 'pass'))
+    await waitFor(() => expect(env.getUserMedia).toHaveBeenCalledTimes(2))
     fireEvent.click(screen.getByRole('button', { name: 'Close and go back' }))
-    await new Promise((r) => setTimeout(r, 400))                      // whatever was still running gives up
+    expect(env.live()).toEqual([])                                      // the camera preview went off with the window
+    await act(async () => { prompt.release() })                         // the student answers the prompt too late
+    await new Promise((r) => setTimeout(r, 100))
+    expect(env.tracks.map((t) => t.kind)).toEqual(['video', 'audio'])
     expectAllOff(env)
-    expect(env.workers.every((w) => w.terminated)).toBe(true)
+    expect(env.workers).toEqual([])                                     // the device check did not go on
+    expect(env.audioContexts).toEqual([])
     expect(intervals.open).toBe(0)
     expect(listeners.active(SENSORS)).toEqual([])
     expect(screen.queryByTestId('pre-exam-window')).toBeNull()
