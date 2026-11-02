@@ -68,11 +68,16 @@ export function SessionDrawer({ sessionId, refresh, onClose, onChanged }: { sess
                 <Fact label="Rules acknowledged" value={dateTime(data.session.rules_acknowledged_at)} />
                 <Fact label="Resumed" value={`${data.session.resumed_count} time${data.session.resumed_count === 1 ? '' : 's'}`} />
               </dl>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {data.requires.camera && <Device icon={Camera} ok={st?.camera_live !== false} label={data.session.camera_label ?? 'Camera'} />}
-                {data.requires.microphone && <Device icon={Mic} ok={st?.mic_live !== false && st?.mic_permission !== 'denied'} label={data.session.mic_label ?? 'Microphone'} />}
-                {data.requires.fullscreen && st && <Device icon={Flag} ok={!!st.fullscreen} label={st.fullscreen ? 'Full screen' : 'Not full screen'} />}
-              </div>
+              {/* The last device report only describes a session that is still open; a finished one has switched them off. */}
+              {data.session.status === 'ACTIVE' || data.session.status === 'INTERRUPTED' ? (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {data.requires.camera && <Device icon={Camera} ok={st?.camera_live !== false} label={data.session.camera_label ?? 'Camera'} />}
+                  {data.requires.microphone && <Device icon={Mic} ok={st?.mic_live !== false && st?.mic_permission !== 'denied'} label={data.session.mic_label ?? 'Microphone'} />}
+                  {data.requires.fullscreen && st && <Device icon={Flag} ok={!!st.fullscreen} label={st.fullscreen ? 'Full screen' : 'Not full screen'} />}
+                </div>
+              ) : data.session.ended_at && (
+                <p className="text-xs text-ink-500">Session finished {dateTime(data.session.ended_at)} — proctoring on the student's device has stopped.</p>
+              )}
 
               <div role="tablist" className="flex gap-1 rounded-xl border border-line bg-ink-800 p-1 text-sm">
                 {(['timeline', 'actions'] as const).map((t) => (

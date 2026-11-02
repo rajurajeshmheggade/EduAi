@@ -157,7 +157,8 @@ class HeartbeatIn(BaseModel):
 
 @router.post("/student/sessions/{session_id}/heartbeat")
 def heartbeat(session_id: UUID, body: HeartbeatIn, user: CurrentUser = Depends(students)):
-    """Every ~10 s while the exam is open. Returns teacher warnings not yet acknowledged and whether a teacher ended it."""
+    """Every ~10 s while the exam is open. Returns teacher warnings not yet acknowledged and whether the session has ended
+    (handed in, closed or ended by a teacher): the device then switches every proctoring sensor off."""
     s = sessions.own(user, session_id)
     limiter.hit(f"proctor-hb:{s['session_id']}", MAX_HEARTBEATS_PER_MINUTE, 60, message="Too many heartbeats")
     return sessions.heartbeat(s, body.model_dump())

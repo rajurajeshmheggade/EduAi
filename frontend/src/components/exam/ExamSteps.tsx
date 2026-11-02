@@ -95,7 +95,9 @@ export function IdPhotoStep({ media, onDone }: { media: ProctorMedia; onDone: (v
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    if (preview.current && media.camera) { preview.current.srcObject = media.camera; void preview.current.play().catch(() => {}) }
+    const v = preview.current
+    if (v && media.camera) { v.srcObject = media.camera; void v.play().catch(() => {}) }
+    return () => { if (v) v.srcObject = null }
   }, [media])
 
   async function take() {

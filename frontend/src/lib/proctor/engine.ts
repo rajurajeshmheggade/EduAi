@@ -80,6 +80,7 @@ export class ProctorEngine {
 
   // ---------------------------------------------------------------- lifecycle
   start() {
+    if (this.stopped) return
     const sig = { signal: this.abort.signal, capture: true }
     const block = (e: Event) => e.preventDefault()
     document.addEventListener('fullscreenchange', () => this.onFullscreen(), sig)
@@ -125,11 +126,13 @@ export class ProctorEngine {
     this.hud()
   }
 
+  /** Every listener, timer, observer and channel off; what is queued is sent. Safe to call twice; stays stopped. */
   stop() {
     if (this.stopped) return
     this.stopped = true
     this.abort.abort()
     this.timers.forEach(clearInterval)
+    this.timers = []
     this.observer?.disconnect()
     this.channel?.close()
     this.o.transport.stop()
@@ -163,8 +166,9 @@ export class ProctorEngine {
     this.early.delete(ev.code)
     const blob = early ? await early.catch(() => null) : kind === 'webcam' ? await this.o.media.webcamJpeg().catch(() => null)
       : kind === 'screen' ? await this.o.media.screenJpeg().catch(() => null) : null
-    this.o.transport.emit(ev, { urgent: !calibration && (warns || !!rule?.pause), evidence: blob && kind ? { blob, kind } : undefined })
-    if (rule) {
+    // Stopped while the snapshot was taken: the event still goes out, at once (the transport timer is off now).
+    this.o.transport.emit(ev, { urgent: this.stopped || (!calibration && (warns || !!rule?.pause)), evidence: blob && kind ? { blob, kind } : undefined })
+    if (rule && !this.stopped) {
       this.o.onFlag({ code: ev.code, label: rule.label, severity: rule.severity, calibration, occurrence: n, modal: !calibration && warns,
         pause: rule.pause, evidence: blob ? URL.createObjectURL(blob) : null })
     }
@@ -287,12 +291,14 @@ export class ProctorEngine {
 
   // ---------------------------------------------------------------- reporting
   private async beat() {
+    if (this.stopped) return
     try {
       const res = await this.o.heartbeat({
         fullscreen: !!document.fullscreenElement, visible: document.visibilityState === 'visible', faces: this.lastFaces,
         camera_live: this.o.media.cameraLive(), screen_live: !!this.o.media.screenLive(), mic_live: !!this.o.media.micLive(),
         online: navigator.onLine, answered: this.o.answered(), fps: Math.round((this.frames.length / 30) * 10) / 10,
       })
+      if (this.stopped) return
       for (const f of res.server_flags) {
         const rule = { label: f.label, severity: 'High' }
         this.o.onFlag({ code: f.code, label: rule.label, severity: rule.severity, calibration: f.calibration, occurrence: 1, modal: !f.calibration, pause: false, evidence: null })
@@ -302,8 +308,9 @@ export class ProctorEngine {
   }
 
   private async presence() {
+    if (this.stopped) return
     const b = await this.o.media.webcamJpeg().catch(() => null)
-    if (b) await this.o.presence(b).catch(() => {})
+    if (b && !this.stopped) await this.o.presence(b).catch(() => {})
   }
 
   private pause(r: PauseReason) {

@@ -190,10 +190,14 @@ def heartbeat(s: dict, status: dict) -> dict:
     gap = (at - last).total_seconds()
     limit = s["settings"].get("heartbeat_missing_seconds", cfg.DEFAULTS["heartbeat_missing_seconds"])
     changed = (s["last_status"] or {}) != status
-    db.execute("UPDATE public.proctor_sessions SET status = 'ACTIVE', last_heartbeat_at = %s, last_status = %s, updated_at = NOW() "
-               "WHERE session_id = %s AND status IN ('ACTIVE', 'INTERRUPTED')", (at, Jsonb(status), s["session_id"]))
     was = s["status"]
+    # Only from the status this beat was read with: a beat still in flight when the student handed in or left must not
+    # bring the session back to ACTIVE (the teacher would see a finished student "writing" with the camera on).
+    row = db.fetch_one("UPDATE public.proctor_sessions SET status = 'ACTIVE', last_heartbeat_at = %s, last_status = %s, updated_at = NOW() "
+                       "WHERE session_id = %s AND status = %s RETURNING session_id", (at, Jsonb(status), s["session_id"], was))
     s = load(s["session_id"])
+    if not row:
+        return {**_student_status(s), "warnings": []}
     if was == "INTERRUPTED":
         _insert(s, "SESSION_RESUMED", source="server", details={"gap_s": round(gap)})
     elif gap > limit:   # nobody swept while it was silent: record the gap now
@@ -219,7 +223,9 @@ def ingest(s: dict, events: list[dict]) -> dict:
 
 
 def _student_status(s: dict) -> dict:
-    return {"status": s["status"], "ended": s["status"] == "ENDED_BY_TEACHER", "end_reason": s["end_reason"], "server_time": now()}
+    """`ended`: the session is over for good (handed in, closed, or ended by a teacher), so the device must switch its
+    camera, microphone and detectors off — not only when a teacher ended it."""
+    return {"status": s["status"], "ended": s["status"] in cfg.DONE, "end_reason": s["end_reason"], "server_time": now()}
 
 
 def _insert(s: dict, code: str, *, seq: int | None = None, client_ts=None, duration_ms: int = 0, confidence=None,
