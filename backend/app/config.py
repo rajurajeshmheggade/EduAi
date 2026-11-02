@@ -46,7 +46,9 @@ class Settings(BaseSettings):
     azure_storage_connection_string: str = ""
     azure_storage_container: str = "eduai"
     signed_url_minutes: int = 60
-    public_base_url: str = "http://localhost:8000"
+    # Prefix for local-storage file links. Empty = same-origin "/files/..." links, which work through the Vite dev
+    # proxy and a reverse proxy alike; set it only when files are served from a different host.
+    public_base_url: str = ""
 
     # --- Azure OpenAI ---
     azure_openai_endpoint: str = ""
