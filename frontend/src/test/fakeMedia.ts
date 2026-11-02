@@ -192,12 +192,12 @@ export function trackListeners(targets: EventTarget[]) {
 
 /** setInterval timers the code under test started and has not cleared yet. */
 export function trackIntervals() {
-  const open = new Set<unknown>()
+  const open = new Map<unknown, string>()
   const realSet = globalThis.setInterval
   const realClear = globalThis.clearInterval
   const set = vi.spyOn(globalThis, 'setInterval').mockImplementation(((fn: () => void, ms?: number) => {
     const id = realSet(fn, ms)
-    open.add(id)
+    open.set(id, new Error().stack ?? '')
     return id
   }) as typeof setInterval)
   const clear = vi.spyOn(globalThis, 'clearInterval').mockImplementation(((id?: ReturnType<typeof setInterval>) => {
@@ -206,6 +206,8 @@ export function trackIntervals() {
   }) as typeof clearInterval)
   return {
     get open() { return open.size },
+    /** Where each interval still running was started (for a failing test's message). */
+    get where() { return [...open.values()] },
     restore: () => { set.mockRestore(); clear.mockRestore() },
   }
 }

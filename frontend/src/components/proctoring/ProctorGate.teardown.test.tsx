@@ -83,6 +83,7 @@ async function begin() {
   await checksPass()
   fireEvent.click(screen.getByRole('button', { name: /Begin exam/ }))
   expect(await screen.findByText('EXAM CONTENT')).toBeInTheDocument()
+  await act(async () => {})                                             // the closed window's effect clean-ups have run
   expect(screen.getByLabelText('Proctoring status')).toBeInTheDocument()
   expect(document.fullscreenElement).not.toBeNull()
   expect(env.live().map((t) => t.kind).sort()).toEqual(['audio', 'video'])
@@ -90,11 +91,13 @@ async function begin() {
   expect(listeners.active(SENSORS).length).toBeGreaterThan(0)
 }
 
-function expectEverythingOff() {
+/** (after React has run the effect clean-ups of what just unmounted) */
+async function expectEverythingOff() {
+  await act(async () => {})
   expectAllOff(env)
   expect(env.workers).toHaveLength(1)
   expect(env.audioContexts).toHaveLength(1)
-  expect(intervals.open).toBe(0)
+  expect(intervals.where).toEqual([])
   expect(listeners.active(SENSORS)).toEqual([])
   expect(document.fullscreenElement).toBeNull()
   expect(screen.queryByLabelText('Proctoring status')).toBeNull()
@@ -110,11 +113,11 @@ describe('ProctorGate switches everything off when the session ends', () => {
     fireEvent.click(screen.getByText('HAND IN'))
     expect(env.live()).toEqual([])                                     // synchronously, before any network round trip
     await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'submitted'))
-    expectEverythingOff()
+    await expectEverythingOff()
     expect(screen.getByText('EXAM CONTENT')).toBeInTheDocument()
     expect(svc.events.mock.invocationCallOrder[0]).toBeLessThan(svc.finish.mock.invocationCallOrder[0])
     fireEvent.click(screen.getByText('HAND IN'))                       // twice: nothing stopped twice, closed once
-    expectEverythingOff()
+    await expectEverythingOff()
     expect(svc.finish).toHaveBeenCalledTimes(1)
   })
 
@@ -125,7 +128,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     await checksPass()
     fireEvent.click(screen.getByRole('button', { name: /Begin exam/ }))
     expect(await screen.findByText('Your teacher ended this session')).toBeInTheDocument()
-    expectEverythingOff()
+    await expectEverythingOff()
     expect(screen.queryByText('EXAM CONTENT')).toBeNull()
     expect(svc.finish).not.toHaveBeenCalled()
   })
@@ -136,7 +139,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     svc.events.mockResolvedValue({ ...ACTIVE, status: 'SUBMITTED', ended: true, end_reason: 'SUBMITTED', accepted: [] })
     act(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')) })   // a flag goes out
     expect(await screen.findByText('This session has ended')).toBeInTheDocument()
-    expectEverythingOff()
+    await expectEverythingOff()
     expect(svc.finish).not.toHaveBeenCalled()
   })
 
@@ -145,7 +148,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     await begin()
     view.unmount()
     expectAllOff(env)
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
     expect(document.fullscreenElement).toBeNull()
     await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'left'))
@@ -156,9 +159,9 @@ describe('ProctorGate switches everything off when the session ends', () => {
     await begin()
     act(() => { window.dispatchEvent(new Event('pagehide')) })
     expectAllOff(env)
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
-    expect(svc.finishOnUnload).toHaveBeenCalledWith('s1', 'left', [])
+    expect(svc.finishOnUnload).toHaveBeenCalledWith('s1', 'left', expect.any(Array))   // with any flag not sent yet
   })
 
   it('a camera switched away from in the device check is stopped too — every stream exactly once', async () => {
@@ -174,7 +177,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     fireEvent.click(await screen.findByText('HAND IN'))
     await waitFor(() => expect(svc.finish).toHaveBeenCalled())
     expect(env.tracks.map((t) => t.label)).toEqual(['Integrated Camera', 'Built-in Mic', 'USB Camera'])
-    expectEverythingOff()
+    await expectEverythingOff()
   })
 
   it('leaving while the camera permission prompt is open: the late stream is stopped, nothing else is opened', async () => {
@@ -189,7 +192,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     expectAllOff(env)
     expect(env.getUserMedia).toHaveBeenCalledTimes(1)                  // the microphone was never asked for
     expect(env.workers).toEqual([])                                     // nor the detector loaded
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
     await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'left'))
   })
@@ -207,7 +210,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     expectAllOff(env)
     expect(env.workers).toEqual([])                                     // the device check did not go on
     expect(env.audioContexts).toEqual([])
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
     expect(screen.queryByTestId('pre-exam-window')).toBeNull()
     expect(svc.finish).toHaveBeenCalledWith('s1', 'left')
@@ -223,7 +226,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     expect(document.fullscreenElement).toBeNull()
     view.unmount()
     expectAllOff(env)
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
   })
 
@@ -234,7 +237,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     expect(env.getUserMedia).toHaveBeenCalledTimes(2)                  // one camera, one microphone: nothing doubled
     fireEvent.click(screen.getByText('HAND IN'))
     await waitFor(() => expect(svc.finish).toHaveBeenCalledWith('s1', 'submitted'))
-    expectEverythingOff()
+    await expectEverythingOff()
   })
 
   it('React StrictMode: leaving in the middle of the device check', async () => {
@@ -245,7 +248,7 @@ describe('ProctorGate switches everything off when the session ends', () => {
     await new Promise((r) => setTimeout(r, 400))
     expectAllOff(env)
     expect(env.workers.every((w) => w.terminate.mock.calls.length === 1)).toBe(true)
-    expect(intervals.open).toBe(0)
+    expect(intervals.where).toEqual([])
     expect(listeners.active(SENSORS)).toEqual([])
   })
 })
