@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 from .. import db
 from ..security import ADMIN_ROLES, CurrentUser, require_role
 from ..services import library as lib
+from ..services.diksha import access as acc
 from ..services.storage import get_storage
 from .admin import org_scope
 
@@ -157,7 +158,7 @@ def _filters(board: str | None, class_number: int | None, subject: str | None, l
 def _teacher_targets(user: CurrentUser) -> list[dict]:
     """Class subjects this teacher may publish to: subjects they teach + every subject of their own class.
 
-    `board` is the admin-set board (CBSE/NCERT/State…) for the class — the Digital Library's DIKSHA catalog is
+    `board` is the admin-set board (CBSE/NCERT/State…) for the class — the Digital Library's catalogue (DIKSHA) is
     scoped to it automatically, so teachers and students never pick a board themselves (FR: admin-bound board).
     """
     return db.fetch_all(
@@ -183,14 +184,23 @@ PUB_SELECT = (
     "  p.unpublished_by, COALESCE(b.title, s.name) AS title, COALESCE(b.board, s.metadata->'boards'->>0) AS board, "
     "  COALESCE(b.class_number, (s.metadata->'classes'->>0)::int) AS class_number, "
     "  COALESCE(b.language, s.metadata->'mediums'->>0) AS language, COALESCE(b.subject_name, s.metadata->'subjects'->>0) AS subject_name, "
-    "  COALESCE(b.source_name, 'DIKSHA') AS source_name, CASE WHEN p.source_item_id IS NULL THEN 'school' ELSE s.source END AS source, "
-    "  s.source_id, s.kind AS source_kind, s.source_status, p.source_context "
+    "  COALESCE(b.source_name, 'Catalogue') AS source_name, CASE WHEN p.source_item_id IS NULL THEN 'school' ELSE s.source END AS source, "
+    "  s.source_id, s.kind AS source_kind, s.source_status, p.source_context, s.metadata AS source_metadata "
     "FROM public.library_publications p "
     "LEFT JOIN public.library_books b ON b.book_id = p.book_id "
     "LEFT JOIN public.library_source_items s ON s.item_id = p.source_item_id "
     "JOIN public.classes c ON c.org_code = p.org_code AND c.class_code = p.class_code "
     "LEFT JOIN public.class_subjects cs ON cs.org_code = p.org_code AND cs.class_code = p.class_code AND cs.subject_code = p.subject_code "
     "LEFT JOIN public.app_users t ON t.org_code = p.org_code AND t.user_code = p.teacher_code ")
+
+
+def _pub_out(r: dict) -> dict:
+    """A publication row for the API: catalogue items say whether students can currently see them (an item whose
+    licence the institution has not approved for in-app display is hidden from students, never linked out)."""
+    out = {k: v for k, v in r.items() if k != "source_metadata"}
+    meta = r.get("source_metadata")
+    out["hidden_from_students"] = bool(meta) and not acc.visible(meta)
+    return out
 
 
 # ---------------------------------------------------------------- shared
@@ -463,7 +473,7 @@ def all_publications(org_code: str | None = None, status: str | None = None, use
     by_pub: dict = {}
     for e in events:
         by_pub.setdefault(e["publication_id"], []).append(e)
-    return {"publications": [{**r, "events": by_pub.get(r["publication_id"], [])} for r in rows]}
+    return {"publications": [{**_pub_out(r), "events": by_pub.get(r["publication_id"], [])} for r in rows]}
 
 
 # ---------------------------------------------------------------- teacher: publishing
@@ -518,7 +528,7 @@ def my_publications(status: str | None = None, user: CurrentUser = Depends(teach
         "AND (%s::text IS NULL OR p.status = %s::text) ORDER BY p.status, p.published_at DESC LIMIT 500",
         (user.org_code, user.user_code, targets, status, status))
     tset = set(targets)
-    return {"publications": [{**r, "can_unpublish": r["status"] == "published" and f"{r['class_code']}|{r['subject_code']}" in tset}
+    return {"publications": [{**_pub_out(r), "can_unpublish": r["status"] == "published" and f"{r['class_code']}|{r['subject_code']}" in tset}
                              for r in rows]}
 
 
@@ -541,13 +551,31 @@ def unpublish(publication_id: UUID, user: CurrentUser = Depends(teachers)):
 
 
 # ---------------------------------------------------------------- student: My Library
+# Content types of the Student Library (school books count as textbooks). Choosing one narrows the subject list to the
+# subjects that have content of that type.
+STUDENT_TYPES = {"textbook": "Textbooks", "video": "Videos", "document": "Documents (PDF)", "interactive": "Interactive", "audio": "Audio"}
+_RESOURCE_TYPE = {"video": "video", "youtube": "video", "pdf": "document", "interactive": "interactive", "audio": "audio"}
+
+
+def _type_of_external(e: dict) -> str | None:
+    return "textbook" if e["kind"] == "textbook" else _RESOURCE_TYPE.get(e["metadata"].get("resource_type"))
+
+
 @router.get("/student/books")
 def student_books(subject: str | None = Query(default=None, max_length=64), language: str | None = None,
-                  q: str | None = Query(default=None, max_length=100), user: CurrentUser = Depends(students)):
-    """FR-010/011: books published to the logged-in student's class for its current academic year (server-derived)."""
+                  q: str | None = Query(default=None, max_length=100), content_type: str | None = Query(default=None, max_length=20),
+                  user: CurrentUser = Depends(students)):
+    """FR-010/011: books published to the logged-in student's class for its current academic year (server-derived).
+
+    `types` counts the whole library; `subjects` lists only the subjects with content of the chosen `content_type`.
+    Catalogue items that cannot be shown in-app (e.g. a NonCommercial licence the institution has not approved) are
+    left out entirely."""
+    if content_type and content_type not in STUDENT_TYPES:
+        raise HTTPException(422, "Content type not supported")
     me = db.call_row("usp_get_member", user.org_code, user.user_code)
     if not me or not me.get("class_code"):
-        return {"class_code": None, "class_name": None, "year_code": None, "books": [], "external": [], "subjects": [], "languages": []}
+        return {"class_code": None, "class_name": None, "year_code": None, "books": [], "external": [], "subjects": [], "languages": [],
+                "types": [{"value": k, "label": v, "count": 0} for k, v in STUDENT_TYPES.items()]}
     cls = db.fetch_one("SELECT class_code, class_name, year_code, grade_number FROM public.classes WHERE org_code = %s AND class_code = %s",
                        (user.org_code, me["class_code"]))
     rows = db.fetch_all(
@@ -567,26 +595,31 @@ def student_books(subject: str | None = Query(default=None, max_length=64), lang
         bk["subjects"].append({"subject_code": r["subject_code"], "subject_name": r["class_subject_name"] or r["subject_code"], "teacher_name": r["teacher_name"]})
         bk["published_at"] = max(bk["published_at"], r["published_at"])
     all_books = list(books.values())
-    subjects = sorted({(s["subject_code"], s["subject_name"]) for b in all_books for s in b["subjects"]}, key=lambda x: x[1])
-    out = [b for b in all_books
+    external = [e for e in _student_source_items(user.org_code, cls) if _type_of_external(e)]
+    of_type_books = all_books if content_type in (None, "", "textbook") else []
+    of_type_ext = [e for e in external if not content_type or _type_of_external(e) == content_type]
+    subjects = sorted({(x["subject_code"], x["subject_name"]) for b in of_type_books + of_type_ext for x in b["subjects"]}, key=lambda x: x[1])
+    out = [b for b in of_type_books
            if (not subject or any(s["subject_code"] == subject for s in b["subjects"]))
            and (not language or b["language"] == language)
            and (not q or q.lower() in f"{b['title']} {b['subject_name']} {b.get('publisher') or ''}".lower())]
-    external = _student_source_items(user.org_code, cls)
-    subjects = sorted({(sc, sn) for sc, sn in subjects} | {(x["subject_code"], x["subject_name"]) for e in external for x in e["subjects"]},
-                      key=lambda x: x[1])
-    ext_out = [e for e in external
+    ext_out = [e for e in of_type_ext
                if (not subject or any(x["subject_code"] == subject for x in e["subjects"]))
                and (not language or language in e["metadata"].get("mediums", []))
                and (not q or q.lower() in f"{e['name']} {' '.join(e['metadata'].get('subjects', []))}".lower())]
     languages = {b["language"] for b in all_books} | {m for e in external for m in e["metadata"].get("mediums", [])}
+    counts = {k: 0 for k in STUDENT_TYPES}
+    counts["textbook"] += len(all_books)
+    for e in external:
+        counts[_type_of_external(e)] += 1
     return {"class_code": cls["class_code"], "class_name": cls["class_name"], "year_code": cls["year_code"],
             "books": out, "external": ext_out, "subjects": [{"subject_code": c, "subject_name": n} for c, n in subjects],
-            "languages": sorted(languages)}
+            "languages": sorted(languages), "types": [{"value": k, "label": v, "count": counts[k]} for k, v in STUDENT_TYPES.items()]}
 
 
 def _student_source_items(org: str, cls: dict) -> list[dict]:
-    """DIKSHA items (metadata references) published to the student's class for its current academic year."""
+    """Catalogue items (metadata references) published to the student's class for its current academic year — only
+    those that can be shown in-app with the current licence settings."""
     rows = db.fetch_all(
         "SELECT s.source, s.source_id, s.kind, s.name, s.metadata, s.source_status, p.subject_code, "
         "  cs.subject_name AS class_subject_name, p.published_at, t.full_name AS teacher_name, p.source_context "
@@ -597,11 +630,12 @@ def _student_source_items(org: str, cls: dict) -> list[dict]:
         "ORDER BY cs.subject_name, s.name", (org, cls["class_code"], cls["year_code"]))
     items: dict = {}
     for r in rows:
+        if not acc.visible(r["metadata"] or {}):
+            continue
         it = items.get(r["source_id"])
         if not it:
-            meta = {k: v for k, v in (r["metadata"] or {}).items() if k not in ("artifact_url", "preview_url", "streaming_url")}
             it = items[r["source_id"]] = {"source": r["source"], "source_id": r["source_id"], "kind": r["kind"], "name": r["name"],
-                                          "metadata": meta, "source_status": r["source_status"], "subjects": [],
+                                          "metadata": acc.public(r["metadata"] or {}), "source_status": r["source_status"], "subjects": [],
                                           "published_at": r["published_at"], "context": r["source_context"]}
         it["subjects"].append({"subject_code": r["subject_code"], "subject_name": r["class_subject_name"] or r["subject_code"],
                                "teacher_name": r["teacher_name"]})

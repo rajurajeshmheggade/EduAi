@@ -28,19 +28,20 @@ MAX_RESULT_WINDOW = 10_000
 class DikshaError(Exception):
     """kind: disabled | invalid_id | timeout | rate_limited | not_found | bad_request | unavailable | invalid_response"""
 
+    # Shown to users: neutral wording (the source platform is never named in the UI).
     MESSAGES = {
-        "disabled": "The DIKSHA library is turned off for this installation.",
-        "invalid_id": "That is not a valid DIKSHA content id.",
-        "timeout": "DIKSHA did not respond in time. Please try again.",
-        "rate_limited": "DIKSHA is receiving too many requests right now. Please try again in a moment.",
-        "not_found": "This item is no longer available on DIKSHA.",
-        "bad_request": "DIKSHA could not process this search.",
-        "unavailable": "DIKSHA is unavailable right now. Please try again later.",
-        "invalid_response": "DIKSHA returned an unexpected response.",
+        "disabled": "The content catalogue is turned off for this installation.",
+        "invalid_id": "That is not a valid content id.",
+        "timeout": "The content catalogue did not respond in time. Please try again.",
+        "rate_limited": "The content catalogue is receiving too many requests right now. Please try again in a moment.",
+        "not_found": "This item is no longer available.",
+        "bad_request": "The content catalogue could not process this search.",
+        "unavailable": "The content catalogue is unavailable right now. Please try again later.",
+        "invalid_response": "The content catalogue returned an unexpected response.",
     }
 
     def __init__(self, kind: str, status: int | None = None):
-        super().__init__(self.MESSAGES.get(kind, "DIKSHA request failed."))
+        super().__init__(self.MESSAGES.get(kind, "The content catalogue request failed."))
         self.kind = kind
         self.status = status
 
