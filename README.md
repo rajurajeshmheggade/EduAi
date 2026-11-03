@@ -746,10 +746,3 @@ Interactive docs at `/docs`.
 ## Not yet built (later phases)
 Image answers inside the online test runner, analytics, creativity reports, .NET 8 CRUD bridge, Azure Key Vault wiring.
 Scanned-page vision captioning during textbook indexing is flagged (`scanned_pages`) but not yet implemented.
-
-## Deploy
-
-Frontend on Vercel (Root Directory `frontend`, config in `frontend/vercel.json`), backend + PostgreSQL/pgvector + all AI
-keys on an always-on host: see [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md).
-Free tier end to end (Vercel + Render + Neon; the root `Dockerfile` builds the API image):
-[docs/DEPLOY_FREE_TIER.md](docs/DEPLOY_FREE_TIER.md).

@@ -3,4 +3,3 @@
 *.jpg binary
 *.pdf binary
 *.xlsx binary
-*.sh text eol=lf

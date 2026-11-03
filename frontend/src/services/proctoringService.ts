@@ -1,5 +1,4 @@
 import { api, tokenStore } from './apiClient'
-import { apiUrl } from '@/lib/apiBase'
 
 const B = '/ICMELive/api/v1/proctoring'
 
@@ -176,8 +175,8 @@ export const proctoringService = {
   /** Page is closing: fire-and-forget with keepalive (sendBeacon cannot carry the Authorization header). */
   finishOnUnload(sessionId: string, reason: 'left' | 'closed', events: WireEvent[] = []) {
     const headers = { ...authHeaders(), 'Content-Type': 'application/json' }
-    if (events.length) void fetch(apiUrl(`${B}/student/sessions/${sessionId}/events`), { method: 'POST', keepalive: true, headers, body: JSON.stringify({ events: events.slice(0, 50) }) }).catch(() => {})
-    void fetch(apiUrl(`${B}/student/sessions/${sessionId}/finish`), { method: 'POST', keepalive: true, headers, body: JSON.stringify({ reason }) }).catch(() => {})
+    if (events.length) void fetch(`${B}/student/sessions/${sessionId}/events`, { method: 'POST', keepalive: true, headers, body: JSON.stringify({ events: events.slice(0, 50) }) }).catch(() => {})
+    void fetch(`${B}/student/sessions/${sessionId}/finish`, { method: 'POST', keepalive: true, headers, body: JSON.stringify({ reason }) }).catch(() => {})
   },
 
   // teacher
@@ -244,7 +243,7 @@ export async function openProctorStream(filter: { module?: ProctorModule; refId?
   const qs = new URLSearchParams()
   if (filter.module) qs.set('module', filter.module)
   if (filter.refId) qs.set('ref_id', filter.refId)
-  const res = await fetch(apiUrl(`${B}/teacher/stream?${qs}`), { headers: { ...authHeaders(), Accept: 'text/event-stream' }, signal, cache: 'no-store' })
+  const res = await fetch(`${B}/teacher/stream?${qs}`, { headers: { ...authHeaders(), Accept: 'text/event-stream' }, signal, cache: 'no-store' })
   if (!res.ok || !res.body) throw new StreamError(res.status)
   const reader = res.body.getReader()
   const dec = new TextDecoder()

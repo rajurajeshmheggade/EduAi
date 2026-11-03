@@ -5,7 +5,6 @@
  */
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import type { Answers, ApplicationStatus, FormDefinition } from '@/lib/admissionForm'
-import { AXIOS_BASE } from '@/lib/apiBase'
 
 const BASE = '/ICMELive/api/v1/apply'
 const K = { access: 'eduai.apply.access', refresh: 'eduai.apply.refresh', slug: 'eduai.apply.slug', done: 'eduai.apply.done' }
@@ -31,7 +30,7 @@ export const applyStore = {
 }
 export interface DoneInfo { slug: string; reference_no: string; status: ApplicationStatus; at: string; test?: boolean }
 
-export const applyApi = axios.create({ baseURL: AXIOS_BASE })
+export const applyApi = axios.create({ baseURL: '/' })
 const slugOf = (url?: string) => /\/apply\/([a-z0-9-]+)/.exec(url ?? '')?.[1] ?? ''
 
 applyApi.interceptors.request.use((cfg) => {

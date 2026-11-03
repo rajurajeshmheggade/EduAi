@@ -14,13 +14,10 @@ import { exam, examStore, PAGE_ID, type ExamView as View } from '@/lib/proctor/e
 import { examChannel, setExamLock } from '@/lib/proctor/examLock'
 import { useProctorMedia } from '@/lib/proctor/useProctorMedia'
 import { errorMessage } from '@/services/apiClient'
-import { API_ORIGIN } from '@/lib/apiBase'
 
-// The backend origin when the API is called directly (VITE_API_BASE_URL); '' when same-origin via rewrites/proxy.
-const API = API_ORIGIN ? ` ${API_ORIGIN}` : ''
 const CSP = [
   "default-src 'self'", `script-src 'self' 'wasm-unsafe-eval'${import.meta.env.DEV ? " 'unsafe-inline'" : ''}`, "worker-src 'self' blob:",
-  `connect-src 'self'${API}${import.meta.env.DEV ? ' ws: wss:' : ''}`, `img-src 'self' blob: data:${API}`, `media-src 'self' blob: mediastream:${API}`,
+  `connect-src 'self'${import.meta.env.DEV ? ' ws: wss:' : ''}`, "img-src 'self' blob: data:", "media-src 'self' blob: mediastream:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src 'self' https://fonts.gstatic.com", "frame-src 'none'", "object-src 'none'",
   "base-uri 'self'",
 ].join('; ')

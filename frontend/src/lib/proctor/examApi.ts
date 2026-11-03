@@ -1,6 +1,5 @@
 import axios from 'axios'
 import type { FlagCode } from './rules'
-import { apiUrl, AXIOS_BASE } from '@/lib/apiBase'
 
 /**
  * The exam view's HTTP client. It sends ONLY the exam token, device id and page id — never the teacher's JWT (the
@@ -40,7 +39,7 @@ export const examStore = {
   },
 }
 
-export const examApi = axios.create({ baseURL: AXIOS_BASE })
+export const examApi = axios.create({ baseURL: '/' })
 examApi.interceptors.request.use((cfg) => {
   const s = examStore.get()
   if (s) {
@@ -130,7 +129,7 @@ export const exam = {
   release() {
     const s = examStore.get()
     if (!s) return
-    void fetch(apiUrl(`${BASE}/release`), { method: 'POST', keepalive: true, body: JSON.stringify({ page_id: PAGE_ID }),
+    void fetch(`${BASE}/release`, { method: 'POST', keepalive: true, body: JSON.stringify({ page_id: PAGE_ID }),
       headers: { 'Content-Type': 'application/json', 'X-Exam-Token': s.token, 'X-Device-Id': s.device, 'X-Page-Id': PAGE_ID } }).catch(() => {})
   },
   confirm: (dob: string) => d(examApi.post<ExamView>(`${BASE}/confirm`, { dob })),

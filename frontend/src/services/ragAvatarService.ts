@@ -1,6 +1,5 @@
 import { tokenStore } from './apiClient'
 import type { Citation } from '@/types'
-import { apiUrl } from '@/lib/apiBase'
 
 export interface RagStreamHandlers {
   onMeta?: (m: { session_id: string; citations: Citation[]; k: number }) => void
@@ -15,7 +14,7 @@ export async function streamRagQuery(
   h: RagStreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(apiUrl('/ICMELive/api/v1/rag/query'), {
+  const res = await fetch('/ICMELive/api/v1/rag/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenStore.access ?? ''}` },
     body: JSON.stringify({ ...body, stream: true }),
@@ -57,7 +56,7 @@ export function dispatch(raw: string, h: RagStreamHandlers) {
 export async function transcribe(blob: Blob): Promise<string> {
   const fd = new FormData()
   fd.append('audio', blob, 'question.webm')
-  const res = await fetch(apiUrl('/ICMELive/transcribe-audio'), {
+  const res = await fetch('/ICMELive/transcribe-audio', {
     method: 'POST', headers: { Authorization: `Bearer ${tokenStore.access ?? ''}` }, body: fd,
   })
   const j = await res.json()

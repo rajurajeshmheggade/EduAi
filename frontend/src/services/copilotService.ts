@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { api, tokenStore } from './apiClient'
-import { apiUrl } from '@/lib/apiBase'
 
 const B = '/ICMELive/api/v1/copilot'
 
@@ -33,7 +32,7 @@ export async function streamCopilotQuery(
   h: CopilotStreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(apiUrl(`${B}/query`), {
+  const res = await fetch(`${B}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenStore.access ?? ''}` },
     body: JSON.stringify({ ...body, stream: true }),
