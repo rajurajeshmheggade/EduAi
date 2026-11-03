@@ -5,6 +5,7 @@ import { Empty, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { errorMessage } from '@/services/apiClient'
 import { admissionService, type TeamMember } from '@/services/admissionService'
 
@@ -55,9 +56,9 @@ export function AdmissionTeamPanel({ org }: { org?: string | null }) {
         <p className="mt-3 text-xs text-ink-500">Counsellors run enquiries and applications; integrity reviewers decide on proctoring flags. The principal role is the school admin account.</p>
       </Panel>
       {created && <CredentialNotice member={created} onDismiss={() => setCreated(null)} />}
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && rows && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
       <Panel title="Admissions team">
-        {!rows ? <div className="skeleton h-32" /> : rows.length === 0 ? <Empty icon={UserPlus}>No counsellors or reviewers yet.</Empty> : (
+        {!rows ? (error ? <ErrorState title="Couldn’t load the admissions team" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-32" />) : rows.length === 0 ? <Empty icon={UserPlus}>No counsellors or reviewers yet.</Empty> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">

@@ -1,4 +1,4 @@
-"""DIKSHA virtual-lab collection -> experiments.
+"""DIKSHA virtual-lab collection -> experiments (everything is shown inside the LMS; see services.diksha.access).
 
 In every collection on https://diksha.gov.in/virtuallabs.html a top-level unit is one experiment (or activity). Its
 resources sit directly under it or in sub-units such as "Simulation", "Explanation Resources" and "Self-Evaluation":
@@ -98,7 +98,9 @@ def experiment(unit: dict, position: int) -> dict:
 
 
 def experiments(tree: dict) -> list[dict]:
-    """Experiments of a collection in DIKSHA's order; units without any resource are left out."""
+    """Experiments of a collection in DIKSHA's order, with only the resources that can be shown in-app; experiments
+    left without any such resource are left out (they never appear in the catalogue or the assignment picker)."""
+    tree = acc.visible_tree(tree)
     out = []
     for u in tree["units"]:
         if u["resource_count"]:
@@ -117,7 +119,7 @@ def summary(lab: dict) -> dict:
 
 def collection_info(book: dict, entry: dict | None = None) -> dict:
     keys = ("source_id", "name", "description", "cover_url", "classes", "subjects", "mediums", "license", "author", "creator",
-            "attributions", "copyright", "copyright_year", "organisation", "official_url")
+            "attributions", "copyright", "copyright_year", "organisation")
     info = {k: book.get(k) for k in keys}
     if entry:
         info.update({"class_number": entry["class_number"], "medium": entry["medium"], "subject": entry["subject"],
@@ -125,14 +127,33 @@ def collection_info(book: dict, entry: dict | None = None) -> dict:
     return info
 
 
+VIDEO_TYPES = ("video", "youtube")
+
+
+def shown(lab: dict) -> dict:
+    """The experiment as it can be shown now: only resources that can be shown in-app with the current licence settings
+    (a stored assignment snapshot is re-checked every time), with role counts recomputed."""
+    resources = [r for r in lab["resources"] if acc.visible(r)]
+    roles = {k: sum(1 for r in resources if r["role"] == k) for k in ROLES}
+    collection = lab.get("collection")
+    return {**lab, "resources": resources, "roles": {k: v for k, v in roles.items() if v}, "has_simulation": roles["simulation"] > 0,
+            **({"collection": {k: v for k, v in collection.items() if k != "official_url"}} if collection else {})}
+
+
+def videos(lab: dict) -> list[dict]:
+    """Videos the student must watch to the end before submitting (every in-app video of the experiment)."""
+    return [r for r in shown(lab)["resources"] if r.get("resource_type") in VIDEO_TYPES]
+
+
 def present(lab: dict) -> dict:
-    """Experiment for display: each resource with the licence decision and how it may be shown (html / pdf / video / official)."""
-    return {**lab, "resources": [{**acc.present(r), "role": r["role"], "role_label": ROLE_LABEL[r["role"]]}
-                                 for r in lab["resources"]]}
+    """Experiment for display: each in-app resource with the licence decision and how it is shown (html / pdf / video /
+    youtube / audio), plus the ids of the videos that unlock Submit."""
+    lab = shown(lab)
+    return {**lab, "resources": [{**acc.present(r), "role": r["role"], "role_label": ROLE_LABEL[r["role"]]} for r in lab["resources"]],
+            "video_ids": [r["source_id"] for r in lab["resources"] if r.get("resource_type") in VIDEO_TYPES]}
 
 
 def snapshot(lab: dict, collection: dict) -> dict:
     """What an assignment stores: experiment metadata + DIKSHA file references (never the content itself).
-    Resources whose licence is missing or unrecognised are left out (they cannot be shown to students)."""
-    resources = [r for r in lab["resources"] if acc.permissions(r)["eligible"]]
-    return {**lab, "resources": resources, "collection": collection}
+    Only resources that can be shown in-app are kept (the experiment has already been filtered by `experiments`)."""
+    return {**shown(lab), "collection": collection}

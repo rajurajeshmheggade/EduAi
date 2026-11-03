@@ -14,10 +14,10 @@ export const aiClassroomService = {
   subjects: (classLabel: string) => api.get<{ subjects: string[] }>(`${B}/subjects`, { params: { class_label: classLabel } }).then((r) => r.data.subjects),
   chapters: (classLabel: string, subject: string) =>
     api.get<{ chapters: NlpChapter[] }>(`${B}/chapters`, { params: { class_label: classLabel, subject } }).then((r) => r.data.chapters),
-  chapterPdf: (classLabel: string, subject: string, chapter: string) =>
-    api.get<Blob>(`${B}/chapter-pdf`, { params: { class_label: classLabel, subject, chapter }, responseType: 'blob' }).then((r) => r.data),
+  chapterPdf: (classLabel: string, subject: string, chapter: string, signal?: AbortSignal) =>
+    api.get<Blob>(`${B}/chapter-pdf`, { params: { class_label: classLabel, subject, chapter }, responseType: 'blob', signal }).then((r) => r.data),
   ask: (classLabel: string, subject: string, chapter: string, page: number, question: string, history: ChatTurn[]) =>
     api.post<{ answer: string; engine: string }>(`${B}/ask`, { class_label: classLabel, subject, chapter, page, question, history }).then((r) => r.data),
-  explain: (classLabel: string, subject: string, chapter: string, page: number) =>
-    api.post<{ explanation: string; engine: string }>(`${B}/explain`, { class_label: classLabel, subject, chapter, page }).then((r) => r.data),
+  explain: (classLabel: string, subject: string, chapter: string, page: number, signal?: AbortSignal) =>
+    api.post<{ explanation: string; engine: string }>(`${B}/explain`, { class_label: classLabel, subject, chapter, page }, { signal }).then((r) => r.data),
 }

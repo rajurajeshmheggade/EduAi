@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { adminTabLink } from '@/lib/adminTabs'
 import { cn } from '@/lib/utils'
 import { adminService } from '@/services/adminService'
@@ -104,7 +105,8 @@ export function ClassesPanel({ org }: { org?: string | null }) {
         })}
       </ol>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && (classes ? <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>
+        : <ErrorState title="Couldn’t load classes" message={error} onRetry={() => { setError(null); void load() }} />)}
 
       {showNew && (
         <Card>
@@ -176,7 +178,7 @@ export function ClassesPanel({ org }: { org?: string | null }) {
           )}
         </Card>
 
-        {!classes ? <div className="skeleton h-96" /> : !current ? (
+        {!classes ? <div className="space-y-6"><Skeleton className="h-28" /><Skeleton className="h-72" /></div> : !current ? (
           <Card className="grid place-items-center p-10 text-center text-sm text-ink-300">
             <div><School className="mx-auto mb-2 h-8 w-8 text-ink-500" />Create a class to add its subjects, chapters and sub-topics.
               <div className="mt-3"><Button size="sm" onClick={() => setShowNew(true)}><Plus className="h-3.5 w-3.5" /> New class</Button></div></div>
@@ -238,7 +240,7 @@ function ClassDetail({ c, classes, teachers, run, org, boards }: {
                 <CardDescription><span className="font-mono">{c.class_code}</span>{c.grade_number ? ` · Class ${c.grade_number}` : ''} · {c.year_code} {c.cycle_code}{c.room_number ? ` · ${c.room_number}` : ''}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {c.board ? <Badge tone="brand">{c.board}</Badge> : <Badge tone="warn" title="Set the board so the Digital Library's DIKSHA catalog is scoped automatically for this class">Board not set</Badge>}
+                {c.board ? <Badge tone="brand">{c.board}</Badge> : <Badge tone="warn" title="Set the board so the Digital Library catalogue is scoped automatically for this class">Board not set</Badge>}
                 <Badge tone="aqua"><Users className="h-3 w-3" /> {c.student_count} students</Badge>
                 <Button size="sm" variant="secondary" onClick={() => { setInfo({ class_name: c.class_name, room_number: c.room_number ?? '', grade_number: c.grade_number ? String(c.grade_number) : '', board: c.board ?? '' }); setEditing(true) }}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
                 <Button size="sm" variant="secondary" onClick={() => save({ is_active: !c.is_active })}>

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState, SkeletonPage } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
@@ -41,7 +42,7 @@ export default function AdmissionTestEditor() {
       scoring_config: t.scoring_config, ...patch }), 'Saved')
   }
 
-  if (!t) return <div className="mx-auto max-w-6xl p-4 md:p-8">{error ? <p role="alert" className="text-sm text-bad">{error}</p> : <div className="skeleton h-96" />}</div>
+  if (!t) return <div className="mx-auto max-w-6xl p-4 md:p-8">{error ? <ErrorState title="Couldn’t open this admission test" message={error} onRetry={() => { setError(null); void load() }} /> : <SkeletonPage variant="table" />}</div>
   const editable = t.status === 'DRAFT'
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-8">

@@ -107,3 +107,26 @@ def test_offline_mode_gives_a_safe_fallback_answer(client, student, nlp_root):
 
 def test_teacher_cannot_use_the_student_ai_classroom(client, teacher, nlp_root):
     assert client.get(f"{AI}/classes", headers=teacher).status_code == 403
+
+
+def test_page_explanations_are_cached_and_built_once(client, student, nlp_root, monkeypatch):
+    tutor = FakeTutor("Sunlight is captured by the leaves.")
+    tutor.name = "fake-tutor-cache"
+    monkeypatch.setattr(ai_classroom_svc, "get_tutor_llm", lambda: tutor)
+    body = {"class_label": "X", "subject": "Science", "chapter": "photosynthesis", "page": 1}
+    a = client.post(f"{AI}/explain", headers=student, json=body).json()
+    b = client.post(f"{AI}/explain", headers=student, json=body).json()   # e.g. the prefetch, then the page itself
+    assert a == b == {"explanation": "Sunlight is captured by the leaves.", "engine": "fake-tutor-cache"}
+    assert len(tutor.calls) == 1
+
+    monkeypatch.setattr(nlp_catalog, "classroom_chapter_pages", lambda *a: ["Page one, edited: stomata let air in."])
+    client.post(f"{AI}/explain", headers=student, json=body)
+    assert len(tutor.calls) == 2                                           # the page changed: explained afresh
+
+    def down(*a, **k):
+        raise RuntimeError("AI down")
+    monkeypatch.setattr(tutor, "chat", down)
+    other = {**body, "chapter": "respiration"}
+    assert client.post(f"{AI}/explain", headers=student, json=other).json()["engine"] == "offline-fallback"
+    monkeypatch.setattr(tutor, "chat", lambda system, messages, **k: "Energy is released.")
+    assert client.post(f"{AI}/explain", headers=student, json=other).json()["engine"] == "fake-tutor-cache"   # not cached

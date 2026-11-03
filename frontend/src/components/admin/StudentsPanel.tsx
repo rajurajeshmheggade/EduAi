@@ -3,6 +3,7 @@ import { Info, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { adminService } from '@/services/adminService'
 import { errorMessage } from '@/services/apiClient'
 import type { Member, SchoolClass } from '@/types'
@@ -14,12 +15,13 @@ export function StudentsPanel({ org }: { org?: string | null }) {
   const [rows, setRows] = useState<Member[] | null>(null)
   const [filter, setFilter] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
   useEffect(() => { adminService.classes(org).then(setClasses).catch(() => setClasses([])) }, [org])
   useEffect(() => {
-    setRows(null)
+    setRows(null); setError(null)
     adminService.students(klass || null, org).then(setRows).catch((e) => setError(errorMessage(e)))
-  }, [klass, org])
+  }, [klass, org, reload])
 
   const f = filter.toLowerCase()
   const shown = rows?.filter((r) => !f || `${r.full_name} ${r.user_code} ${r.email} ${r.guardian_name ?? ''}`.toLowerCase().includes(f))
@@ -39,8 +41,7 @@ export function StudentsPanel({ org }: { org?: string | null }) {
       </CardHeader>
       <CardContent>
         <p className="mb-3 flex items-center gap-2 rounded-lg bg-ink-800 px-3 py-2 text-xs text-ink-300"><Info className="h-3.5 w-3.5 shrink-0" /> Students are enrolled by their class teacher (Teacher portal → My classes).</p>
-        {error && <p role="alert" className="mb-3 text-sm text-bad">{error}</p>}
-        {!shown ? <div className="skeleton h-40" /> : shown.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">No students found.</p> : (
+        {error ? <ErrorState title="Couldn’t load students" message={error} onRetry={() => setReload((n) => n + 1)} /> : !shown ? <div className="skeleton h-40" /> : shown.length === 0 ? <p className="py-10 text-center text-sm text-ink-300">No students found.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-500">

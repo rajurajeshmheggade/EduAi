@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Image as ImageIcon, Loader2, Printer, RefreshCw, Sparkles } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Image as ImageIcon, Printer, RefreshCw, Sparkles } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { Gauge, Radar, Ring, SectionBars, Timeline, TimeStrip, type Tone } from '@/components/admission-test/ReportCharts'
 import { fmtOffset } from '@/lib/proctor/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { ErrorState, PageLoader, SkeletonPage } from '@/components/ui/loading'
 import { toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { errorMessage } from '@/services/apiClient'
@@ -40,13 +41,13 @@ export default function AdmissionReport() {
   }, [data, load])
 
   const back = user?.role === 'teacher' ? '/teacher/admissions?tab=results' : '/admin-dashboard?tab=admission-tests'
-  if (error) return <div className="mx-auto max-w-5xl p-8"><p role="alert" className="text-bad">{error}</p></div>
-  if (!data) return <div className="mx-auto max-w-5xl p-8"><div className="skeleton h-96" /></div>
+  if (error) return <div className="mx-auto max-w-5xl p-8"><ErrorState title="Couldn’t load the report" message={error} onRetry={() => { setError(null); void load() }} /></div>
+  if (!data) return <div className="mx-auto max-w-5xl p-8"><SkeletonPage variant="detail" /></div>
   if (!data.report || data.status !== 'READY') {
     return (
       <div className="mx-auto max-w-5xl p-8 text-center">
         {data.status === 'FAILED' ? <p role="alert" className="text-bad">The report could not be generated: {data.error}</p>
-          : <p className="flex items-center justify-center gap-2 text-ink-300"><Loader2 className="h-4 w-4 animate-spin" /> Scoring and writing the report…</p>}
+          : <PageLoader message="Scoring and writing the report…" detail="Marks are computed first, then the AI drafts the narrative. This page updates by itself." slowAfterMs={60_000} />}
         {data.status === 'FAILED' && user?.role === 'teacher' && <Button className="mt-4" onClick={async () => { await svc.regenerate(sessionId); void load() }}><RefreshCw className="h-4 w-4" /> Try again</Button>}
       </div>
     )

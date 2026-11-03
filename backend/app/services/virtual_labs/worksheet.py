@@ -108,7 +108,7 @@ def _brief(lab: dict) -> str:
     c = lab.get("collection") or {}
     lines = [f"Experiment: {lab['name']}", f"Class: {c.get('class_number') or 'not stated'}",
              f"Subject: {c.get('subject') or ', '.join(c.get('subjects') or []) or 'not stated'}",
-             f"Lab manual: {c.get('name') or 'DIKSHA virtual lab'}"]
+             f"Lab manual: {c.get('name') or 'Virtual lab'}"]
     if lab.get("summary"):
         lines.append(f"Description: {lab['summary']}")
     if lab.get("keywords"):
@@ -120,7 +120,8 @@ def _brief(lab: dict) -> str:
 
 
 DRAFT_SYSTEM = """You are an experienced CBSE/NCERT teacher in India preparing a virtual-lab worksheet for {grade} students.
-The student performs the DIKSHA / OLabs simulation described below and keeps a lab record.
+The student performs the online (OLabs) simulation described below inside the school's LMS and keeps a lab record.
+Never mention the website or platform the simulation comes from.
 Return ONLY a JSON object:
 {{"aim": "one sentence starting with 'To'",
   "materials": ["apparatus / chemicals / materials used in the simulation"],

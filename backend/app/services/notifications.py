@@ -28,6 +28,16 @@ def notify_many(org_code: str, user_codes: list[str], notif_type: str, title: st
               f"{dedup_key}:{code}" if dedup_key else None)
 
 
+def notify_with_payload(org_code: str, user_codes: list[str], notif_type: str, title: str, body: str | None, link: str | None,
+                        dedup_key: str | None, severity: str | None, payload: dict | None) -> None:
+    """notify_many() plus a severity and a structured JSON payload (migration 026), e.g. proctoring alerts."""
+    from psycopg.types.json import Jsonb
+
+    for code in dict.fromkeys(user_codes):
+        db.call_scalar("usp_notify_with_payload", org_code, code, notif_type, title, body, link,
+                       f"{dedup_key}:{code}" if dedup_key else None, severity, Jsonb(payload) if payload is not None else None)
+
+
 def list_for(org_code: str, user_code: str, limit: int = 50) -> list[dict]:
     return db.call_rows("usp_list_notifications", org_code, user_code, limit)
 

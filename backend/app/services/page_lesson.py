@@ -3,7 +3,9 @@
 The page text (only the page text: no student data) goes to the tutor LLM (AI_TUTOR_PROVIDER / PROVIDER_MODE), which
 returns a structured lesson: an introduction, every key point of the page explained in classroom language, important
 terms, a recap and one check question. Each key point carries a short exact quote from the page so the reader can
-highlight what is being explained. In mock mode (or if the AI fails) an offline extractive lesson is built instead.
+highlight what is being explained. When the previous page has already been explained, its title and recap are passed
+along so the lesson can pick up where that one left off. A failed or empty answer is retried (READ_ALOUD_RETRIES, with
+backoff); in mock mode (or if the AI keeps failing) an offline extractive lesson is built instead.
 The lesson is turned into a spoken script for the avatar.
 """
 from __future__ import annotations
@@ -11,12 +13,14 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 
+from ..config import get_settings
 from ..providers import get_tutor_llm
 
 log = logging.getLogger("eduai.tutor")
 
-PROMPT_VERSION = "lesson-v3"
+PROMPT_VERSION = "lesson-v4"
 MAX_PAGE_CHARS = 6000
 
 SYSTEM = """You are an experienced, warm school teacher in India. You are explaining ONE page of an NCERT-style textbook
@@ -33,6 +37,8 @@ Rules:
   them (for example "seventeen eighty-nine", "twenty per cent", "nine point eight metres per second squared").
   Expand abbreviations.
 - Never start with "This page discusses" or "This page explores". Sound like a person teaching, not a summary.
+- If you are told what the previous page was about, you may link to it in one short phrase in the intro (for example
+  "Earlier we saw…"), so the lesson flows on from the last page. Do not explain the previous page again.
 
 Example of the voice to use (a different topic, for tone only):
   intro: "Let us look at this page together. Here we will find out why things fall to the ground, and why it matters
@@ -97,23 +103,39 @@ def extractive_lesson(paras: list[str], sents: list[str], page: int, chapter: st
             "question": f"Can you explain {headings[0].lower()} in your own words?" if headings else ""}
 
 
-def generate(tb: dict, page: int, paras: list[str], sents: list[str], chapter: str | None) -> tuple[dict, str]:
-    """(lesson, engine label). Falls back to the offline lesson in mock mode or when the AI call fails."""
+def context_of(lesson: dict | None, page: int) -> dict | None:
+    """What the next page's lesson needs to know about this one (a short hand-off for continuity)."""
+    if not lesson or not (lesson.get("title") or lesson.get("recap")):
+        return None
+    return {"page": page, "title": _s(lesson.get("title"), 160), "recap": _s(lesson.get("recap") or lesson.get("intro"), 400)}
+
+
+def generate(tb: dict, page: int, paras: list[str], sents: list[str], chapter: str | None,
+             context: dict | None = None) -> tuple[dict, str]:
+    """(lesson, engine label). Falls back to the offline lesson in mock mode or when the AI keeps failing."""
     llm = get_tutor_llm()
     if llm.name.startswith("mock") or not sents:
         return extractive_lesson(paras, sents, page, chapter), "offline"
     text = "\n\n".join(paras)[:MAX_PAGE_CHARS]
+    before = (f"The previous page (page {context['page']}) was about: {context['title']}. {context['recap']}\n\n"
+              if context else "")
     user = (f"Book: {tb['title']}\nChapter: {chapter or 'not known'}\nPage {page} of {tb['total_pages']}.\n\n"
-            f"PAGE TEXT:\n{text}")
-    try:
-        raw = llm.chat(SYSTEM.format(grade=_grade(tb)), [{"role": "user", "content": user}], json_mode=True, temperature=0.5)
-        lesson = clean_lesson(json.loads(raw))
-        if not (lesson["intro"] or lesson["key_points"]):
-            raise ValueError("empty lesson")
-        return lesson, llm.name
-    except Exception as e:  # noqa: BLE001 — the student still gets an explanation
-        log.warning("AI tutor lesson failed for %s p%s: %s", tb["textbook_id"], page, type(e).__name__)
-        return extractive_lesson(paras, sents, page, chapter), "offline-fallback"
+            f"{before}PAGE TEXT:\n{text}")
+    s = get_settings()
+    attempts = 1 + max(0, s.read_aloud_retries)
+    for attempt in range(attempts):
+        try:
+            raw = llm.chat(SYSTEM.format(grade=_grade(tb)), [{"role": "user", "content": user}], json_mode=True, temperature=0.5)
+            lesson = clean_lesson(json.loads(raw))
+            if not (lesson["intro"] or lesson["key_points"]):
+                raise ValueError("empty lesson")
+            return lesson, llm.name
+        except Exception as e:  # noqa: BLE001 — retried, then the student still gets an explanation
+            log.warning("AI tutor lesson failed for %s p%s (attempt %s/%s): %s", tb["textbook_id"], page, attempt + 1,
+                        attempts, type(e).__name__)
+            if attempt + 1 < attempts:
+                time.sleep(s.read_aloud_retry_backoff * (2 ** attempt))
+    return extractive_lesson(paras, sents, page, chapter), "offline-fallback"
 
 
 ORDINALS = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth"]

@@ -1,7 +1,7 @@
 import { api } from './apiClient'
 import type { DikshaItem } from './dikshaService'
 
-/** DIKSHA Virtual Labs (Classes 6–12): teacher assigns an experiment, student performs it and keeps a lab record. */
+/** Virtual Labs (Classes 6–12): teacher assigns an experiment, student performs it in the app and keeps a lab record. */
 const BASE = '/ICMELive/api/v1/virtual-labs'
 
 export type LabRole = 'simulation' | 'manual' | 'theory' | 'procedure' | 'video' | 'self_check' | 'reading' | 'other'
@@ -11,7 +11,7 @@ export interface LabCollection {
   class_number: number
   medium: 'English' | 'Hindi'
   subject: string
-  /** As written on DIKSHA's page (Hindi medium in Devanagari). */
+  /** As written on the source's catalogue page (Hindi medium in Devanagari). */
   label: string
 }
 
@@ -19,7 +19,6 @@ export interface LabTarget { class_code: string; class_name: string; grade_numbe
 
 export interface LabCatalog {
   enabled: boolean
-  source: { name: string; url: string }
   classes: number[]
   mediums: string[]
   collections: LabCollection[]
@@ -28,7 +27,7 @@ export interface LabCatalog {
 }
 
 export interface CollectionInfo extends Pick<DikshaItem, 'source_id' | 'name' | 'description' | 'cover_url' | 'classes' | 'subjects' | 'mediums'
-  | 'license' | 'author' | 'creator' | 'attributions' | 'copyright' | 'copyright_year' | 'organisation' | 'official_url'> {
+  | 'license' | 'author' | 'creator' | 'attributions' | 'copyright' | 'copyright_year' | 'organisation'> {
   class_number?: number
   medium?: string
   subject?: string
@@ -48,7 +47,27 @@ export interface LabSummary {
 }
 
 export interface LabResource extends DikshaItem { role: LabRole; role_label: string }
-export interface Lab extends LabSummary { resources: LabResource[]; collection?: CollectionInfo }
+export interface Lab extends LabSummary {
+  resources: LabResource[]
+  collection?: CollectionInfo
+  /** Videos that must be watched to the end before the lab can be submitted. */
+  video_ids?: string[]
+}
+
+/** How much of one lab video a student has really watched (recorded by the server). */
+export interface VideoProgress {
+  resource_id: string
+  duration_seconds: number
+  watched_seconds: number
+  coverage: number
+  segments: [number, number][]
+  last_position: number
+  reached_end: boolean
+  completed: boolean
+  completed_at: string | null
+}
+export interface LabVideo { resource_id: string; name: string | null; progress: VideoProgress | null }
+export interface VideoReport { resource_id: string; duration: number; segments: [number, number][]; position: number; ended: boolean }
 
 export interface WorksheetQuestion {
   id: string
@@ -99,6 +118,8 @@ export interface LabAssignment {
   lab_class: number | null
   has_simulation: boolean
   lab_roles: Partial<Record<LabRole, number>>
+  /** Number of videos to watch to the end before submitting (0 = the lab has no video). */
+  videos_required?: number
 }
 
 export interface TeacherLabAssignment extends LabAssignment { students: number; started: number; submitted: number; reviewed: number; average_pct: number | null; proctor_flags: number }
@@ -137,8 +158,10 @@ export interface LabAttempt extends LabWork {
   updated_at: string
   teacher_feedback: string | null
   result: LabResult | null
-  /** Running count from the light on-device camera/mic check (see LiveCameraCheck) — no detail, just a count. */
+  /** Legacy count-only flag endpoint (kept for compatibility): unified proctoring (proctoringService) now updates this count itself. */
   proctor_flag_count: number
+  /** The lab's videos with this attempt's watch progress (persisted, so a reload keeps it). */
+  videos?: LabVideo[]
 }
 
 export interface StudentLabView { assignment: LabAssignment; lab: Lab; worksheet: Worksheet; attempt: LabAttempt | null }
@@ -164,6 +187,8 @@ export interface RosterRow {
   marks: number | null
   returned_count: number | null
   proctor_flag_count: number | null
+  videos_watched?: number
+  videos_required?: number
 }
 
 export interface AssignmentDetail extends LabAssignment {
@@ -238,6 +263,9 @@ export const virtualLabService = {
     api.post<{ active_seconds: number; launches: number; min_seconds: number }>(`${BASE}/my/${id}/activity`, { seconds, launched }).then((r) => r.data),
   saveWork: (id: string, work: LabWork) => api.put<{ saved_at: string }>(`${BASE}/my/${id}/work`, work).then((r) => r.data),
   proctorFlag: (id: string) => api.post<{ flag_count: number }>(`${BASE}/my/${id}/proctor-flag`).then((r) => r.data),
+  /** Parts of a lab video really played; the server credits them at real-time speed and decides completion. */
+  videoProgress: (id: string, report: VideoReport) =>
+    api.post<VideoProgress & { videos_done: number; videos_required: number }>(`${BASE}/my/${id}/video-progress`, report).then((r) => r.data),
   submit: (id: string, work: LabWork) => api.post<StudentLabView>(`${BASE}/my/${id}/submit`, work).then((r) => normView(r.data)),
   ask: (id: string, question: string, history: ChatMessage[]) =>
     api.post<{ answer: string; engine: string }>(`${BASE}/my/${id}/ask`, { question, history }).then((r) => r.data),

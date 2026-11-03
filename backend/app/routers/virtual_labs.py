@@ -8,10 +8,12 @@ POST   /collections/{cid}/labs/{lab}/worksheet       POST /my/{id}/activity    t
 GET    /assignments          POST /assignments       PUT  /my/{id}/work        autosave of the lab record
 GET    /assignments/{id}     PATCH / DELETE          POST /my/{id}/submit      MCQs marked + AI feedback
 GET    /assignments/{id}/attempts/{student}          POST /my/{id}/ask         AI lab assistant
-POST   /assignments/{id}/attempts/{student}/review
+POST   /assignments/{id}/attempts/{student}/review   POST /my/{id}/video-progress  parts of a lab video really played
 
-Experiments are read live from DIKSHA (cached); an assignment stores a metadata snapshot of the experiment. Simulations
-run from DIKSHA's own host when the licence allows in-app display, otherwise on DIKSHA's official player.
+Experiments are read live from DIKSHA (cached); an assignment stores a metadata snapshot of the experiment. Everything
+runs inside the LMS (simulations, PDFs and videos streamed from the source host); resources that cannot be shown in-app
+(e.g. a NonCommercial licence the institution has not approved) are not listed at all. A lab with video(s) can be
+submitted only after every video was watched to the end (services.virtual_labs.video), enforced here on submit.
 """
 from __future__ import annotations
 
@@ -28,6 +30,7 @@ from ..config import get_settings
 from ..security import CurrentUser, require_role
 from ..services.diksha import access as acc
 from ..services.virtual_labs import catalog, labs
+from ..services.virtual_labs import video as vid
 from ..services.virtual_labs import worksheet as wsx
 from ..services.virtual_labs.worksheet import Worksheet
 from .diksha import _tree, validate_or_422
@@ -54,7 +57,7 @@ def _entries(collection_id: str) -> list[catalog.Collection]:
     validate_or_422(collection_id)
     rows = catalog.entries(collection_id)
     if not rows:
-        raise HTTPException(404, "Not a DIKSHA virtual-lab collection")
+        raise HTTPException(404, "Not a virtual-lab collection")
     return rows
 
 
@@ -70,6 +73,8 @@ def _lab(collection_id: str, lab_id: str, medium: str | None = None) -> tuple[di
     tree = _tree(collection_id)
     lab = labs.find(tree, lab_id)
     if not lab:
+        if any(u["id"] == lab_id for u in tree["units"]):
+            raise HTTPException(404, "None of this experiment's resources can be shown in the app")
         raise HTTPException(404, "This experiment is not part of that lab collection")
     return lab, labs.collection_info(tree["book"], _entry(rows, medium)), tree
 
@@ -98,13 +103,25 @@ ASSIGNMENT_FIELDS = ("assignment_id", "class_code", "class_name", "subject_code"
 
 
 def _assignment_view(a: dict) -> dict:
-    lab = a["lab"]
+    lab = labs.shown(a["lab"])
     return {**{k: a.get(k) for k in ASSIGNMENT_FIELDS}, "window": _window(a), "lab_name": lab["name"],
             "lab_class": (lab.get("collection") or {}).get("class_number"), "has_simulation": lab.get("has_simulation", False),
-            "lab_roles": lab.get("roles") or {}}
+            "lab_roles": lab.get("roles") or {}, "videos_required": len(labs.videos(a["lab"]))}
 
 
-def _attempt_view(t: dict | None, *, reveal: bool) -> dict | None:
+def _video_rows(attempt_id) -> dict[str, dict]:
+    rows = db.fetch_all("SELECT * FROM public.virtual_lab_video_progress WHERE attempt_id = %s", (attempt_id,))
+    return {r["resource_id"]: r for r in rows}
+
+
+def _videos_of(a: dict, t: dict | None) -> list[dict]:
+    """The lab's required videos with this attempt's progress (None when not started)."""
+    rows = _video_rows(t["attempt_id"]) if t else {}
+    return [{"resource_id": r["source_id"], "name": r.get("name"), "progress": vid.view(rows.get(r["source_id"]))}
+            for r in labs.videos(a["lab"])]
+
+
+def _attempt_view(t: dict | None, *, reveal: bool, a: dict | None = None) -> dict | None:
     if not t:
         return None
     done = t["status"] in ("submitted", "reviewed")
@@ -114,6 +131,8 @@ def _attempt_view(t: dict | None, *, reveal: bool) -> dict | None:
     out["result"] = {"auto_score": t["auto_score"], "auto_max": t["auto_max"], "feedback": t["ai_feedback"],
                      "suggested_marks": t["suggested_marks"], "marks": t["marks"] if t["status"] == "reviewed" else None,
                      "reviewed_at": t["reviewed_at"]} if done and reveal else None
+    if a is not None:
+        out["videos"] = _videos_of(a, t)
     return out
 
 
@@ -129,8 +148,7 @@ ASSIGNMENT_SELECT = (
 @router.get("/catalog")
 def catalog_index(user: CurrentUser = Depends(staff)):
     s = get_settings()
-    return {"enabled": s.diksha_enabled, "source": {"name": "DIKSHA Virtual Labs", "url": catalog.SOURCE_PAGE},
-            "classes": catalog.CLASSES, "mediums": catalog.MEDIUMS, "collections": catalog.COLLECTIONS,
+    return {"enabled": s.diksha_enabled, "classes": catalog.CLASSES, "mediums": catalog.MEDIUMS, "collections": catalog.COLLECTIONS,
             "embed_noncommercial": s.diksha_embed_noncommercial,
             "targets": [{k: t[k] for k in ("class_code", "class_name", "grade_number", "subject_code", "subject_name", "student_count")}
                         for t in _targets(user)]}
@@ -138,18 +156,19 @@ def catalog_index(user: CurrentUser = Depends(staff)):
 
 @router.get("/collections/{collection_id}")
 def collection(collection_id: str, medium: str | None = Query(default=None, max_length=20), user: CurrentUser = Depends(staff)):
-    """Experiments of one virtual-lab collection, in DIKSHA's order (resource counts by role, no file details)."""
+    """Experiments of one virtual-lab collection, in DIKSHA's order (resource counts by role, no file details). Only
+    experiments with at least one resource that can be shown in-app are listed."""
     rows = _entries(collection_id)
     tree = _tree(collection_id)
     return {"collection": labs.collection_info(tree["book"], _entry(rows, medium)),
             "labs": [labs.summary(x) for x in labs.experiments(tree)],
-            "intro": [acc.present(r) for r in tree["resources"]]}
+            "intro": [acc.present(r) for r in tree["resources"] if acc.visible(r)]}
 
 
 @router.get("/collections/{collection_id}/labs/{lab_id}")
 def lab_detail(collection_id: str, lab_id: str, medium: str | None = Query(default=None, max_length=20),
                user: CurrentUser = Depends(staff)):
-    """One experiment with every resource and how it may be shown (simulation in app / on DIKSHA)."""
+    """One experiment with every in-app resource and how it is shown (simulation, PDF, video …)."""
     lab, info, _ = _lab(collection_id, lab_id, medium)
     assigned = []
     if user.role == "teacher":
@@ -211,7 +230,7 @@ def assign(body: AssignIn, user: CurrentUser = Depends(teachers)):
     info = labs.collection_info(tree["book"], _entry(rows, body.medium, grade))
     snap = labs.snapshot(lab, info)
     if not snap["resources"]:
-        raise HTTPException(422, "None of this experiment's resources has a recognised licence, so it cannot be assigned")
+        raise HTTPException(422, "None of this experiment's resources can be shown in the app, so it cannot be assigned")
     ws = body.worksheet.model_dump()
     row = db.fetch_one(
         "INSERT INTO public.virtual_lab_assignments (org_code, class_code, subject_code, year_code, teacher_code, collection_id, lab_id, "
@@ -261,15 +280,19 @@ def _manageable(user: CurrentUser, assignment_id: UUID) -> dict:
 def assignment(assignment_id: UUID, user: CurrentUser = Depends(teachers)):
     """Assignment with the class roster: who has started, time in the lab, submissions and marks."""
     a = _manageable(user, assignment_id)
+    video_ids = [r["source_id"] for r in labs.videos(a["lab"])]
     roster = db.fetch_all(
         "SELECT u.user_code AS student_code, u.full_name, u.roll_number, x.status, x.started_at, x.active_seconds, x.launches, "
-        "x.submitted_at, x.is_late, x.auto_score, x.auto_max, x.suggested_marks, x.marks, x.returned_count, x.proctor_flag_count "
+        "x.submitted_at, x.is_late, x.auto_score, x.auto_max, x.suggested_marks, x.marks, x.returned_count, x.proctor_flag_count, "
+        "(SELECT COUNT(*) FROM public.virtual_lab_video_progress v WHERE v.attempt_id = x.attempt_id AND v.completed_at IS NOT NULL "
+        "   AND v.resource_id = ANY(%s)) AS videos_watched "
         "FROM public.app_users u LEFT JOIN public.virtual_lab_attempts x ON x.assignment_id = %s AND x.student_code = u.user_code "
         "WHERE u.org_code = %s AND u.class_code = %s AND u.user_role = 'student' AND u.is_active "
         "ORDER BY CASE WHEN u.roll_number ~ '^[0-9]+$' THEN lpad(u.roll_number, 12, '0') ELSE COALESCE(u.roll_number, '~') END, u.full_name",
-        (assignment_id, user.org_code, a["class_code"]))
+        (video_ids, assignment_id, user.org_code, a["class_code"]))
     for r in roster:
         r["status"] = r["status"] or "not_started"
+        r["videos_required"] = len(video_ids)
     done = [r for r in roster if r["status"] in ("submitted", "reviewed")]
     reviewed = [r for r in roster if r["status"] == "reviewed" and r["marks"] is not None]
     stats = {"students": len(roster), "started": sum(1 for r in roster if r["status"] != "not_started"), "submitted": len(done),
@@ -325,7 +348,7 @@ def attempt(assignment_id: UUID, student_code: str, user: CurrentUser = Depends(
     a = _manageable(user, assignment_id)
     t = _attempt_of(a, student_code)
     return {"student": {"student_code": student_code, "full_name": t["full_name"], "roll_number": t["roll_number"]},
-            "attempt": {**_attempt_view(t, reveal=True), "result": {
+            "attempt": {**_attempt_view(t, reveal=True, a=a), "result": {
                 "auto_score": t["auto_score"], "auto_max": t["auto_max"], "feedback": t["ai_feedback"],
                 "suggested_marks": t["suggested_marks"], "marks": t["marks"], "reviewed_at": t["reviewed_at"]},
                 "teacher_feedback": t["teacher_feedback"]},
@@ -389,7 +412,7 @@ def _mine(a: dict, user: CurrentUser) -> dict | None:
 def _student_view(a: dict, t: dict | None) -> dict:
     reveal = bool(t and t["status"] in ("submitted", "reviewed"))
     return {"assignment": _assignment_view(a), "lab": labs.present(a["lab"]),
-            "worksheet": wsx.for_student(a["worksheet"], reveal), "attempt": _attempt_view(t, reveal=True)}
+            "worksheet": wsx.for_student(a["worksheet"], reveal), "attempt": _attempt_view(t, reveal=True, a=a)}
 
 
 @router.get("/my")
@@ -484,6 +507,58 @@ def proctor_flag(assignment_id: UUID, user: CurrentUser = Depends(students)):
     return {"flag_count": row["proctor_flag_count"]}
 
 
+class VideoProgressIn(BaseModel):
+    resource_id: str = Field(min_length=5, max_length=100)
+    duration: float = Field(gt=0, le=vid.MAX_DURATION, description="Length of the video in seconds, as the player reports it")
+    segments: list[tuple[float, float]] = Field(default_factory=list, max_length=400,
+                                                description="[start, end] parts actually played (seconds)")
+    position: float = Field(default=0, ge=0, le=vid.MAX_DURATION)
+    ended: bool = False
+
+
+@router.post("/my/{assignment_id}/video-progress")
+def video_progress(assignment_id: UUID, body: VideoProgressIn, user: CurrentUser = Depends(students)):
+    """Record how much of one of the lab's videos the student has really watched (own attempt only). Watched time is
+    credited no faster than real time at the top playback speed, so progress cannot be claimed in bulk; the video is
+    complete once the end was reached and at least 90% was played. Completion of every video unlocks Submit."""
+    a = _my_assignment(user, assignment_id)
+    t = _open_attempt(a, user)
+    video = next((r for r in labs.videos(a["lab"]) if r["source_id"] == body.resource_id), None)
+    if not video:
+        raise HTTPException(404, "This video is not part of the lab")
+    now = _now()
+    with db.connection() as conn:
+        row = conn.execute("SELECT * FROM public.virtual_lab_video_progress WHERE attempt_id = %s AND resource_id = %s FOR UPDATE",
+                           (t["attempt_id"], body.resource_id)).fetchone()
+        if row:
+            duration = float(row["duration_seconds"])
+            if not vid.duration_matches(duration, body.duration):
+                raise HTTPException(422, "The reported video length does not match this video")
+        else:
+            duration = max(body.duration, vid.catalogue_duration(video) or 0)
+        segments = vid.merge(list(row["segments"] if row else []) + [list(x) for x in body.segments], duration)
+        watched = vid.credit(previous=float(row["watched_seconds"]) if row else 0.0, coverage=vid.covered(segments),
+                             last_update=_aware(row["updated_at"]) if row else None, now=now)
+        reached_end = bool(row and row["reached_end"]) or (body.ended and body.position >= duration - max(3.0, 0.02 * duration))
+        complete = (row and row["completed_at"] is not None) or vid.is_complete(watched=watched, duration=duration, reached_end=reached_end)
+        out = conn.execute(
+            "INSERT INTO public.virtual_lab_video_progress (attempt_id, resource_id, duration_seconds, segments, watched_seconds, "
+            "last_position, reached_end, completed_at, reports, created_at, updated_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,%s,%s) "
+            "ON CONFLICT (attempt_id, resource_id) DO UPDATE SET segments = EXCLUDED.segments, watched_seconds = EXCLUDED.watched_seconds, "
+            "last_position = EXCLUDED.last_position, reached_end = EXCLUDED.reached_end, "
+            "completed_at = COALESCE(public.virtual_lab_video_progress.completed_at, EXCLUDED.completed_at), "
+            "reports = public.virtual_lab_video_progress.reports + 1, updated_at = EXCLUDED.updated_at RETURNING *",
+            (t["attempt_id"], body.resource_id, duration, Jsonb(segments), watched, min(body.position, duration), reached_end,
+             now if complete else None, now, now)).fetchone()
+    progress = vid.view(out)
+    videos = _videos_of(a, t)
+    return {**progress, "videos_done": sum(1 for v in videos if v["progress"] and v["progress"]["completed"]), "videos_required": len(videos)}
+
+
+def _videos_left(a: dict, t: dict) -> list[dict]:
+    return [v for v in _videos_of(a, t) if not (v["progress"] and v["progress"]["completed"])]
+
+
 class WorkIn(BaseModel):
     steps_done: list[int] = Field(default_factory=list, max_length=20)
     observations: list[list[str]] = Field(default_factory=list, max_length=wsx.MAX_ROWS)
@@ -538,10 +613,15 @@ def save_work(assignment_id: UUID, body: WorkIn, user: CurrentUser = Depends(stu
 
 @router.post("/my/{assignment_id}/submit")
 def submit(assignment_id: UUID, body: WorkIn, user: CurrentUser = Depends(students)):
-    """Final save, minimum-time check, MCQs marked, AI feedback on short answers and the lab record."""
+    """Final save, video-completion and minimum-time checks, MCQs marked, AI feedback on short answers and the record."""
     a = _my_assignment(user, assignment_id)
     _workable(a)
     t = _open_attempt(a, user)
+    left = _videos_left(a, t)
+    if left:
+        total = len(labs.videos(a["lab"]))
+        raise HTTPException(409, "Watch the full video to unlock Submit" if total == 1
+                            else f"Watch all {total} videos to the end to unlock Submit ({len(left)} still to finish)")
     need = a["min_minutes"] * 60
     if t["active_seconds"] < need:
         left = max(1, -(-(need - t["active_seconds"]) // 60))

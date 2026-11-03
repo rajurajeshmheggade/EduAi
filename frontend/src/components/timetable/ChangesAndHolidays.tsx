@@ -1,16 +1,27 @@
 import { CalendarOff, History } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { formatShort } from '@/lib/calendar'
 import { DAY_NAMES } from '@/lib/timetable'
 import type { Holiday, TimetableChange } from '@/types'
+
+/** TIME values arrive as "HH:MM:SS"; show "HH:MM". */
+const t = (v: string | null) => (v ? v.slice(0, 5) : '')
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 }
 
+const KIND: Record<TimetableChange['change_kind'], { label: string; tone: 'bad' | 'warn' | 'ok' | 'brand' }> = {
+  CANCELLED: { label: 'Period removed', tone: 'bad' },
+  UPDATED: { label: 'Period updated', tone: 'warn' },
+  ADDED: { label: 'Extra period', tone: 'ok' },
+  RESTORED: { label: 'Back to normal', tone: 'brand' },
+}
+
 /** #3B: shows recently changed/cancelled periods (with old vs new details, reason, who and when) and #10:
- * upcoming published holidays. Shared by TeacherTimetable and StudentTimetable — a standing weekly grid has
- * no real calendar dates, so these are shown as plain lists rather than overlaid on grid cells. */
+ * upcoming published holidays. Shared by TeacherTimetable and StudentTimetable. A change to one date (dated
+ * timetable) names that date; a change to the weekly pattern names the weekday. */
 export function RecentTimetableChanges({ changes }: { changes: TimetableChange[] }) {
   if (changes.length === 0) return null
   return (
@@ -21,17 +32,19 @@ export function RecentTimetableChanges({ changes }: { changes: TimetableChange[]
           <div key={c.change_id} className="rounded-xl border border-line p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-fg">{c.new_subject_name ?? c.old_subject_name}</span>
-              <Badge tone={c.change_kind === 'CANCELLED' ? 'bad' : 'warn'}>{c.change_kind === 'CANCELLED' ? 'Period removed' : 'Period updated'}</Badge>
-              <span className="text-xs text-ink-500">{DAY_NAMES[c.day_of_week]} · Period {c.period_number}</span>
+              <Badge tone={KIND[c.change_kind].tone}>{c.session_date && c.change_kind === 'CANCELLED' ? 'Cancelled' : KIND[c.change_kind].label}</Badge>
+              <span className="text-xs text-ink-500">{c.session_date ? formatShort(c.session_date) : `${DAY_NAMES[c.day_of_week]}s`} · Period {c.period_number}</span>
             </div>
             <div className="mt-1.5 space-y-0.5 text-xs text-ink-300">
-              {c.change_kind === 'UPDATED' ? (
+              {c.change_kind === 'UPDATED' || c.change_kind === 'RESTORED' ? (
                 <>
-                  <div>Previous: {c.old_start_time}–{c.old_end_time}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>
-                  <div>Updated: {c.new_start_time}–{c.new_end_time}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
+                  {c.old_start_time && <div>Previous: {c.old_subject_name && c.old_subject_name !== c.new_subject_name ? `${c.old_subject_name} · ` : ''}{t(c.old_start_time)}–{t(c.old_end_time)}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>}
+                  <div>{c.change_kind === 'RESTORED' ? 'Now' : 'Updated'}: {t(c.new_start_time)}–{t(c.new_end_time)}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
                 </>
+              ) : c.change_kind === 'ADDED' ? (
+                <div>{t(c.new_start_time)}–{t(c.new_end_time)}{c.new_teacher_name ? ` · ${c.new_teacher_name}` : ''}</div>
               ) : (
-                <div>Was: {c.old_start_time}–{c.old_end_time}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>
+                <div>Was: {t(c.old_start_time)}–{t(c.old_end_time)}{c.old_teacher_name ? ` · ${c.old_teacher_name}` : ''}</div>
               )}
               {c.reason && <div>Reason: {c.reason}</div>}
               <div className="text-ink-500">Changed by {c.changed_by_name ?? 'the admin'} on {when(c.changed_at)}</div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileCheck2,
@@ -9,11 +9,12 @@ import { BarList } from '@/components/evaluation/BarList'
 import { Empty, HeroBanner, Kpi, Panel } from '@/components/dashboard/Widgets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
-import { errorMessage } from '@/services/apiClient'
-import { dashboardService, type TeacherDash } from '@/services/dashboardService'
+import { dashboardService } from '@/services/dashboardService'
 import { greeting, longDate, shortDateTime } from '@/lib/datetime'
 import { markAttendanceLink } from '@/lib/timetable'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 import { num } from '@/types'
 
@@ -23,12 +24,10 @@ const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLI
 /** Teacher home: today's periods with attendance status, work needing attention, open assessments and class signals. */
 export default function TeacherDashboard() {
   const { user } = useAuth()
-  const [d, setD] = useState<TeacherDash | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: d, error, retry } = useAsync(() => dashboardService.teacher(), [])
   const [hello] = useState(() => greeting())
   const [hhmm] = useState(() => new Date().toTimeString().slice(0, 5))
 
-  useEffect(() => { dashboardService.teacher().then(setD).catch((e) => setError(errorMessage(e))) }, [])
   if (!user) return null
   const first = user.full_name.split(' ')[0]
   const k = d?.kpis
@@ -48,28 +47,18 @@ export default function TeacherDashboard() {
         ]}
       />
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
-      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {!k ? Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
-          <Kpi icon={School} label="My classes" value={k.classes} tone="brand" to="/teacher/classes" />
-          <Kpi icon={Users} label="Students" value={k.students} tone="aqua" to="/teacher/classes" />
-          <Kpi icon={CalendarClock} label="Periods today" value={k.periods_today} tone="neutral" to="/teacher/timetable" />
-          <Kpi icon={CalendarCheck} label="Attendance to mark" value={k.attendance_pending} tone={k.attendance_pending ? 'warn' : 'ok'} to="/teacher/attendance" hint={k.attendance_pending ? 'for today’s periods' : 'All marked'} />
-          <Kpi icon={FileCheck2} label="Homework to review" value={k.homework_to_review} tone={k.homework_to_review ? 'warn' : 'ok'} to="/teacher/homework" />
-          <Kpi icon={AlertTriangle} label="Needs attention" value={k.needs_attention} tone={k.needs_attention ? 'bad' : 'ok'} hint={`${k.active_assessments} test(s) / assignment(s) open`} />
-        </>}
-      </section>
-
+      {/* Today's timetable comes first, right under the greeting. */}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel icon={CalendarClock} title="Today’s schedule" action={{ to: '/teacher/timetable', label: 'Full week' }}>
-          {!d ? <div className="skeleton h-40" /> : d.today_slots.length === 0 ? <Empty icon={CalendarClock}>No periods scheduled today.</Empty> : (
+        <Panel icon={CalendarClock} title="Today’s schedule" action={{ to: '/teacher/timetable', label: 'Full timetable' }}>
+          {!d ? <div className="skeleton h-40" /> : d.today_slots.length === 0 ? <Empty icon={CalendarClock}>{d.holiday_today ? `Holiday today — ${d.holiday_today}.` : 'No periods scheduled today.'}</Empty> : (
             <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-[3.4rem] before:top-2 before:w-px before:bg-line">
               {[...d.today_slots].sort((a, b) => a.start_time.localeCompare(b.start_time)).map((s) => {
                 const live = s.start_time <= hhmm && hhmm < s.end_time
                 const past = s.end_time <= hhmm
                 return (
-                  <li key={s.slot_id} className="relative flex items-center gap-4">
+                  <li key={s.session_key} className="relative flex items-center gap-4">
                     <span className={cn('w-11 text-right text-xs tabular-nums', live ? 'font-semibold text-brand-600' : 'text-ink-500')}>{s.start_time}</span>
                     <span className={cn('relative z-10 h-3 w-3 shrink-0 rounded-full ring-4 ring-ink-900', live ? 'bg-brand-500' : past ? 'bg-ink-700' : 'bg-aqua-500')} />
                     <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3 rounded-xl border p-3', live ? 'border-brand-400 bg-brand-500/6' : 'border-line')}>
@@ -111,6 +100,17 @@ export default function TeacherDashboard() {
           )}
         </Panel>
       </div>
+
+      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {!k ? Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
+          <Kpi icon={School} label="My classes" value={k.classes} tone="brand" to="/teacher/classes" />
+          <Kpi icon={Users} label="Students" value={k.students} tone="aqua" to="/teacher/classes" />
+          <Kpi icon={CalendarClock} label="Periods today" value={k.periods_today} tone="neutral" to="/teacher/timetable" />
+          <Kpi icon={CalendarCheck} label="Attendance to mark" value={k.attendance_pending} tone={k.attendance_pending ? 'warn' : 'ok'} to="/teacher/attendance" hint={k.attendance_pending ? 'for today’s periods' : 'All marked'} />
+          <Kpi icon={FileCheck2} label="Homework to review" value={k.homework_to_review} tone={k.homework_to_review ? 'warn' : 'ok'} to="/teacher/homework" />
+          <Kpi icon={AlertTriangle} label="Needs attention" value={k.needs_attention} tone={k.needs_attention ? 'bad' : 'ok'} hint={`${k.active_assessments} test(s) / assignment(s) open`} />
+        </>}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel icon={PencilRuler} title="Open tests & assignments" action={{ to: '/teacher/tests', label: 'All tests' }}>

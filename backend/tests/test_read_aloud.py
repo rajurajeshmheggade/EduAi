@@ -183,9 +183,9 @@ def test_explain_mode_falls_back_when_the_ai_fails(client, student, book, speech
     tutor = FakeTutor("not json")
     monkeypatch.setattr(page_lesson, "get_tutor_llm", lambda: tutor)
     body = client.get(f"{RA}/{book}/pages/4", headers=student).json()
-    assert body["engine"] == "offline-fallback" and body["segments"]
-    client.get(f"{RA}/{book}/pages/4", headers=student)
-    assert len(tutor.calls) == 2                                             # a failed answer is not cached
+    assert body["engine"] == "offline-fallback" and body["fallback"] and body["segments"]
+    assert client.get(f"{RA}/{book}/pages/4", headers=student).json()["version"] == body["version"]
+    assert len(tutor.calls) == 2              # one retry, then the fallback is cached (stable parts; AI asked again later)
 
 
 def test_voice_follows_the_subject_teacher(client, admin, student, book, speech):
@@ -236,7 +236,7 @@ def test_read_aloud_needs_the_avatar_module_and_the_subject(client, student, stu
         assert client.get(f"{RA}/{book}/voice", headers=student).status_code == 403
     finally:
         db.execute("UPDATE public.organizations SET ai_modules = ARRAY['rag_chatbot','ai_avatar_tutor','ocr_evaluation',"
-                   "'capability_analysis'] WHERE org_code = 'DEMO-SCHOOL'")
+                   "'capability_analysis','question_generator'] WHERE org_code = 'DEMO-SCHOOL'")
     assert client.get(f"{RA}/{book}/voice", headers=admin).status_code == 403          # classroom roles only
 
 

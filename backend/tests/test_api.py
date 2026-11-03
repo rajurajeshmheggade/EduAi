@@ -98,7 +98,7 @@ def test_vectorization_indexes_chunks_with_metadata(client, teacher, physics):
     tb = next(t for t in r["textbooks"] if t["textbook_id"] == physics["textbook_id"])
     assert tb["vector_status"] == "indexed" and tb["total_pages"] >= 5
     assert [c["chapter_title"] for c in tb["chapters"]] == [
-        "Motion", "Force and Laws of Motion", "Gravitation", "Work, Energy and Power"]
+        "Motion", "Force and Laws of Motion", "Gravitation", "Work, Energy and Power", "Electricity", "Light: Reflection and Refraction"]
     assert tb["pdf_url"].startswith("http")
 
 

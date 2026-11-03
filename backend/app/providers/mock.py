@@ -137,9 +137,152 @@ class MockLLM:
         except (ValueError, AttributeError):
             snap = {}
         q = question.lower()
+        advice = "[INTENT:ADVICE]" in system  # services/copilot.py wants_advice(): "suggest…", "how can I improve…"
         if "attendance_this_month_percent" in snap:  # student snapshot shape (services/copilot.py build_student_snapshot)
-            return self._copilot_student(snap, q)
-        return self._copilot_staff(snap, q)
+            return self._copilot_student_advice(snap) if advice else self._copilot_student(snap, q)
+        if "my_teaching" in snap:  # teacher snapshot shape (build_teacher_snapshot): own classes + institution view
+            return self._copilot_teacher_advice(snap) if advice else self._copilot_teacher(snap, q)
+        return self._copilot_staff_advice(snap) if advice else self._copilot_staff(snap, q)
+
+    def _copilot_teacher(self, snap: dict, q: str) -> str:
+        t = snap["my_teaching"]
+        lines: list[str] = []
+        periods = t["periods_today"]
+        if any(w in q for w in ("today", "period", "timetable", "schedule")) and "attendance" not in q:
+            if t["holiday_today"]:
+                lines.append(f"Today is a holiday ({t['holiday_today']}).")
+            elif periods:
+                first = periods[0]
+                lines.append(f"You have {len(periods)} period(s) today, starting with {first['subject']} for "
+                             f"{first['class']} at {first['start_time']}.")
+            else:
+                lines.append("You have no periods scheduled today.")
+        if "attendance" in q:
+            todo = [p for p in periods if not p["attendance_marked"]]
+            if "month" in q and t["attendance_this_month"]:
+                lines.append("This month: " + "; ".join(f"{a['class']} {a['subject']} {a['percent']}%"
+                                                        for a in t["attendance_this_month"][:4]) + ".")
+            elif todo:
+                lines.append(f"Attendance is still to be marked for {len(todo)} of today's period(s): "
+                             + ", ".join(f"P{p['period']} {p['subject']} ({p['class']})" for p in todo[:4]) + ".")
+            else:
+                lines.append("Attendance is marked for all of today's periods." if periods else "No periods need attendance today.")
+        if any(w in q for w in ("homework", "review", "submission")):
+            n = t["homework_submissions_to_review"]
+            lines.append(f"{n} homework submission(s) are waiting for your review"
+                         + (f", most in \"{t['homework_to_review'][0]['title']}\"." if n and t["homework_to_review"] else "."))
+        if any(w in q for w in ("assessment", "test", "evaluat", "script", "exam", "attention")):
+            att = t["assessments_needing_attention"]
+            lines.append(f"{len(att)} assessment(s) need your attention"
+                         + (f" (e.g. \"{att[0]['title']}\": {', '.join(att[0]['reasons'])})" if att else "")
+                         + f"; {t['scripts_awaiting_evaluation']} script(s) are awaiting evaluation"
+                         + f" and {len(t['active_assessments'])} test(s) are open.")
+        if any(w in q for w in ("class", "student")) and not lines:
+            lines.append(f"You teach {len(t['my_classes'])} class(es) with {t['students_taught']} student(s): "
+                         + "; ".join(f"{c['class']} ({', '.join(c['my_subjects']) or 'class teacher'})" for c in t["my_classes"]) + ".")
+        if not lines and any(w in q for w in ("teacher", "staff", "admission", "applicant", "consent")):
+            return self._copilot_staff(snap, q)
+        if not lines:
+            lines.append(f"You have {len(periods)} period(s) today, {t['attendance_still_to_mark_today']} still to mark for "
+                         f"attendance, and {t['homework_submissions_to_review']} homework submission(s) to review.")
+        return " ".join(lines)
+
+    def _copilot_teacher_advice(self, snap: dict) -> str:
+        """Concrete next steps from this teacher's OWN classes (class level, never an individual student)."""
+        t = snap["my_teaching"]
+        tips: list[str] = []
+        if t["attendance_still_to_mark_today"]:
+            tips.append(f"Mark attendance for the {t['attendance_still_to_mark_today']} period(s) still open today "
+                        "(Attendance) — ideally during the period itself.")
+        if t["homework_submissions_to_review"]:
+            first = t["homework_to_review"][0]["title"] if t["homework_to_review"] else None
+            tips.append(f"Review the {t['homework_submissions_to_review']} homework submission(s) waiting"
+                        + (f", starting with \"{first}\"" if first else "") + " (Homework).")
+        for a in t["assessments_needing_attention"][:2]:
+            tips.append(f"Fix \"{a['title']}\" ({a['class']}): {', '.join(a['reasons'])} (Online tests / AI Evaluation).")
+        if t["scripts_awaiting_evaluation"]:
+            tips.append(f"{t['scripts_awaiting_evaluation']} script(s) are awaiting evaluation — run or check them in AI Evaluation.")
+        low = [a for a in t["attendance_this_month"] if a["percent"] is not None and a["percent"] < 85]
+        if low:
+            w = min(low, key=lambda a: a["percent"])
+            tips.append(f"Attendance in {w['class']} {w['subject']} is {w['percent']}% this month — talk to the class "
+                        "teacher about repeated absences and keep periods engaging.")
+        weak = [r for r in t["recent_results"] if r["class_average_percent"] is not None and float(r["class_average_percent"]) < 60]
+        if weak:
+            r = min(weak, key=lambda r: float(r["class_average_percent"]))
+            tips.append(f"The class average for \"{r['title']}\" ({r['class']}) was {r['class_average_percent']}% — "
+                        "plan a short re-teach and a quick practice quiz (Lesson Plans / AI Question Generator).")
+        if t["periods_today"] and len(tips) < 2:
+            tips.append(f"You have {len(t['periods_today'])} period(s) today — check the lesson plan for "
+                        f"{t['periods_today'][0]['subject']} ({t['periods_today'][0]['class']}) before it starts.")
+        if len(tips) < 3:
+            tips.append("Prepare next week's lesson plans and a quick revision quiz (Lesson Plans / AI Question Generator).")
+        return "Here's what I'd suggest for your classes:\n\n" + "\n".join(f"- {x}" for x in tips[:5])
+
+    def _copilot_staff_advice(self, snap: dict) -> str:
+        """Concrete, aggregated next steps grounded in the snapshot's own figures (most urgent first)."""
+        inst, adm = snap.get("institution"), snap.get("admissions")
+        tips: list[str] = []
+        if adm and adm["data_requests_overdue"]:
+            tips.append(f"Resolve the {adm['data_requests_overdue']} overdue data request(s) first — they are compliance "
+                        "deadlines (Admissions → Data requests).")
+        if inst and inst["classes_without_class_teacher"]:
+            tips.append(f"Assign a class teacher to the {inst['classes_without_class_teacher']} class(es) that have none "
+                        "(Admin console → Classes).")
+        if inst and inst["class_subjects_without_teacher"]:
+            tips.append(f"Map a subject teacher to the {inst['class_subjects_without_teacher']} class subject(s) still "
+                        "without one, so timetables and homework can run.")
+        if inst:
+            today, month = inst["attendance_today_percent"], inst["attendance_this_month_percent"]
+            if today is None:
+                tips.append("Attendance isn't marked yet today — remind class teachers to mark it before first period ends.")
+            if month is not None and month < 90:
+                tips.append(f"Attendance is {month}% this month — ask class teachers to follow up on repeated absences "
+                            "and share the monthly attendance report with parents.")
+        if adm and adm["consent_pending"]:
+            tips.append(f"Follow up with the families of the {adm['consent_pending']} applicant(s) whose consent is still pending.")
+        if not inst and not adm:
+            return "I don't have an aggregated snapshot to base suggestions on yet — make sure an institution is selected."
+        if len(tips) < 3:
+            tips.append("Review the attendance report and the admissions pipeline weekly, so issues surface early.")
+        return "Here are some suggestions based on your institution's current figures:\n\n" + "\n".join(f"- {t}" for t in tips[:5])
+
+    def _copilot_student_advice(self, snap: dict) -> str:
+        """Concrete next steps from the student's OWN snapshot only (never a comparison with anyone else)."""
+        if "note" in snap:
+            return snap["note"]
+        tips: list[str] = []
+        month = snap["attendance_this_month_percent"]
+        if month is not None and month < 85:
+            tips.append(f"Your attendance is {month}% this month — aim for 85% or more by attending every class this week.")
+        weak = [s for s in snap["attendance_by_subject"] if s["percent"] is not None and s["percent"] < 75]
+        if weak:
+            w = min(weak, key=lambda s: s["percent"])
+            tips.append(f"{w['subject']} attendance is lowest at {w['percent']}% — don't miss its next periods.")
+        if snap["homework_pending_count"]:
+            nxt = snap["homework_due_soon"][0] if snap["homework_due_soon"] else None
+            tips.append(f"Clear your {snap['homework_pending_count']} pending homework item(s)"
+                        + (f", starting with \"{nxt['title']}\" ({nxt['subject']}) due {nxt['due_date']}." if nxt else "."))
+        if snap["upcoming_tests_and_assignments"]:
+            u = snap["upcoming_tests_and_assignments"][0]
+            tips.append(f"Prepare for \"{u['title']}\" ({u['subject']}) — revise for 20–30 minutes a day before {u['due_at']}.")
+        scored = [r for r in snap["recent_results"] if r["percentage"] is not None]
+        if scored:
+            low = min(scored, key=lambda r: float(r["percentage"]))
+            if float(low["percentage"]) < 75:
+                tips.append(f"Your {low['subject']} result was {low['percentage']}% — go over the mistakes in "
+                            f"\"{low['title']}\" and ask your teacher about anything unclear.")
+            else:
+                tips.append(f"Your recent results look solid (lowest {low['percentage']}% in {low['subject']}) — keep "
+                            "revising a little every day.")
+        if snap["todays_periods"]:
+            tips.append(f"You have {len(snap['todays_periods'])} period(s) today — skim your notes for "
+                        f"{snap['todays_periods'][0]['subject']} before it starts.")
+        if not tips:
+            tips.append("You're all caught up — nothing is overdue in your own data right now.")
+        if len(tips) < 3:
+            tips.append("Plan 30 minutes of revision a day, and use the AI Classroom to ask doubts about a chapter.")
+        return "Here's what I'd suggest, based on your own data:\n\n" + "\n".join(f"- {t}" for t in tips[:5])
 
     def _copilot_staff(self, snap: dict, q: str) -> str:
         inst, adm = snap.get("institution"), snap.get("admissions")

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Building2, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
+import { AdmissionFormsPanel } from '@/components/admin/admissions/AdmissionFormsPanel'
 import { AdmissionTeamPanel } from '@/components/admin/admissions/AdmissionTeamPanel'
 import { AdmissionTestsPanel } from '@/components/admin/admissions/AdmissionTestsPanel'
 import { AdmissionsHome } from '@/components/admin/admissions/AdmissionsHome'
@@ -14,14 +15,18 @@ import { InstitutionsPanel } from '@/components/admin/InstitutionsPanel'
 import { LibraryCatalogPanel } from '@/components/admin/LibraryCatalogPanel'
 import { OverviewPanel } from '@/components/admin/OverviewPanel'
 import { PlatformOverview } from '@/components/admin/PlatformOverview'
+import { ProctoringSettingsPanel } from '@/components/admin/ProctoringSettingsPanel'
+import { QgenMappingPanel } from '@/components/admin/QgenMappingPanel'
 import { StudentsPanel } from '@/components/admin/StudentsPanel'
 import { TeachersPanel } from '@/components/admin/TeachersPanel'
 import { TimetablePanel } from '@/components/admin/TimetablePanel'
 import { HeroBanner } from '@/components/dashboard/Widgets'
 import { Select } from '@/components/ui/field'
+import { ErrorState, SkeletonPage } from '@/components/ui/loading'
 import { ADMIN_TABS, isAdminTab, type AdminTab } from '@/lib/adminTabs'
 import { longDate } from '@/lib/datetime'
 import { adminService } from '@/services/adminService'
+import { errorMessage } from '@/services/apiClient'
 import type { Organization } from '@/types'
 
 const PLATFORM_ORG = 'PLATFORM'
@@ -38,6 +43,8 @@ export default function AdminDashboard() {
   const [params, setParams] = useSearchParams()
   const [orgs, setOrgs] = useState<Organization[] | null>(isSuper ? null : [])
   const [org, setOrg] = useState<string | null>(null)
+  const [orgsError, setOrgsError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const raw = params.get('tab')
   const tab: AdminTab = isAdminTab(raw, isSuper) ? raw : isSuper && orgs?.length === 0 ? 'institutions' : 'overview'
   const setTab = (t: AdminTab) => setParams(t === 'overview' ? {} : { tab: t })
@@ -49,9 +56,9 @@ export default function AdminDashboard() {
       const real = list.filter((o) => o.org_code !== PLATFORM_ORG)
       setOrgs(real)
       setOrg((cur) => cur ?? real[0]?.org_code ?? null)
-    }).catch(() => setOrgs([]))
+    }).catch((e) => setOrgsError(errorMessage(e)))
     // Re-read the list when leaving the Institutions page, so a newly onboarded institution appears in the switcher.
-  }, [isSuper, onInstitutionsTab])
+  }, [isSuper, onInstitutionsTab, reload])
 
   if (!user) return null
   // orgadmins are always scoped to their own tenant server-side; only the super-admin passes ?org_code=
@@ -93,6 +100,9 @@ export default function AdminDashboard() {
             {org && <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-fg"><Building2 className="h-5 w-5 text-brand-600" /> {current?.org_name ?? org}</h2>}
           </div>
         )}
+        {!platformPage && isSuper && !orgs && (orgsError
+          ? <ErrorState title="Couldn’t load institutions" message={orgsError} onRetry={() => { setOrgsError(null); setReload((n) => n + 1) }} />
+          : <SkeletonPage variant="dashboard" />)}
         {!platformPage && (!isSuper || org) && <div className={isSuper && tab === 'overview' ? 'mt-4' : undefined}>
           {tab === 'overview' && <OverviewPanel org={scope} onGo={setTab} />}
           {tab === 'teachers' && <TeachersPanel org={scope} />}
@@ -102,10 +112,13 @@ export default function AdminDashboard() {
           {tab === 'attendance' && <AttendanceSummaryPanel org={scope} />}
           {tab === 'evaluation' && <EvaluationScoresPanel org={scope} />}
           {tab === 'library' && <LibraryCatalogPanel org={scope} />}
+          {tab === 'question-generator' && <QgenMappingPanel org={scope} />}
           {tab === 'admissions' && <AdmissionsHome org={scope} />}
           {tab === 'admissions-team' && <AdmissionTeamPanel org={scope} />}
           {tab === 'privacy' && <PrivacyPanel org={scope} />}
           {tab === 'admission-tests' && <AdmissionTestsPanel org={scope} />}
+          {tab === 'admission-forms' && <AdmissionFormsPanel org={scope} />}
+          {tab === 'proctoring' && <ProctoringSettingsPanel org={scope} />}
         </div>}
         {!platformPage && isSuper && orgs?.length === 0 && (
           <p className="rounded-xl border border-line bg-ink-900 p-6 text-center text-sm text-ink-300">Onboard an institution first from <b>Institutions</b> in the sidebar.</p>

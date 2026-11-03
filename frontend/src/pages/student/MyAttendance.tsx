@@ -1,29 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CalendarCheck, TriangleAlert } from 'lucide-react'
 import { STATUS_META, STATUS_ORDER } from '@/components/attendance/status'
 import { MonthPicker } from '@/components/attendance/RegisterGrid'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { StatCard, fmtPct, pctTone } from '@/components/ui/stat'
-import { errorMessage } from '@/services/apiClient'
 import { isoMonth, monthLabel } from '@/services/classroomService'
 import { classroomService } from '@/services/classroomService'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
-import type { StudentAttendance, StudentSubjectAttendance } from '@/types'
+import type { StudentSubjectAttendance } from '@/types'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 /** Student: own attendance per subject for a chosen month, with a calendar and a month-by-month trend. */
 export default function MyAttendance() {
   const [month, setMonth] = useState(isoMonth())
-  const [data, setData] = useState<StudentAttendance | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setData(null); setError(null)
-    classroomService.myAttendance(month).then(setData).catch((e) => setError(errorMessage(e)))
-  }, [month])
+  const { data, error, loading, retry } = useAsync(() => classroomService.myAttendance(month), [month])
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
@@ -35,8 +30,8 @@ export default function MyAttendance() {
         <MonthPicker value={month} onChange={setMonth} />
       </header>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!data ? !error && <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-48" />)}</div> : (
+      {error && <ErrorState title="Couldn’t load your attendance" message={error} onRetry={retry} />}
+      {!data || loading ? !error && <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-48" />)}</div> : (
         <>
           <section className="grid gap-4 sm:grid-cols-3" aria-label="Summary">
             <StatCard label={monthLabel(month)} value={fmtPct(data.summary.percentage)} tone={pctTone(data.summary.percentage, data.threshold)}

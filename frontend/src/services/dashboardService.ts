@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { AssessmentType, Numeric, Tally, TeacherClass, TimetableSlot } from '@/types'
+import type { AssessmentType, Numeric, Tally, TeacherClass, TimetableSession } from '@/types'
 
 export interface DashAssessment {
   eval_test_id: string
@@ -22,9 +22,12 @@ export interface DashAssessment {
 export interface TeacherDash {
   today: string
   weekday: number
+  /** Name of today's school-wide holiday, if any. */
+  holiday_today?: string | null
   kpis: { classes: number; students: number; periods_today: number; attendance_pending: number; homework_to_review: number; active_assessments: number; needs_attention: number }
   classes: TeacherClass[]
-  today_slots: (TimetableSlot & { attendance_marked: boolean })[]
+  /** Today's resolved sessions (published, dated changes and holidays applied). */
+  today_slots: (TimetableSession & { attendance_marked: boolean })[]
   homework_to_review: { homework_id: string; title: string; class_code: string; subject_code: string; due_date: string; to_review: number; submitted: number }[]
   active_assessments: DashAssessment[]
   attention: DashAssessment[]
@@ -35,12 +38,14 @@ export interface TeacherDash {
 export interface StudentDash {
   today: string
   weekday: number
+  /** Name of today's holiday for the student's class, if any. */
+  holiday_today?: string | null
   threshold: number
   class_code: string
   kpis: { attendance_month: number | null; attendance_overall: number | null; homework_pending: number; to_do: number; average_score: number | null; results: number }
   attendance_month: Tally
   attendance_by_subject: ({ subject_code: string; subject_name: string } & Tally)[]
-  today_slots: TimetableSlot[]
+  today_slots: TimetableSession[]
   homework: { homework_id: string; title: string; subject_name: string; due_date: string }[]
   upcoming: { eval_test_id: string; assessment_type: 'ONLINE_TEST' | 'ASSIGNMENT'; title: string; subject_name: string; due_at: string | null; opens_at: string | null; in_progress: boolean; duration_minutes: number | null }[]
   results: { eval_test_id: string; assessment_type: AssessmentType; title: string; subject_name: string; obtained: Numeric; max: Numeric; percentage: number; grade: string; date: string | null }[]

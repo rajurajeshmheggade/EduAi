@@ -61,8 +61,8 @@ describe('AvatarTutor', () => {
     expect(await screen.findByText('Let us look at motion.', { selector: '#avatar-caption' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /Pause/ })).toBeInTheDocument()
     expect(connectAudio).toHaveBeenCalledWith(readerAudio())          // lip-sync listens to the tutor's audio
-    expect(svc.page).toHaveBeenCalledWith('tb1', 1, 'explain')
-    expect(svc.audio).toHaveBeenCalledWith('tb1', 1, 0, 'explain')
+    expect(svc.page).toHaveBeenCalledWith('tb1', 1, 'explain', expect.anything())
+    expect(svc.audio).toHaveBeenCalledWith('tb1', 1, 0, 'explain', expect.anything())
     const notes = screen.getByRole('region', { name: /Teacher's notes/ })
     expect(within(notes).getByText('Speed')).toBeInTheDocument()
     expect(within(notes).getByText(/Words to remember/).closest('li')).toHaveTextContent('Words to remember: Velocity')
@@ -84,7 +84,7 @@ describe('AvatarTutor', () => {
     expect(screen.getByRole('button', { name: /Word for word/ })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: /^Read page/ }))
     expect(await screen.findByText('Word for word 1.')).toBeInTheDocument()
-    expect(svc.audio).toHaveBeenCalledWith('tb1', 1, 0, 'read')
+    expect(svc.audio).toHaveBeenCalledWith('tb1', 1, 0, 'read', expect.anything())
   })
 
   it('uses the female avatar when the teacher is not male', async () => {

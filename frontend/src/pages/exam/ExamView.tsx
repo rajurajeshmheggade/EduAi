@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Lock, Maximize, MonitorX } from 'lucide-react'
+import { ApplicantReturn } from '@/components/exam/ApplicantReturn'
 import { ConfirmStep, ConsentStep, IdPhotoStep, ReadyStep, StepCard } from '@/components/exam/ExamSteps'
 import { HandBack } from '@/components/exam/HandBack'
 import { Runner } from '@/components/exam/Runner'
 import { SystemCheck } from '@/components/exam/SystemCheck'
 import { useAuth } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/button'
+import { ErrorState, PageLoader } from '@/components/ui/loading'
 import { Toaster } from '@/components/ui/toast'
 import { exam, examStore, PAGE_ID, type ExamView as View } from '@/lib/proctor/examApi'
 import { examChannel, setExamLock } from '@/lib/proctor/examLock'
-import { ProctorMedia } from '@/lib/proctor/media'
+import { useProctorMedia } from '@/lib/proctor/useProctorMedia'
 import { errorMessage } from '@/services/apiClient'
 
 const CSP = [
@@ -48,8 +50,11 @@ export default function ExamView() {
   const [refused, setRefused] = useState(false)
   const [full, setFull] = useState(() => !!document.fullscreenElement)
   const [ended, setEnded] = useState<string | null | undefined>(undefined)
+  // Started from the standalone admission application: the end screen returns there instead of the teacher hand-back.
+  const [origin, setOrigin] = useState<string | undefined>(undefined)
   const [proctorReady, setProctorReady] = useState(false)
-  const [media] = useState(() => new ProctorMedia())
+  // Owned by this page: switched off when it unmounts, and as soon as the exam is over for this tab (below).
+  const media = useProctorMedia()
   const [reference, setReference] = useState<number[] | null>(null)
   const [baseline, setBaseline] = useState({ yaw: 0, pitch: 0 })
 
@@ -74,6 +79,7 @@ export default function ExamView() {
   const load = useCallback(async () => {
     try {
       const st = await exam.claim()
+      setOrigin(st.origin)
       if (st.ended) { setEnded(st.submit_reason); return }
       setView(await exam.view())
     } catch (e) {
@@ -82,16 +88,21 @@ export default function ExamView() {
     }
   }, [])
   useEffect(() => { if (mine) queueMicrotask(() => void load()) }, [mine, load])
-  useEffect(() => () => media.stop(), [media])
+  // Submitted, timed out, ended by the teacher, locked, or taken over by another tab: the end / hand-back screen
+  // shows no camera — every proctoring stream (camera, microphone, screen share) and the models are switched off.
+  const over = refused || ended !== undefined || !!view?.ended || view?.status === 'LOCKED'
+  useEffect(() => { if (over) media.stop() }, [over, media])
 
   if (!mine) return <Shell><HandBack title="This exam is not open on this device" /></Shell>
   if (refused) {
     return <Shell><StepCard icon={MonitorX} title="This test is open in another tab or window"><p className="text-ink-300">Only one page can run the test. Close this tab and continue in the other one.</p></StepCard></Shell>
   }
-  if (ended !== undefined) return <Shell><HandBack reason={ended} /></Shell>
-  if (error) return <Shell><StepCard icon={Lock} title="The test could not be opened"><p role="alert" className="text-bad">{error}</p></StepCard></Shell>
-  if (!view) return <Shell><div className="grid h-full place-items-center text-ink-300">Opening the test…</div></Shell>
-  if (view.ended) return <Shell><HandBack reason={view.submit_reason} /></Shell>
+  const applicant = origin === 'applicant' || view?.origin === 'applicant'
+  if (ended !== undefined) return <Shell>{applicant ? <ApplicantReturn reason={ended} /> : <HandBack reason={ended} />}</Shell>
+  if (error) return <Shell><StepCard icon={Lock} title="The test could not be opened"><ErrorState message={error} onRetry={() => { setError(null); void load() }} /></StepCard></Shell>
+  if (!view) return <Shell><PageLoader className="h-full" message="Opening the test…" detail="Checking this exam session." /></Shell>
+  if (view.ended) return <Shell>{applicant ? <ApplicantReturn reason={view.submit_reason} /> : <HandBack reason={view.submit_reason} />}</Shell>
+  if (view.status === 'LOCKED' && applicant) return <Shell><ApplicantReturn locked /></Shell>
   if (view.status === 'LOCKED') {
     return <Shell><StepCard icon={Lock} title="Please ask your teacher"><p className="text-ink-300">The date of birth did not match three times, so the test is locked. Your teacher can launch it again.</p></StepCard>
       <HandBack title="Teacher: sign in to continue" /></Shell>

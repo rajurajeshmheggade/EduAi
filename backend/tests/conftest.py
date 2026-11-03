@@ -6,7 +6,7 @@ from pathlib import Path
 # --- Environment must be set before the app settings are first read -------------------------
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
-TEST_DB = "eduai_test"
+TEST_DB = os.environ.get("EDUAI_TEST_DB", "eduai_test")  # set per checkout to run suites side by side
 os.environ["DATABASE_URL"] = f"postgresql://postgres@127.0.0.1:5433/{TEST_DB}"
 os.environ["PROVIDER_MODE"] = "mock"
 os.environ["STORAGE_MODE"] = "local"

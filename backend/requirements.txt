@@ -21,7 +21,7 @@ pytest>=8.0
 reportlab>=4.0
 openpyxl>=3.1
 # Local-dev embedded Postgres + pgvector (no Docker needed)
-pgserver>=0.1.4
+pgserver>=0.1.4; sys_platform != "linux" or platform_machine != "aarch64"  # no wheel there: see app/devdb.py
 # AI avatar tutor offline neural voice (Kokoro-82M via ONNX Runtime); model files: python -m scripts.download_voice
 kokoro-onnx==0.6.1
 # Admission tests: re-encode ID photos / proctoring evidence as JPEG (strips EXIF)

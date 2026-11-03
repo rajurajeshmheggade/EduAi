@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { shortDate, shortDateTime } from '@/lib/datetime'
 import { ACCESS_LABEL, LICENSE_LABEL, VERIFY_LABEL } from '@/lib/library'
@@ -85,9 +86,9 @@ function Catalog({ org }: { org?: string | null }) {
         </CardContent>
       </Card>
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && data && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {!data ? <div className="skeleton h-64" /> : data.books.length === 0 ? (
+      {!data ? (error ? <ErrorState title="Couldn’t load the catalog" message={error} onRetry={() => { setError(null); load() }} /> : <div className="skeleton h-64" />) : data.books.length === 0 ? (
         <LibraryEmpty title="No catalog records">Add verified books from official sources (for example the NCERT or Karnataka textbook portals) with <b>Add book</b> or <b>Import CSV</b>.</LibraryEmpty>
       ) : (
         <Card>
@@ -328,13 +329,14 @@ function PublishLog({ org }: { org?: string | null }) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [refresh, setRefresh] = useState<{ busy: boolean; msg?: string }>({ busy: false })
-  useEffect(() => { libraryService.publications(org, status).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, status])
+  const [reload, setReload] = useState(0)
+  useEffect(() => { libraryService.publications(org, status).then(setRows).catch((e) => setError(errorMessage(e))) }, [org, status, reload])
 
   async function refreshDiksha() {
     setRefresh({ busy: true })
     try {
       const r = await dikshaService.refresh(org)
-      setRefresh({ busy: false, msg: `Checked ${r.checked} DIKSHA item(s): ${r.updated} updated, ${r.unavailable} no longer on DIKSHA${r.failed ? `, ${r.failed} could not be reached` : ''}.` })
+      setRefresh({ busy: false, msg: `Checked ${r.checked} catalogue item(s): ${r.updated} updated, ${r.unavailable} no longer available${r.failed ? `, ${r.failed} could not be reached` : ''}.` })
       libraryService.publications(org, status).then(setRows).catch(() => {})
     } catch (e) { setRefresh({ busy: false, msg: errorMessage(e) }) }
   }
@@ -345,8 +347,8 @@ function PublishLog({ org }: { org?: string | null }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-300">Every publish and unpublish, with who did it and when.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" disabled={refresh.busy} onClick={refreshDiksha} title="Re-read metadata of published DIKSHA items older than the refresh window">
-              {refresh.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />} Refresh DIKSHA metadata
+            <Button size="sm" variant="secondary" disabled={refresh.busy} onClick={refreshDiksha} title="Re-read metadata of published catalogue items older than the refresh window">
+              {refresh.busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />} Refresh catalogue metadata
             </Button>
             <Select aria-label="Status" className="h-9 w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">All</option><option value="published">Published</option><option value="unpublished">Unpublished</option>
@@ -354,16 +356,17 @@ function PublishLog({ org }: { org?: string | null }) {
           </div>
         </div>
         {refresh.msg && <p role="status" className="rounded-lg bg-ink-800 px-3 py-2 text-sm text-ink-100">{refresh.msg}</p>}
-        {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-        {!rows ? <div className="skeleton h-40" /> : rows.length === 0 ? <LibraryEmpty title="No publishing activity yet" /> : (
+        {error && rows && <p role="alert" className="text-sm text-bad">{error}</p>}
+        {!rows ? (error ? <ErrorState title="Couldn’t load the publishing log" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-40" />) : rows.length === 0 ? <LibraryEmpty title="No publishing activity yet" /> : (
           <ul className="divide-y divide-line">
             {rows.map((p) => (
               <li key={p.publication_id} className="flex flex-wrap items-start gap-3 py-3">
                 <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 font-medium text-fg">{p.title}
-                    {p.source === 'diksha' && <Badge tone="aqua">DIKSHA</Badge>}
-                    {p.source_status === 'unavailable' && <Badge tone="warn">No longer on DIKSHA</Badge>}
+                    {p.source === 'diksha' && <Badge tone="aqua">Catalogue</Badge>}
+                    {p.source_status === 'unavailable' && <Badge tone="warn">No longer available</Badge>}
+                    {p.status === 'published' && p.hidden_from_students && <Badge tone="warn">Hidden from students (licence)</Badge>}
                   </div>
                   <div className="text-xs text-ink-500">{p.class_name} · {p.class_subject_name ?? p.subject_code} · {p.year_code}{p.source_context ? ` · from ${p.source_context.textbook_name}` : ''}</div>
                   <ol className="mt-1.5 space-y-0.5 text-xs text-ink-300">

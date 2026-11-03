@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { BookOpenText, ChevronDown, GraduationCap, Loader2, Pause, Play, SkipBack, SkipForward, Square, Volume2 } from 'lucide-react'
+import { BookOpenText, CheckCircle2, ChevronDown, CircleAlert, Clock3, GraduationCap, Loader2, Pause, Play, SkipBack, SkipForward, Square, Volume2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
-import type { ReadMode } from '@/services/readAloudService'
+import type { Readiness, ReadMode } from '@/services/readAloudService'
 import { AvatarStage } from './AvatarStage'
 import type { ReadAloud } from './useReadAloud'
 
@@ -18,7 +18,12 @@ const MODES: { id: ReadMode; label: string; icon: typeof GraduationCap }[] = [
  * Avatar tutor pane of the AI Classroom: the subject teacher's avatar explains the open textbook page like a teacher
  * (key points, terms, recap, a question) — or reads it word for word — with lip-sync, captions and the teacher's notes.
  */
-export function AvatarTutor({ reader, page }: { reader: ReadAloud; page: number }) {
+export function AvatarTutor({ reader, page, modelUrl }: {
+  reader: ReadAloud
+  page: number
+  /** Preloaded 3D model (object URL), or null to use the 2D avatar; omitted = load it here. */
+  modelUrl?: string | null
+}) {
   const { status, voice, mode, lesson } = reader
   const name = voice?.teacher?.name ?? 'Your teacher'
   const gender = voice?.voice ?? 'female'
@@ -52,6 +57,7 @@ export function AvatarTutor({ reader, page }: { reader: ReadAloud; page: number 
       <div className="relative shrink-0 self-center sm:self-start">
         <AvatarStage
           gender={gender}
+          modelUrl={modelUrl}
           speaking={playing}
           label={`${name}'s avatar${playing ? ', speaking' : ''}`}
           className={cn('h-52 w-40 overflow-hidden rounded-2xl ring-1 ring-line',
@@ -118,6 +124,12 @@ export function AvatarTutor({ reader, page }: { reader: ReadAloud; page: number 
           </label>
         </div>
         {status === 'error' && reader.error && <p role="alert" className="text-xs text-bad">{reader.error}</p>}
+        {reader.ready && !reader.voiceError && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1" aria-live="polite" id="tutor-readiness">
+            {!reader.reading && <ReadyChip status={reader.ready.status} label={`page ${reader.ready.page}`} />}
+            {reader.ready.next && <ReadyChip status={reader.ready.next.status} label={`next page (${reader.ready.next.page})`} />}
+          </div>
+        )}
 
         {explain && lesson && lesson.key_points.length > 0 && (
           <section aria-labelledby="tutor-notes-h" className="rounded-lg border border-line bg-ink-900/70 p-2.5">
@@ -150,5 +162,23 @@ export function AvatarTutor({ reader, page }: { reader: ReadAloud; page: number 
         )}
       </div>
     </div>
+  )
+}
+
+const READY: Record<Readiness, { icon: typeof Clock3; text: (what: string) => string; cls: string }> = {
+  ready: { icon: CheckCircle2, text: (w) => `${w[0].toUpperCase()}${w.slice(1)} ready`, cls: 'text-ok' },
+  preparing: { icon: Loader2, text: (w) => `Preparing ${w}…`, cls: 'text-ink-300' },
+  queued: { icon: Clock3, text: (w) => `${w[0].toUpperCase()}${w.slice(1)} queued`, cls: 'text-ink-500' },
+  idle: { icon: Clock3, text: (w) => `${w[0].toUpperCase()}${w.slice(1)} queued`, cls: 'text-ink-500' },
+  failed: { icon: CircleAlert, text: (w) => `Couldn't prepare ${w} yet`, cls: 'text-warn' },
+}
+
+/** How far the open / next page has been prepared (script + first spoken part), so Next feels instant. */
+function ReadyChip({ status, label }: { status: Readiness; label: string }) {
+  const r = READY[status]
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-[11px]', r.cls)} data-ready={status}>
+      <r.icon className={cn('h-3 w-3', status === 'preparing' && 'animate-spin')} aria-hidden /> {r.text(label)}
+    </span>
   )
 }

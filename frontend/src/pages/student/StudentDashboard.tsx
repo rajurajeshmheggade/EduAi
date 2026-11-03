@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowRight, Award, BarChart3, CalendarCheck, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, Hourglass,
@@ -10,10 +10,11 @@ import { Empty, HeroBanner, Kpi, Panel, Ring } from '@/components/dashboard/Widg
 import { TodayList } from '@/components/timetable/WeeklyGrid'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
-import { errorMessage } from '@/services/apiClient'
-import { dashboardService, type StudentDash } from '@/services/dashboardService'
+import { dashboardService } from '@/services/dashboardService'
 import { greeting, longDate, shortDate, shortDateTime } from '@/lib/datetime'
+import { useAsync } from '@/lib/useAsync'
 import { num } from '@/types'
 
 const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLINE_EXAM: 'Exam' } as const
@@ -22,11 +23,9 @@ const TYPE_LABEL = { ONLINE_TEST: 'Online test', ASSIGNMENT: 'Assignment', OFFLI
 export default function StudentDashboard() {
   const { user, setSubject } = useAuth()
   const nav = useNavigate()
-  const [d, setD] = useState<StudentDash | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: d, error, retry } = useAsync(() => dashboardService.student(), [])
   const [hello] = useState(() => greeting())
 
-  useEffect(() => { dashboardService.student().then(setD).catch((e) => setError(errorMessage(e))) }, [])
   if (!user) return null
   const first = user.full_name.split(' ')[0]
   const k = d?.kpis
@@ -57,18 +56,13 @@ export default function StudentDashboard() {
         )}
       />
 
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load your dashboard" message={error} onRetry={retry} />}
 
-      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {!k ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
-          <Kpi icon={CalendarCheck} label="Overall attendance" value={k.attendance_overall == null ? '—' : `${k.attendance_overall}%`} tone={k.attendance_overall != null && d && k.attendance_overall < d.threshold ? 'bad' : 'ok'} to="/student/attendance" hint={`This month ${k.attendance_month == null ? '—' : `${k.attendance_month}%`}`} />
-          <Kpi icon={Hourglass} label="Tests & assignments to do" value={k.to_do} tone={k.to_do ? 'warn' : 'ok'} to="/student/tests" />
-          <Kpi icon={ClipboardList} label="Homework pending" value={k.homework_pending} tone={k.homework_pending ? 'warn' : 'ok'} to="/student/homework" />
-          <Kpi icon={Trophy} label="Average score" value={k.average_score == null ? '—' : `${k.average_score}%`} tone="brand" to="/student/evaluations" hint={`${k.results} result(s) published`} />
-        </>}
-      </section>
-
+      {/* Today's timetable comes first, right under the greeting. */}
       <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+        <Panel icon={CalendarClock} title="Today’s classes" action={{ to: '/student/timetable', label: 'Full timetable' }}>
+          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" empty={d.holiday_today ? `Holiday today — ${d.holiday_today}.` : undefined} />}
+        </Panel>
         <Panel icon={Hourglass} title="Upcoming deadlines" action={{ to: '/student/tests', label: 'All tests' }}>
           {!d ? <div className="skeleton h-40" /> : d.upcoming.length === 0 ? <Empty icon={CheckCircle2}>Nothing due — you’re all caught up.</Empty> : (
             <ul className="space-y-2.5">
@@ -92,11 +86,16 @@ export default function StudentDashboard() {
             </ul>
           )}
         </Panel>
-
-        <Panel icon={CalendarClock} title="Today’s classes" action={{ to: '/student/timetable', label: 'Full week' }}>
-          {!d ? <div className="skeleton h-40" /> : <TodayList slots={d.today_slots} today={d.weekday} secondary="teacher" />}
-        </Panel>
       </div>
+
+      <section aria-label="Overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {!k ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />) : <>
+          <Kpi icon={CalendarCheck} label="Overall attendance" value={k.attendance_overall == null ? '—' : `${k.attendance_overall}%`} tone={k.attendance_overall != null && d && k.attendance_overall < d.threshold ? 'bad' : 'ok'} to="/student/attendance" hint={`This month ${k.attendance_month == null ? '—' : `${k.attendance_month}%`}`} />
+          <Kpi icon={Hourglass} label="Tests & assignments to do" value={k.to_do} tone={k.to_do ? 'warn' : 'ok'} to="/student/tests" />
+          <Kpi icon={ClipboardList} label="Homework pending" value={k.homework_pending} tone={k.homework_pending ? 'warn' : 'ok'} to="/student/homework" />
+          <Kpi icon={Trophy} label="Average score" value={k.average_score == null ? '—' : `${k.average_score}%`} tone="brand" to="/student/evaluations" hint={`${k.results} result(s) published`} />
+        </>}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel icon={Award} title="Recent results" action={{ to: '/student/evaluations', label: 'All results' }}>

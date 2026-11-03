@@ -6,11 +6,16 @@
 * mode "explain" (default): the AI tutor turns the page into a teacher's explanation (services.page_lesson);
   mode "read": the page is read word for word.
 * The script is split into sentence segments of about TTS_SEGMENT_CHARS characters (the very first one is a single
-  sentence so speech starts quickly). The client plays segment by segment; the server pre-voices the rest of the page
-  and prepares the next page in the background.
+  sentence so speech starts quickly). The client plays segment by segment.
+* A background page pipeline (services.page_pipeline) prepares what each reader needs next while they listen: the
+  next pages' scripts and first parts, then the rest of the open page's audio. It is cancelled / re-aimed when the
+  reader jumps elsewhere, and every page and part is built once however many readers ask (single-flight).
 * Text is made speakable before synthesis ("e.g." -> "for example", "1789" -> "seventeen eighty-nine", units …).
 * Voice follows the subject teacher: male when the teacher's gender is 'male', otherwise female.
 * Scripts and synthesised audio are cached in storage, so a page is explained and voiced once per engine / voice.
+  Script keys carry the textbook's content checksum and the prompt version, so changed content is re-explained.
+  If the AI fails, the offline lesson is cached too (stable parts for audio) and marked so the AI is asked again
+  later; the replaced script stays readable by version for anyone part-way through it.
 """
 from __future__ import annotations
 
@@ -19,20 +24,23 @@ import json
 import logging
 import re
 import threading
-from concurrent.futures import ThreadPoolExecutor
+import time
+from collections import OrderedDict
 from typing import Literal
 
 from .. import db
 from ..config import get_settings
-from ..providers.speech import Voice, get_speech
+from ..providers.speech import SpeechUnavailable, Voice, get_speech
 from ..security import CurrentUser
 from . import page_lesson
+from .page_pipeline import Pipeline, SingleFlight, Step
 from .storage import get_storage
 
 log = logging.getLogger("eduai.read_aloud")
 
 Mode = Literal["explain", "read"]
-CACHE_VERSION = "v2"
+SCRIPT_CACHE = "v3"   # page scripts; v3 = content-versioned keys, cached fallbacks, script versions
+AUDIO_CACHE = "v2"    # voiced parts (unchanged: audio already voiced stays valid)
 MAX_SEGMENTS = 60
 FIRST_SEGMENT_CHARS = 140
 
@@ -161,13 +169,6 @@ def _page_layout(tb: dict, page: int) -> dict:
         doc.close()
 
 
-def _cached(key: str) -> bytes | None:
-    try:
-        return get_storage().get(key)
-    except Exception:  # noqa: BLE001 — a cache miss (missing file / blob)
-        return None
-
-
 def _chapter(tb: dict, page: int) -> str | None:
     for c in db.call_rows("usp_list_chapters", tb["textbook_id"]):
         if c["first_page"] <= page <= (c["last_page"] or c["first_page"]):
@@ -183,29 +184,139 @@ def _segments(parts: list[dict]) -> list[dict]:
     return out[:MAX_SEGMENTS]
 
 
-_lesson_locks = [threading.Lock() for _ in range(16)]
+# ---------------------------------------------------------------- page scripts (cached)
+_flight = SingleFlight()            # one build per page / one synthesis per part, however many readers ask at once
+_memo: OrderedDict[str, tuple[dict, float]] = OrderedDict()   # recently used scripts, so audio requests skip storage
+_memo_lock = threading.Lock()
+MEMO_SIZE = 256
+OFFLINE = ("offline", "offline-fallback")
+
+
+def _cached(key: str) -> bytes | None:
+    try:
+        return get_storage().get(key)
+    except Exception:  # noqa: BLE001 — a cache miss (missing file / blob)
+        return None
+
+
+def _exists(key: str) -> bool:
+    path = getattr(get_storage(), "resolve_path", None)
+    return path(key).exists() if path else _cached(key) is not None
+
+
+def content_version(tb: dict) -> str:
+    """Changes whenever the textbook's PDF does (checksum set at indexing, migration 027), so cached pages of an
+    old upload are never served for new content."""
+    digest = tb.get("content_sha256") or hashlib.sha256(f"{tb['blob_pdf_url']}|{tb['total_pages']}".encode()).hexdigest()
+    return digest.strip()[:16]
+
+
+def script_key(tb: dict, page: int, mode: Mode) -> str:
+    tutor = page_lesson.get_tutor_llm().name if mode == "explain" else "text"
+    tag = re.sub(r"[^A-Za-z0-9.-]+", "_", tutor)
+    return (f"read-aloud/{SCRIPT_CACHE}/{tb['textbook_id']}/{content_version(tb)}/"
+            f"{mode}-{page_lesson.PROMPT_VERSION}-{tag}-p{page}.json")
+
+
+def _remember(key: str, script: dict) -> None:
+    # A fallback is re-read from storage now and then: another worker process may have replaced it with the AI's.
+    until = time.monotonic() + 30 if script.get("fallback") else float("inf")
+    with _memo_lock:
+        _memo[key] = (script, until)
+        _memo.move_to_end(key)
+        while len(_memo) > MEMO_SIZE:
+            _memo.popitem(last=False)
+
+
+def _load(key: str) -> dict | None:
+    with _memo_lock:
+        hit = _memo.get(key)
+        if hit and hit[1] > time.monotonic():
+            _memo.move_to_end(key)
+            return hit[0]
+    raw = _cached(key)
+    try:
+        script = json.loads(raw) if raw is not None else None
+    except ValueError:            # half-written by another process: treat as a miss
+        return None
+    if script is not None:
+        _remember(key, script)
+    return script
+
+
+def _store(key: str, script: dict) -> None:
+    get_storage().put(key, json.dumps(script).encode(), "application/json")
+    _remember(key, script)
+
+
+def _version(segments: list[dict]) -> str:
+    return hashlib.sha256("\n".join(s["text"] for s in segments).encode()).hexdigest()[:12]
+
+
+def _archived(key: str, version: str) -> str:
+    return f"{key[:-5]}@{version}.json"
+
+
+def _context(tb: dict, page: int) -> dict | None:
+    """The previous page's lesson in brief, when the AI has already explained it (continuity between pages)."""
+    if page <= 1:
+        return None
+    prev = _load(script_key(tb, page - 1, "explain"))
+    if not prev or prev.get("engine") in OFFLINE:
+        return None
+    return page_lesson.context_of(prev.get("lesson"), page - 1)
+
+
+def _build(tb: dict, page: int, mode: Mode, key: str, replacing: dict | None = None) -> dict:
+    paras = paragraphs(_page_layout(tb, page))
+    sents = sentences(paras)
+    if mode == "read":
+        out: dict = {"segments": _segments([{"text": s} for s in sents]) if sents else [], "lesson": None, "engine": "text"}
+    else:
+        ctx = _context(tb, page)
+        lesson, engine = page_lesson.generate(tb, page, paras, sents, _chapter(tb, page), ctx)
+        out = {"segments": _segments(page_lesson.script(lesson)), "lesson": lesson, "engine": engine}
+        if ctx:
+            out["context_page"] = ctx["page"]
+        if engine == "offline-fallback":
+            out["fallback"] = True      # the AI failed: cached all the same (stable parts), replaced later
+    out["version"] = _version(out["segments"])
+    out["created"] = time.time()
+    if replacing and replacing.get("version") != out["version"]:
+        # Readers part-way through the old script keep fetching its parts by version.
+        get_storage().put(_archived(key, replacing["version"]), json.dumps(replacing).encode(), "application/json")
+    _store(key, out)
+    return out
 
 
 def page_script(tb: dict, page: int, mode: Mode = "explain") -> dict:
-    """{"segments": [{text, quote, point}], "lesson": {...} | None, "engine": str} for one page, cached."""
-    tutor = page_lesson.get_tutor_llm().name if mode == "explain" else "text"
-    tag = re.sub(r"[^A-Za-z0-9.-]+", "_", tutor)
-    key = f"read-aloud/{CACHE_VERSION}/{tb['textbook_id']}/{mode}-{page_lesson.PROMPT_VERSION}-{tag}-p{page}.json"
-    with _lesson_locks[int(hashlib.md5(key.encode()).hexdigest()[:4], 16) % len(_lesson_locks)]:
-        hit = _cached(key)        # a prefetch and a play of one page ask the AI once
-        if hit is not None:
-            return json.loads(hit)
-        paras = paragraphs(_page_layout(tb, page))
-        sents = sentences(paras)
-        if mode == "read":
-            out = {"segments": _segments([{"text": s} for s in sents]) if sents else [], "lesson": None, "engine": "text"}
+    """{"segments": [{text, quote, point}], "lesson": {...} | None, "engine", "version", ...} for one page, cached
+    per textbook content + prompt + tutor. Concurrent requests for one page build it once."""
+    key = script_key(tb, page, mode)
+    out = _load(key) or _flight.do(key, lambda: _load(key) or _build(tb, page, mode, key))
+    s = get_settings()
+    if out.get("fallback") and time.time() - out.get("created", 0) >= s.read_aloud_fallback_retry_seconds:
+        if s.read_aloud_prewarm:        # ask the AI again in the background; the next request gets its lesson
+            pipeline().submit(Step(f"upgrade|{key}", lambda _cancelled: _upgrade(tb, page, mode, key)), rank=50)
         else:
-            lesson, engine = page_lesson.generate(tb, page, paras, sents, _chapter(tb, page))
-            out = {"segments": _segments(page_lesson.script(lesson)), "lesson": lesson, "engine": engine}
-            if engine == "offline-fallback":      # the AI failed: serve the offline lesson, try the AI again next time
-                return out
-        get_storage().put(key, json.dumps(out).encode(), "application/json")
-        return out
+            out = _upgrade(tb, page, mode, key)
+    return out
+
+
+def _upgrade(tb: dict, page: int, mode: Mode, key: str) -> dict:
+    """Re-asks the AI for a page whose cached lesson is the offline fallback; a real lesson replaces it."""
+    def run() -> dict:
+        cur = _load(key)
+        return cur if cur is not None and not cur.get("fallback") else _build(tb, page, mode, key, replacing=cur)
+    return _flight.do(key, run)
+
+
+def script_version(tb: dict, page: int, mode: Mode, version: str) -> dict | None:
+    """The page's script as it was at `version` (current, or an archived one a newer lesson replaced)."""
+    cur = page_script(tb, page, mode)
+    if cur.get("version") == version:
+        return cur
+    return _load(_archived(script_key(tb, page, mode), version))
 
 
 # ---------------------------------------------------------------- speakable text
@@ -251,82 +362,166 @@ def speakable(text: str) -> str:
     return " ".join(text.split())
 
 
-_locks = [threading.Lock() for _ in range(32)]   # striped: a prefetch and a play of one segment synthesise once
+# ---------------------------------------------------------------- voice
+def _audio_key(text: str, voice: Voice) -> str:
+    digest = hashlib.sha256(f"{get_speech().label}|speak-v1|{voice}|{text}".encode()).hexdigest()
+    return f"read-aloud/{AUDIO_CACHE}/audio/{digest[:2]}/{digest}"
+
+
+def _audio_ready(key: str) -> bool:
+    return _exists(f"{key}.mp3") or _exists(f"{key}.wav")
 
 
 def segment_audio(text: str, voice: Voice) -> tuple[bytes, str]:
     """Audio for one segment; cached per engine + voice + text so the same page is voiced once."""
-    speech = get_speech()
-    digest = hashlib.sha256(f"{speech.label}|speak-v1|{voice}|{text}".encode()).hexdigest()
-    key = f"read-aloud/{CACHE_VERSION}/audio/{digest[:2]}/{digest}"
-    with _locks[int(digest[:4], 16) % len(_locks)]:
+    key = _audio_key(text, voice)
+
+    def synth() -> tuple[bytes, str]:
         for ext, mime in (("mp3", "audio/mpeg"), ("wav", "audio/wav")):
             hit = _cached(f"{key}.{ext}")
             if hit is not None:
                 return hit, mime
-        data, mime = speech.synthesize(speakable(text), voice)
+        data, mime = get_speech().synthesize(speakable(text), voice)
         get_storage().put(f"{key}.{'mp3' if mime == 'audio/mpeg' else 'wav'}", data, mime)
-    return data, mime
+        return data, mime
+
+    return _flight.do(key, synth)
+
+
+# ---------------------------------------------------------------- whose avatar / voice
+_teachers: dict[tuple, tuple[dict, float]] = {}
+_teachers_lock = threading.Lock()
+
+_TEACHER_SQL = """
+SELECT u.full_name, u.gender
+FROM (SELECT COALESCE(
+        (SELECT cs.teacher_code FROM public.class_subjects cs
+         WHERE cs.org_code = %(org)s AND cs.class_code = me.class_code AND cs.subject_code = %(subject)s),
+        (SELECT c.class_teacher_code FROM public.classes c WHERE c.org_code = %(org)s AND c.class_code = me.class_code),
+        %(uploader)s) AS code
+      FROM (SELECT (SELECT class_code FROM public.app_users WHERE org_code = %(org)s AND user_code = %(me)s)
+            AS class_code) me) pick
+JOIN public.app_users u ON u.org_code = %(org)s AND u.user_code = pick.code AND u.user_role IN ('teacher', 'orgadmin')
+"""
 
 
 def avatar_teacher(user: CurrentUser, tb: dict) -> dict:
     """The teacher whose avatar reads this book: subject teacher of the student's class, else the class teacher,
-    else whoever uploaded the book. A teacher previewing the classroom gets their own avatar."""
+    else whoever uploaded the book. A teacher previewing the classroom gets their own avatar. One query, cached for
+    AVATAR_TEACHER_CACHE_SECONDS (every audio request needs it); admin edits to teachers clear the cache."""
     org = tb["org_code"]
-    code = None
+    ck = (org, user.role, user.user_code, tb["subject_code"], tb["uploaded_by"])
+    now = time.monotonic()
+    with _teachers_lock:
+        hit = _teachers.get(ck)
+        if hit and hit[1] > now:
+            return hit[0]
     if user.role == "teacher":
-        code = user.user_code
+        t = db.fetch_one("SELECT full_name, gender FROM public.app_users WHERE org_code = %s AND user_code = %s "
+                         "AND user_role IN ('teacher','orgadmin')", (org, user.user_code))
     else:
-        me = db.fetch_one("SELECT class_code FROM public.app_users WHERE org_code = %s AND user_code = %s",
-                          (org, user.user_code))
-        cls = me["class_code"] if me else None
-        if cls:
-            row = db.fetch_one("SELECT teacher_code FROM public.class_subjects WHERE org_code = %s AND class_code = %s "
-                               "AND subject_code = %s", (org, cls, tb["subject_code"]))
-            code = row["teacher_code"] if row else None
-            if not code:
-                row = db.fetch_one("SELECT class_teacher_code FROM public.classes WHERE org_code = %s AND class_code = %s",
-                                   (org, cls))
-                code = row["class_teacher_code"] if row else None
-        code = code or tb["uploaded_by"]
-    t = db.fetch_one("SELECT full_name, gender FROM public.app_users WHERE org_code = %s AND user_code = %s "
-                     "AND user_role IN ('teacher','orgadmin')", (org, code)) if code else None
+        t = db.fetch_one(_TEACHER_SQL, {"org": org, "me": user.user_code, "subject": tb["subject_code"],
+                                        "uploader": tb["uploaded_by"]})
     gender = t["gender"] if t else None
-    return {
-        "teacher": {"name": t["full_name"], "gender": gender} if t else None,
-        "voice": "male" if gender == "male" else "female",
-    }
+    out = {"teacher": {"name": t["full_name"], "gender": gender} if t else None,
+           "voice": "male" if gender == "male" else "female"}
+    with _teachers_lock:
+        if len(_teachers) > 5000:
+            _teachers.clear()
+        _teachers[ck] = (out, now + get_settings().avatar_teacher_cache_seconds)
+    return out
 
 
-# ---------------------------------------------------------------- background warm-up
-_warmer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="read-aloud-warm")
-_latest: dict[tuple[str, str, str], int] = {}
-_latest_lock = threading.Lock()
+def forget_avatar_teachers() -> None:
+    """A teacher's name / gender or a class's teachers changed: look the avatars up again."""
+    with _teachers_lock:
+        _teachers.clear()
 
 
-def warm(tb: dict, page: int, mode: Mode, voice: Voice, reader: str) -> None:
-    """Voices the rest of `page` in order, then prepares the next page (script + first part), in one background
-    worker. A newer request from the same reader for the same book cancels the remaining steps."""
-    who = (reader, str(tb["textbook_id"]), mode)
-    with _latest_lock:
-        if _latest.get(who) == page:
+# ---------------------------------------------------------------- background page pipeline
+_pipe: Pipeline | None = None
+_pipe_lock = threading.Lock()
+
+
+def pipeline() -> Pipeline:
+    global _pipe
+    with _pipe_lock:
+        if _pipe is None:
+            s = get_settings()
+            _pipe = Pipeline(workers=s.read_aloud_workers, retries=s.read_aloud_retries, backoff=s.read_aloud_retry_backoff,
+                             give_up=(LookupError, SpeechUnavailable), name="read-aloud")
+        return _pipe
+
+
+def _voice_part(tb: dict, page: int, mode: Mode, voice: Voice, index: int) -> None:
+    segs = page_script(tb, page, mode)["segments"]
+    if index < len(segs):
+        segment_audio(segs[index]["text"], voice)
+
+
+def _voice_rest(tb: dict, page: int, mode: Mode, voice: Voice, cancelled) -> None:
+    for seg in page_script(tb, page, mode)["segments"][1:]:
+        if cancelled():           # the reader went elsewhere: stop between parts
             return
-        _latest[who] = page
+        segment_audio(seg["text"], voice)
 
-    def stale() -> bool:
-        return _latest.get(who) != page
 
-    def job() -> None:
-        try:
-            for seg in page_script(tb, page, mode)["segments"]:
-                if stale():
-                    return
-                segment_audio(seg["text"], voice)
-            if page < tb["total_pages"] and not stale():
-                nxt = page_script(tb, page + 1, mode)["segments"]
-                if nxt and not stale():
-                    segment_audio(nxt[0]["text"], voice)
-        except Exception as e:  # noqa: BLE001 — warm-up is best effort; the reader fetches on demand anyway
-            log.info("read-aloud warm-up stopped: %s", type(e).__name__)
+def _first_ready(tb: dict, page: int, mode: Mode, voice: Voice) -> bool:
+    script = _load(script_key(tb, page, mode))
+    return script is not None and (not script["segments"] or _audio_ready(_audio_key(script["segments"][0]["text"], voice)))
 
-    _warmer.submit(job)
+
+def lookahead(tb: dict, page: int, mode: Mode, voice: Voice) -> list[Step]:
+    """What to prepare for a reader on `page`, most urgent first: this page's script and first part, the next page's
+    script and first part, the rest of this page's audio, then the pages after that (READ_ALOUD_LOOKAHEAD_PAGES).
+    Each page's lesson waits for the previous page's, so it can carry on from it. Ready work is left out."""
+    s = get_settings()
+    last = max(page, min(tb["total_pages"] or page, page + max(0, s.read_aloud_lookahead_pages)))
+    steps: list[Step] = []
+
+    def add_page(p: int) -> None:
+        key = script_key(tb, p, mode)
+        prev = f"script|{script_key(tb, p - 1, mode)}" if mode == "explain" and p > page else None
+        if _load(key) is None:
+            steps.append(Step(f"script|{key}", lambda _c, p=p: page_script(tb, p, mode), needs=prev))
+        if not _first_ready(tb, p, mode, voice):
+            steps.append(Step(f"audio|{key}|0|{voice}", lambda _c, p=p: _voice_part(tb, p, mode, voice, 0),
+                              needs=f"script|{key}"))
+
+    add_page(page)
+    if page + 1 <= last:
+        add_page(page + 1)
+    key = script_key(tb, page, mode)
+    script = _load(key)
+    if script is None or not all(_audio_ready(_audio_key(x["text"], voice)) for x in script["segments"][1:]):
+        steps.append(Step(f"rest|{key}|{voice}", lambda cancelled: _voice_rest(tb, page, mode, voice, cancelled),
+                          needs=f"script|{key}"))
+    for p in range(page + 2, last + 1):
+        add_page(p)
+    return steps
+
+
+def prepare(tb: dict, page: int, mode: Mode, voice: Voice, reader: str) -> None:
+    """Points this reader's pipeline at `page`: work for pages they left is cancelled (unless another reader needs
+    it), and the window around `page` is queued in priority order on the shared worker pool."""
+    pipeline().follow((tb["org_code"], reader), lookahead(tb, page, mode, voice))
+
+
+def _state(step_key: str, flight_key: str) -> str | None:
+    st = _pipe.state(step_key) if _pipe is not None else None
+    return st or ("preparing" if _flight.busy(flight_key) else None)
+
+
+def page_status(tb: dict, page: int, mode: Mode, voice: Voice) -> dict:
+    """ready / preparing / queued / failed / idle for one page's script and first part — no AI, no PDF parsing."""
+    key = script_key(tb, page, mode)
+    script = _load(key)
+    s_state = "ready" if script is not None else _state(f"script|{key}", key) or "idle"
+    a_state = s_state
+    if script is not None and script["segments"]:
+        akey = _audio_key(script["segments"][0]["text"], voice)
+        a_state = "ready" if _audio_ready(akey) else _state(f"audio|{key}|0|{voice}", akey) or "idle"
+    both = {s_state, a_state}
+    overall = next(st for st in ("failed", "preparing", "queued", "idle", "ready") if st in both)
+    return {"page": page, "status": overall, "script": s_state, "audio": a_state,
+            "engine": script["engine"] if script else None, "fallback": bool(script and script.get("fallback"))}

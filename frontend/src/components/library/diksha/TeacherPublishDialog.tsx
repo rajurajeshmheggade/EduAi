@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, BookOpen, ExternalLink, Layers, Loader2, Send } from 'lucide-react'
+import { AlertTriangle, BookOpen, Layers, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { classText } from '@/lib/diksha'
@@ -19,7 +19,6 @@ export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
   const norm = (x: string) => x.toLowerCase().replace(/[^a-z]/g, '')
   const otherSubject = selections.filter((s) => s.item.subjects.length > 0 && !s.item.subjects.some((x) =>
     norm(target.subject_name).includes(norm(x)) || norm(x).includes(norm(target.subject_name))))
-  const linkOnly = selections.filter((s) => s.item.kind === 'resource' && s.item.access.viewer === 'official')
 
   async function publish() {
     setBusy(true); setError(null)
@@ -36,7 +35,7 @@ export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
   }
 
   return (
-    <Dialog open onClose={onClose} title="Publish Catalogue content" description="Students get a link to the source content — nothing is copied into the LMS." className="w-[min(38rem,calc(100vw-2rem))]">
+    <Dialog open onClose={onClose} title="Publish Catalogue content" description="Students open it inside EduAI, with its credits — nothing is copied into the LMS." className="w-[min(38rem,calc(100vw-2rem))]">
       <div className="space-y-4 text-sm">
         <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-ink-800 p-3">
           <dt className="text-ink-500">Class</dt><dd className="font-medium text-fg">{target.class_name}{grade ? ` (Class ${grade})` : ''}</dd>
@@ -56,8 +55,6 @@ export function TeacherPublishDialog({ selections, target, onClose, onDone }: {
         {wrongClass.length > 0 && <Warn tone="bad">{wrongClass.length} item(s) are not for Class {grade}. Remove them to publish.</Warn>}
         {otherSubject.length > 0 && <Warn>{otherSubject.length} item(s) are tagged with a different subject than {target.subject_name} in the Catalogue.</Warn>}
         {!grade && <Warn>This class has no grade set, so the class of each item is not checked automatically.</Warn>}
-        {linkOnly.length > 0 && <p className="flex items-start gap-2 rounded-lg bg-aqua-500/10 px-3 py-2 text-aqua-400"><ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
-          {linkOnly.length} item(s) open on the source site (licence or format does not allow in-app display).</p>}
         {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-bad">{error}</p>}
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

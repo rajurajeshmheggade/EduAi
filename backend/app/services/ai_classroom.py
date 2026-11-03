@@ -1,16 +1,26 @@
 """AI Classroom's chapter-library reader: answers questions about, and explains, the PDF page a student currently
 has open (backend/nlp/<class>/<subject>/<chapter>/*.pdf). Same LLM pattern as the Virtual Lab assistant
 (`services/virtual_labs/worksheet.assist`) — a direct chat call grounded in the page's extracted text, not a
-vectorised RAG pipeline (these are ad-hoc chapter PDFs, not indexed textbooks)."""
+vectorised RAG pipeline (these are ad-hoc chapter PDFs, not indexed textbooks).
+
+Page explanations are cached in storage under a hash of the page text, prompt version and model, so each page is
+explained once for everybody (the reader prefetches the next page's), concurrent requests for one page ask the AI once,
+and an edited chapter PDF is explained afresh. Failed answers are not cached."""
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 
 from ..providers import get_tutor_llm
+from .page_pipeline import SingleFlight
+from .storage import get_storage
 
 log = logging.getLogger("eduai.ai_classroom")
 
 MAX_PAGE_CHARS = 6000
+EXPLAIN_VERSION = "explain-v1"
+_flight = SingleFlight()
 
 ASK_SYSTEM = """You are a patient AI classroom tutor helping a student in Class {grade}, studying "{chapter}" ({subject}).
 The student is on page {page} of the chapter PDF right now. Its text (for context only — do not just repeat it back):
@@ -54,8 +64,21 @@ def explain(*, class_label: str, subject: str, chapter: str, grade: int | None, 
     if llm.name.startswith("mock"):
         return _offline(page_text.strip()[:400] or "This page has no readable text to explain.")
     system = EXPLAIN_SYSTEM.format(grade=grade or class_label, chapter=chapter, subject=subject, page=page, page_text=page_text[:MAX_PAGE_CHARS])
-    try:
-        return llm.chat(system, [{"role": "user", "content": "Explain this page."}], temperature=0.3).strip()[:1500], llm.name
-    except Exception as e:  # noqa: BLE001
-        log.warning("ai classroom explain failed for %s/%s/%s p%s: %s", class_label, subject, chapter, page, type(e).__name__)
-        return "Sorry, the AI could not explain this page just now. Please try again in a moment.", "offline-fallback"
+    digest = hashlib.sha256(f"{EXPLAIN_VERSION}|{llm.name}|{system}".encode()).hexdigest()
+    key = f"ai-classroom/{EXPLAIN_VERSION}/{digest[:2]}/{digest}.json"
+
+    def ask_ai() -> tuple[str, str]:
+        try:
+            hit = json.loads(get_storage().get(key))
+            return hit["explanation"], hit["engine"]
+        except Exception:  # noqa: BLE001 — not cached yet
+            pass
+        try:
+            text = llm.chat(system, [{"role": "user", "content": "Explain this page."}], temperature=0.3).strip()[:1500]
+        except Exception as e:  # noqa: BLE001
+            log.warning("ai classroom explain failed for %s/%s/%s p%s: %s", class_label, subject, chapter, page, type(e).__name__)
+            return "Sorry, the AI could not explain this page just now. Please try again in a moment.", "offline-fallback"
+        get_storage().put(key, json.dumps({"explanation": text, "engine": llm.name}).encode(), "application/json")
+        return text, llm.name
+
+    return _flight.do(key, ask_ai)

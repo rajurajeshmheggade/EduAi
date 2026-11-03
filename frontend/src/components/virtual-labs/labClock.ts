@@ -1,14 +1,17 @@
 /**
  * Time in the lab, measured in the browser and reported every 15 s (the server caps every report by its own clock).
  *
- * Counts while the workspace is visible and the student is active: recent mouse / keyboard input, or focus inside the
- * simulation frame (a cross-origin frame sends no input events to the page). After the simulation is opened on DIKSHA
- * in another tab, time away counts too, for at most 20 minutes per launch. Wall-clock deltas are used, so throttled
- * background timers neither lose nor invent time. Kept outside React so ticking never re-renders the simulation.
+ * Counts while the workspace is visible and the student is active: recent mouse / keyboard input, focus inside the
+ * simulation or video frame (a cross-origin frame sends no input events to the page), or a lab video playing. Everything
+ * runs inside the app, so time in another tab never counts. Wall-clock deltas are used, so throttled background timers
+ * neither lose nor invent time. Kept outside React so ticking never re-renders the simulation.
  */
 export const IDLE_MS = 3 * 60_000
-export const EXTERNAL_MS = 20 * 60_000
 const REPORT_MS = 15_000
+
+type ClockDoc = Pick<Document, 'visibilityState' | 'activeElement'> & Partial<Pick<Document, 'querySelectorAll'>>
+const videoPlaying = (doc: ClockDoc) =>
+  !!doc.querySelectorAll && Array.from(doc.querySelectorAll('video')).some((v) => !v.paused && !v.ended)
 
 type Report = (seconds: number, launched: boolean) => Promise<{ active_seconds: number }>
 
@@ -18,7 +21,6 @@ export class LabClock {
   private launched = false
   private lastInput = Date.now()
   private lastTick = Date.now()
-  private externalUntil = 0
   private inflight = false
   private paused = false
   private listeners = new Set<() => void>()
@@ -35,13 +37,13 @@ export class LabClock {
   private emit() { this.listeners.forEach((fn) => fn()) }
 
   /** Called once a second (and on visibility changes). */
-  tick(now = Date.now(), doc: Pick<Document, 'visibilityState' | 'activeElement'> = document) {
+  tick(now = Date.now(), doc: ClockDoc = document) {
     const dt = Math.min(now - this.lastTick, 60_000) / 1000
     this.lastTick = now
     if (this.paused) return
     const visible = doc.visibilityState === 'visible'
     const inFrame = doc.activeElement?.tagName === 'IFRAME'
-    const active = visible ? inFrame || now - this.lastInput < IDLE_MS : now < this.externalUntil
+    const active = visible && (inFrame || now - this.lastInput < IDLE_MS || videoPlaying(doc))
     if (active && dt > 0) {
       const before = Math.floor(this.seconds)
       this.seconds += dt
@@ -52,11 +54,10 @@ export class LabClock {
 
   input(now = Date.now()) { this.lastInput = now }
 
-  /** The simulation was opened: in the app (frame loaded) or on DIKSHA in another tab. */
-  launch(inApp: boolean, now = Date.now()) {
+  /** The simulation was opened (its in-app frame loaded). */
+  launch(now = Date.now()) {
     this.launched = true
     this.lastInput = now
-    if (!inApp) this.externalUntil = now + EXTERNAL_MS
     void this.flush()
   }
 

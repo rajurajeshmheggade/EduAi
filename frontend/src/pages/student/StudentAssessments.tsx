@@ -5,10 +5,12 @@ import { ReportSkeleton, ReportView } from '@/components/evaluation/ReportView'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { Tabs } from '@/components/ui/tabs'
 import { errorMessage } from '@/services/apiClient'
 import { assessmentService, fmtDateTime, relTime } from '@/services/assessmentService'
+import { useAsync } from '@/lib/useAsync'
 import { cn } from '@/lib/utils'
 import { num, type EvalReport, type MyAssessmentStatus, type StudentAssessment } from '@/types'
 
@@ -26,10 +28,9 @@ export default function StudentAssessments({ kind }: { kind: Kind }) {
 }
 
 function AssessmentList({ kind }: { kind: Kind }) {
-  const [items, setItems] = useState<StudentAssessment[] | null>(null)
+  const { data, error, retry } = useAsync(() => assessmentService.list(kind), [kind])
+  const items = data?.assessments
   const [tab, setTab] = useState<'todo' | 'done'>('todo')
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => { assessmentService.list(kind).then((r) => setItems(r.assessments)).catch((e) => setError(errorMessage(e))) }, [kind])
 
   const isDone = (a: StudentAssessment) => ['EVALUATING', 'EVALUATED', 'FAILED'].includes(a.my.status) || (!a.window.open && a.my.status === 'NOT_STARTED' && !a.window.opens_at)
   const shown = items?.filter((a) => (tab === 'done' ? isDone(a) : !isDone(a)))
@@ -42,8 +43,8 @@ function AssessmentList({ kind }: { kind: Kind }) {
         <p className="mt-1 text-sm text-ink-300">{kind === 'ONLINE_TEST' ? 'Timed online tests from your teachers — answered here, marked by AI with feedback for every question.' : 'Write your answers on paper, upload one PDF, and get AI marks with feedback for every question.'}</p>
       </header>
       <Tabs items={[{ id: 'todo', label: 'To do', count: items?.filter((a) => !isDone(a)).length }, { id: 'done', label: 'Submitted & closed', count: items?.filter(isDone).length }]} value={tab} onChange={setTab} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!shown ? !error && <div className="skeleton h-48" /> : shown.length === 0 ? (
+      {error && <ErrorState title={`Couldn’t load your ${kind === 'ONLINE_TEST' ? 'tests' : 'assignments'}`} message={error} onRetry={retry} />}
+      {!shown ? !error && <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-40" />)}</div> : shown.length === 0 ? (
         <Card className="p-10 text-center text-sm text-ink-300"><Icon className="mx-auto mb-2 h-8 w-8 text-ink-500" />{tab === 'todo' ? 'Nothing to do right now.' : 'Nothing here yet.'}</Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -86,7 +87,6 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
   const [a, setA] = useState<StudentAssessment | null>(null)
   const [report, setReport] = useState<EvalReport | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
   const [pct, setPct] = useState<number | null>(null)
   const timer = useRef<number | undefined>(undefined)
 
@@ -110,11 +110,9 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
     return () => window.clearInterval(timer.current)
   }, [a?.my.status, load])
 
-  async function start() {
-    if (!a) return
-    if (a.my.status === 'NOT_STARTED' && !confirm(`Start "${a.test_title}" now? The ${a.duration_minutes}-minute timer starts immediately and you get one attempt.`)) return
-    setBusy(true); setError(null)
-    try { await assessmentService.start(id); nav(`${BASE.ONLINE_TEST}/${id}/take`) } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
+  // The test runner opens the full-screen proctoring preparation window first; the timer starts only after it.
+  function start() {
+    if (a) nav(`${BASE.ONLINE_TEST}/${id}/take`)
   }
 
   async function upload(file: File | undefined) {
@@ -123,7 +121,7 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
     try { setA(await assessmentService.upload(id, file, setPct)) } catch (e) { setError(errorMessage(e)) } finally { setPct(null) }
   }
 
-  if (!a) return <div className="mx-auto max-w-4xl p-4 md:p-8">{error ? <p className="text-sm text-bad">{error}</p> : <ReportSkeleton />}</div>
+  if (!a) return <div className="mx-auto max-w-4xl p-4 md:p-8">{error ? <ErrorState title="Couldn’t open this assessment" message={error} onRetry={() => { setError(null); void load() }} /> : <ReportSkeleton />}</div>
   const st = STATUS[a.my.status]
   const canUpload = kind === 'ASSIGNMENT' && a.window.open && a.my.status !== 'EVALUATING'
 
@@ -151,8 +149,8 @@ function AssessmentDetail({ id, kind }: { id: string; kind: Kind }) {
         {kind === 'ONLINE_TEST' && (a.my.status === 'NOT_STARTED' || a.my.status === 'IN_PROGRESS') && (
           <div className="mt-4">
             {a.window.open || a.my.status === 'IN_PROGRESS' ? (
-              <Button size="lg" onClick={start} disabled={busy} id="start-test">
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{a.my.status === 'IN_PROGRESS' ? `Resume test (${Math.ceil((a.my.seconds_left ?? 0) / 60)} min left)` : 'Start test'}
+              <Button size="lg" onClick={start} id="start-test">
+                <Play className="h-4 w-4" />{a.my.status === 'IN_PROGRESS' ? `Resume test (${Math.ceil((a.my.seconds_left ?? 0) / 60)} min left)` : 'Start test'}
               </Button>
             ) : <p className="flex items-center gap-2 text-sm text-ink-300"><Lock className="h-4 w-4" /> {a.window.reason}{a.window.opens_at ? ` — opens ${fmtDateTime(a.window.opens_at)}` : ''}</p>}
           </div>

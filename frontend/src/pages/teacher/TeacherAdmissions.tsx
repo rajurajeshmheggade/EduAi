@@ -6,6 +6,7 @@ import { LaunchTab } from '@/components/admission-test/LaunchTab'
 import { LiveTab } from '@/components/admission-test/LiveTab'
 import { ResultsTab } from '@/components/admission-test/ResultsTab'
 import { TestsTab } from '@/components/admission-test/TestsTab'
+import { ErrorState } from '@/components/ui/loading'
 import { Tabs } from '@/components/ui/tabs'
 import { errorMessage } from '@/services/apiClient'
 import { admissionTestService as svc, type AdmTest, type Candidate } from '@/services/admissionTestService'
@@ -34,7 +35,7 @@ export default function TeacherAdmissions() {
       <Tabs items={[{ id: 'tests', label: 'Tests', icon: ClipboardList, count: tests?.length }, { id: 'candidates', label: 'Candidates', icon: Users, count: candidates?.length },
         { id: 'launch', label: 'Launch', icon: Rocket }, { id: 'live', label: 'Live monitor', icon: Radio }, { id: 'results', label: 'Results', icon: BarChart3 }]}
         value={tab} onChange={(t) => setParams({ tab: t })} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load admission tests" message={error} onRetry={() => { setError(null); void loadTests(); void loadCandidates() }} />}
       {tab === 'tests' && <TestsTab tests={tests} />}
       {tab === 'candidates' && <CandidatesTab candidates={candidates} reload={() => void loadCandidates()} />}
       {tab === 'launch' && <LaunchTab tests={tests} candidates={candidates} />}

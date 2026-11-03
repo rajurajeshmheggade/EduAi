@@ -35,14 +35,14 @@ describe('CommandPalette', () => {
 })
 
 describe('CopilotDrawer', () => {
-  it('is hidden when closed and closes with Escape when open', () => {
+  it('is hidden when closed, focuses the question box when opened and closes with Escape', () => {
     const onClose = vi.fn()
     const { rerender } = render(<AuthProvider><CopilotDrawer open={false} onClose={onClose} /></AuthProvider>)
     expect(screen.getByLabelText('Copilot', { selector: 'aside' })).toHaveAttribute('aria-hidden', 'true')
     rerender(<AuthProvider><CopilotDrawer open onClose={onClose} /></AuthProvider>)
-    expect(screen.getByRole('button', { name: 'Close Copilot' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Ask Copilot' })).toHaveFocus()
     expect(screen.getByText(/never sees a\s+child's name/)).toBeInTheDocument()
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Ask Copilot' }), { key: 'Escape' })
     expect(onClose).toHaveBeenCalled()
   })
 

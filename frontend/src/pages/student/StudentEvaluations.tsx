@@ -4,29 +4,31 @@ import { ReportSkeleton, ReportView } from '@/components/evaluation/ReportView'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
+import { useAsync } from '@/lib/useAsync'
 import { errorMessage } from '@/services/apiClient'
-import { evaluationService, type StudentEvalTest } from '@/services/evaluationService'
+import { evaluationService } from '@/services/evaluationService'
 import { num, type EvalReport } from '@/types'
 
 /** FR-EV-11: a student's published evaluations and the SL.No-wise report for each. */
 export default function StudentEvaluations() {
-  const [tests, setTests] = useState<StudentEvalTest[] | null>(null)
+  const { data: tests, error: listError, retry } = useAsync(() => evaluationService.myTests(), [])
   const [open, setOpen] = useState<string | null>(null)
   const [report, setReport] = useState<EvalReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
-  useEffect(() => { evaluationService.myTests().then(setTests).catch((e) => setError(errorMessage(e))) }, [])
   useEffect(() => {
-    setReport(null)
+    setReport(null); setError(null)
     if (open) evaluationService.myReport(open).then(setReport).catch((e) => setError(errorMessage(e)))
-  }, [open])
+  }, [open, reload])
 
   if (open) {
     return (
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-8">
         <Button variant="ghost" onClick={() => setOpen(null)}><ArrowLeft className="h-4 w-4" /> All evaluations</Button>
-        {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+        {error && <ErrorState title="Couldn’t load this report" message={error} onRetry={() => setReload((n) => n + 1)} />}
         {report ? <ReportView report={report} /> : !error && <ReportSkeleton />}
       </div>
     )
@@ -38,8 +40,8 @@ export default function StudentEvaluations() {
         <h1 className="font-display text-3xl font-bold">My <span className="text-gradient">evaluations</span></h1>
         <p className="mt-1 text-sm text-ink-300">AI-evaluated answer scripts published by your teachers — see marks, why you got them, what was missing and how to improve.</p>
       </header>
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!tests ? !error && <div className="skeleton h-48" /> : tests.length === 0 ? (
+      {listError && <ErrorState title="Couldn’t load your evaluations" message={listError} onRetry={retry} />}
+      {!tests ? !listError && <div className="grid gap-4 md:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-40" />)}</div> : tests.length === 0 ? (
         <Card className="p-10 text-center text-sm text-ink-300"><ScanText className="mx-auto mb-2 h-8 w-8 text-ink-500" />No evaluation results published yet.</Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

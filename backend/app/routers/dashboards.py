@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from .. import db
 from ..security import CurrentUser, require_role
 from ..services import attendance as att
+from ..services import timetable as tt
 from ..services.evaluation import analytics
-from .admin import list_slots, org_scope
+from .admin import org_scope
 
 router = APIRouter(prefix="/ICMELive/api/v1/dashboard", tags=["dashboard"])
 DONE = ("EVALUATED", "REVIEWED")
@@ -32,8 +33,9 @@ def teacher_dashboard(user: CurrentUser = Depends(require_role("teacher"))):
     classes = db.call_rows("usp_teacher_classes", org, me)
     pairs = {(c["class_code"], s["subject_code"]) for c in classes for s in c["subjects"]}
 
-    # Today's periods + whether attendance for that exact period is already saved
-    slots = [s for s in list_slots(org, None, me) if s["day_of_week"] == dow]
+    # Today's periods (published, in range, dated changes and holidays applied) + whether attendance for that exact
+    # period is already saved
+    slots = tt.scheduled_today(org, today, teacher_code=me)
     marked = {(r["class_code"], r["subject_code"], r["session_slot"]) for r in db.fetch_all(
         "SELECT DISTINCT class_code, subject_code, session_slot FROM public.attendance_records "
         "WHERE org_code = %s AND attendance_date = %s", (org, today))}
@@ -92,7 +94,7 @@ def teacher_dashboard(user: CurrentUser = Depends(require_role("teacher"))):
 
     students = sum(c["student_count"] for c in classes)
     return {
-        "today": today, "weekday": dow,
+        "today": today, "weekday": dow, "holiday_today": tt.holiday_on(org, "", today),
         "kpis": {
             "classes": len(classes), "students": students, "periods_today": len(slots),
             "attendance_pending": sum(1 for s in slots if not s["attendance_marked"]),
@@ -130,7 +132,7 @@ def student_dashboard(user: CurrentUser = Depends(require_role("student"))):
         if first <= m["attendance_date"] <= last:
             by_subject.setdefault(m["subject_code"], []).append(m)
 
-    slots = [s for s in list_slots(org, me["class_code"], None) if s["day_of_week"] == dow]
+    slots = tt.scheduled_today(org, today, class_code=me["class_code"])
     homework = [h for h in db.call_rows("usp_student_homework", org, user.user_code) if h["status"] == "PENDING"]
     homework.sort(key=lambda h: h["due_date"])
 
@@ -173,6 +175,7 @@ def student_dashboard(user: CurrentUser = Depends(require_role("student"))):
 
     return {
         "today": today, "weekday": dow, "threshold": threshold, "class_code": me["class_code"],
+        "holiday_today": tt.holiday_on(org, me["class_code"], today),
         "kpis": {"attendance_month": month["percentage"], "attendance_overall": overall["percentage"],
                  "homework_pending": len(homework), "to_do": len(upcoming), "average_score": avg,
                  "results": len(results)},

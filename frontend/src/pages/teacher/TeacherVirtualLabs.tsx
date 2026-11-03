@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlaskConical, Info, Search, Send, Users } from 'lucide-react'
-import { SourceAttribution } from '@/components/library/diksha/SourceAttribution'
+import { Credits } from '@/components/library/diksha/Credits'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Label, Select } from '@/components/ui/field'
+import { ErrorState, Skeleton } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { Tabs } from '@/components/ui/tabs'
 import { AssignLabDialog } from '@/components/virtual-labs/AssignLabDialog'
@@ -18,19 +19,20 @@ import { virtualLabService, type CollectionInfo, type LabCatalog, type LabSummar
 type Tab = 'explore' | 'assigned'
 type LabDetail = Awaited<ReturnType<typeof virtualLabService.lab>>
 
-/** Teacher: explore DIKSHA virtual labs (Classes 6–12), assign an experiment with a lab worksheet, follow and mark the class. */
+/** Teacher: explore virtual labs (Classes 6–12, all in-app), assign an experiment with a lab worksheet, follow and mark the class. */
 export default function TeacherVirtualLabs() {
   const [tab, setTab] = useState<Tab>('explore')
   const [cat, setCat] = useState<LabCatalog | null>(null)
   const [assigned, setAssigned] = useState<TeacherLabAssignment[] | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
   const loadAssigned = useCallback(() => virtualLabService.assignments().then(setAssigned).catch((e) => setError(errorMessage(e))), [])
   useEffect(() => {
     virtualLabService.catalog().then(setCat).catch((e) => setError(errorMessage(e)))
     void loadAssigned()
-  }, [loadAssigned])
+  }, [loadAssigned, reload])
 
   const toReview = assigned?.reduce((n, a) => n + a.submitted - a.reviewed, 0) ?? 0
   return (
@@ -44,8 +46,11 @@ export default function TeacherVirtualLabs() {
       </header>
       <Tabs items={[{ id: 'explore', label: 'Explore labs', icon: FlaskConical }, { id: 'assigned', label: 'Assigned', icon: Users, count: assigned?.length }]}
         value={tab} onChange={setTab} />
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {tab === 'explore' ? (cat ? <Explore cat={cat} onAssigned={() => { void loadAssigned(); setTab('assigned') }} /> : !error && <div className="skeleton h-96" />) : (
+      {error && <ErrorState title="Couldn’t load virtual labs" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} />}
+      {tab === 'explore' ? (cat ? <Explore cat={cat} onAssigned={() => { void loadAssigned(); setTab('assigned') }} /> : !error && (
+        <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>
+          <div className="grid gap-4 lg:grid-cols-[22rem_1fr]"><Skeleton className="h-[60vh]" /><Skeleton className="h-[60vh]" /></div></div>
+      )) : (
         <Assigned items={assigned} toReview={toReview} onOpen={setOpen} />
       )}
       {open && <AssignmentDetail assignmentId={open} onClose={() => setOpen(null)} onChanged={() => void loadAssigned()} />}
@@ -66,6 +71,7 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
   const [detail, setDetail] = useState<LabDetail | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
 
   const cid = current?.collection_id
   useEffect(() => {
@@ -74,7 +80,7 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
     virtualLabService.collection(cid, medium).then((d) => { if (live) { setLabsOf({ id: cid, ...d }); setError(null) } })
       .catch((e) => { if (live) setError(errorMessage(e)) })
     return () => { live = false }
-  }, [cid, medium])
+  }, [cid, medium, reload])
   const list = labsOf?.id === cid ? labsOf : null
   const shown = list?.labs.filter((l) => !query.trim() || `${l.name} ${l.keywords.join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()))
   const selected = list?.labs.find((l) => l.lab_id === labId) ?? null
@@ -110,11 +116,12 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
       {!cat.embed_noncommercial && (
         <p className="flex items-start gap-2 rounded-xl border border-aqua-400/30 bg-aqua-500/5 px-3 py-2 text-xs text-ink-300">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-aqua-400" />
-          Most virtual labs carry a Creative Commons NonCommercial licence, so their simulations open on the original source site in a new tab.
-          Your administrator can let them run inside EduAI after reviewing the licence. Time in the lab is tracked either way.
+          Everything here runs inside EduAI. Experiments whose resources carry a Creative Commons NonCommercial licence — most virtual
+          labs — are not listed until your administrator approves showing NonCommercial content inside EduAI after a licence review.
         </p>
       )}
-      {error && <p role="alert" className="rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <ErrorState title="Couldn’t load the experiments" message={error}
+        onRetry={() => { setError(null); if (!list) setReload((n) => n + 1); if (labId && !view) loadDetail(labId) }} />}
 
       <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <Card className="flex max-h-[78vh] min-h-0 flex-col p-3">
@@ -122,9 +129,11 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-500" />
             <Input aria-label="Search experiments" placeholder="Search experiments" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
-          {list && <p className="mb-2 px-1 text-xs text-ink-500">{list.collection.name} · {list.labs.length} experiments</p>}
+          {list && <p className="mb-2 px-1 text-xs text-ink-500">{list.collection.name} · {list.labs.length} experiment{list.labs.length === 1 ? '' : 's'} available</p>}
           <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto" aria-label="Experiments">
-            {!shown ? <li className="skeleton h-64" /> : shown.length === 0 ? <li className="p-4 text-center text-sm text-ink-500">No experiments match.</li> : shown.map((l) => (
+            {!shown ? <li className="skeleton h-64" /> : shown.length === 0 ? (
+              <li className="p-4 text-center text-sm text-ink-500">{list?.labs.length ? 'No experiments match.' : 'No experiments in this lab manual can be shown in EduAI with your institution’s licence settings.'}</li>
+            ) : shown.map((l) => (
               <li key={l.lab_id}>
                 <button onClick={() => pick(l)} aria-current={l.lab_id === labId}
                   className={cn('w-full cursor-pointer rounded-xl px-3 py-2 text-left transition-colors', l.lab_id === labId ? 'bg-brand-500/10 ring-1 ring-brand-400/30' : 'hover:bg-ink-800')}>
@@ -160,7 +169,7 @@ function Explore({ cat, onAssigned }: { cat: LabCatalog; onAssigned: () => void 
                 <p className="text-xs text-ink-300">Already assigned: {view.assigned.map((a) => `${a.class_name}${a.status === 'closed' ? ' (closed)' : ''}`).join(', ')}</p>
               ) : null}
               {!view ? <div className="skeleton h-[55vh]" /> : <LabStage key={view.lab.lab_id} lab={view.lab} height="55vh" />}
-              {list && <SourceAttribution item={list.collection} compact />}
+              {list && <Credits item={list.collection} compact />}
             </Card>
           )}
         </div>

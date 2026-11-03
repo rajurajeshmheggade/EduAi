@@ -1,12 +1,10 @@
 import { api } from './apiClient'
 
-/** What the licence allows for one DIKSHA resource (decided by the server, see DIKSHA_LICENSE_AND_ATTRIBUTION.md). */
+/** What the licence allows for one catalogue resource (decided by the server, see DIKSHA_LICENSE_AND_ATTRIBUTION.md). */
 export interface DikshaPermissions {
   license: string | null
   discover: boolean
-  link: boolean
   embed: boolean
-  download: boolean
   store_copy: boolean
   redistribute: boolean
   modify: boolean
@@ -15,8 +13,9 @@ export interface DikshaPermissions {
   notes: string[]
 }
 
-export type DikshaViewer = 'pdf' | 'video' | 'audio' | 'youtube' | 'html' | 'official'
-export interface DikshaAccess { viewer: DikshaViewer; src: string | null; official_url: string; reason?: string }
+/** How a resource opens inside the app. `none` = it cannot be shown here (the server does not list such items). */
+export type DikshaViewer = 'pdf' | 'video' | 'audio' | 'youtube' | 'html' | 'none'
+export interface DikshaAccess { viewer: DikshaViewer; src: string | null; video_id?: string; reason?: string }
 
 export interface DikshaItem {
   source: 'diksha'
@@ -47,7 +46,6 @@ export interface DikshaItem {
   version: number | null
   published_on: string | null
   status: string | null
-  official_url: string
   permissions: DikshaPermissions
   access: DikshaAccess
   path?: string[]
@@ -58,22 +56,28 @@ export interface DikshaUnit { id: string; name: string; index: number | null; un
 export interface DikshaTextbook { book: DikshaItem; units: DikshaUnit[]; resources: DikshaItem[]; resource_count: number; empty_units: number }
 
 export interface FacetOption<T = string> { value: T; label: string; count?: number }
+/** Content types of the library: textbooks (chapter lists) and the formats that open inside the app. */
+export type ContentType = 'textbook' | 'video' | 'document' | 'interactive' | 'audio'
+export const DEFAULT_CONTENT_TYPE: ContentType = 'textbook'
 export interface DikshaFilterOptions {
   total: number
+  content_type?: ContentType
   boards: FacetOption[]
   classes: FacetOption<number>[]
+  /** Only subjects that have content of the chosen type. */
   subjects: FacetOption[]
+  /** Languages for the chosen type (and subject, when one is chosen). */
   mediums: FacetOption[]
-  content_types: FacetOption[]
+  content_types: FacetOption<ContentType>[]
 }
-export interface DikshaMeta { enabled: boolean; source: { name: string; url: string }; boards: FacetOption[]; classes: number[]; content_types: string[]; embed_noncommercial: boolean }
+export interface DikshaMeta { enabled: boolean; boards: FacetOption[]; classes: number[]; content_types: FacetOption<ContentType>[]; embed_noncommercial: boolean }
 
 export interface DikshaQuery {
-  board?: string; class_number?: number | ''; subject?: string; medium?: string; content_type?: string; q?: string; page?: number; page_size?: number
+  board?: string; class_number?: number | ''; subject?: string; medium?: string; content_type?: ContentType; q?: string; page?: number; page_size?: number
 }
 export interface DikshaSearchResult { items: DikshaItem[]; total: number | null; page: number; page_size: number; window_exceeded: boolean }
 
-/** A DIKSHA item published to the student's class (metadata snapshot stored by the LMS). */
+/** A catalogue item published to the student's class (metadata snapshot stored by the LMS). */
 export interface PublishedExternal {
   source: 'diksha'
   source_id: string
@@ -93,7 +97,7 @@ const clean = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(
 
 export const dikshaService = {
   meta: async () => (await api.get<DikshaMeta>(`${B}/meta`)).data,
-  filters: async (f: { board?: string; class_number?: number | ''; content_type?: string }) =>
+  filters: async (f: { board?: string; class_number?: number | ''; content_type?: ContentType; subject?: string }) =>
     (await api.get<DikshaFilterOptions>(`${B}/filters`, { params: clean(f) })).data,
   search: async (f: DikshaQuery) => (await api.get<DikshaSearchResult>(`${B}/search`, { params: clean({ ...f }) })).data,
   textbook: async (id: string) => (await api.get<DikshaTextbook>(`${B}/textbooks/${encodeURIComponent(id)}`)).data,
@@ -105,10 +109,13 @@ export const dikshaService = {
     `${B}/refresh`, null, { params: clean({ org_code: org }) })).data,
 }
 
-/** Link to the in-app DIKSHA reader page. */
+/** In-app reader route for catalogue items (`/library/diksha/…` is the old path, redirected there). */
+export const EXPLORE_ROUTE = '/library/explore'
+
+/** Link to the in-app reader page of a catalogue textbook / resource. */
 export function dikshaReaderLink(sourceId: string, kind: 'textbook' | 'resource' | 'collection', opts: { within?: string | null; from?: string } = {}) {
   const q = new URLSearchParams({ kind: kind === 'collection' ? 'textbook' : kind })
   if (opts.within) q.set('within', opts.within)
   if (opts.from) q.set('from', opts.from)
-  return `/library/diksha/${encodeURIComponent(sourceId)}?${q.toString()}`
+  return `${EXPLORE_ROUTE}/${encodeURIComponent(sourceId)}?${q.toString()}`
 }

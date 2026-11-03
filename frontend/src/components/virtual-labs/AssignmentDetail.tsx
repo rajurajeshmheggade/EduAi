@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Textarea } from '@/components/ui/field'
+import { ErrorState } from '@/components/ui/loading'
 import { Progress } from '@/components/ui/progress'
 import { toast } from '@/components/ui/toast'
 import { LabRecord } from '@/components/virtual-labs/LabRecord'
@@ -31,8 +32,8 @@ export function AssignmentDetail({ assignmentId, onClose, onChanged }: { assignm
   return (
     <Dialog open onClose={onClose} title={data?.title ?? 'Virtual lab'} description={data ? `${data.class_name} · ${data.subject_name} · ${data.max_marks} marks` : undefined}
       className="w-[min(64rem,calc(100vw-2rem))]">
-      {error && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
-      {!data || !s ? <div className="skeleton h-64" /> : student ? (
+      {error && data && <p role="alert" className="mb-3 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+      {!data || !s ? (error ? <ErrorState title="Couldn’t load this lab" message={error} onRetry={() => { setError(null); void load() }} /> : <div className="skeleton h-64" />) : student ? (
         <Review assignmentId={assignmentId} studentCode={student} onBack={() => { setStudent(null); void load(); onChanged() }} />
       ) : (
         <div className="max-h-[72vh] space-y-4 overflow-y-auto pr-1">
@@ -59,6 +60,7 @@ export function AssignmentDetail({ assignmentId, onClose, onChanged }: { assignm
               <thead className="bg-ink-800 text-xs text-ink-300">
                 <tr><th className="px-3 py-2 font-medium">Roll</th><th className="px-3 py-2 font-medium">Student</th><th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 font-medium">Time in lab</th><th className="px-3 py-2 font-medium">Submitted</th><th className="px-3 py-2 font-medium">MCQ</th>
+                  {data.roster.some((r) => r.videos_required) && <th className="px-3 py-2 font-medium" title="Lab videos watched to the end (needed before submitting)">Videos</th>}
                   <th className="px-3 py-2 font-medium">AI suggests</th><th className="px-3 py-2 font-medium">Marks</th>
                   <th className="px-3 py-2 font-medium" title="Camera/mic check flags during the lab">Flags</th><th className="px-3 py-2" /></tr>
               </thead>
@@ -73,6 +75,10 @@ export function AssignmentDetail({ assignmentId, onClose, onChanged }: { assignm
                       <td className="px-3 py-2 tabular-nums">{r.status === 'not_started' ? '—' : duration(r.active_seconds)}{r.launches ? <span className="text-xs text-ink-500"> · {r.launches}× opened</span> : null}</td>
                       <td className="px-3 py-2 text-xs">{r.submitted_at ? fmtDateTime(r.submitted_at) : '—'}{r.is_late && <Badge tone="bad" className="ml-1">late</Badge>}</td>
                       <td className="px-3 py-2 tabular-nums">{r.auto_max ? `${fmtMarks(r.auto_score)}/${fmtMarks(r.auto_max)}` : '—'}</td>
+                      {data.roster.some((x) => x.videos_required) && (
+                        <td className="px-3 py-2 tabular-nums">{r.status === 'not_started' ? '—'
+                          : <Badge tone={r.videos_watched === r.videos_required ? 'ok' : 'neutral'}>{r.videos_watched ?? 0}/{r.videos_required}</Badge>}</td>
+                      )}
                       <td className="px-3 py-2 tabular-nums">{fmtMarks(r.suggested_marks)}</td>
                       <td className="px-3 py-2 font-semibold tabular-nums text-fg">{r.marks == null ? '—' : `${fmtMarks(r.marks)}/${fmtMarks(data.max_marks)}`}</td>
                       <td className="px-3 py-2 tabular-nums">{r.proctor_flag_count ? <Badge tone="warn">{r.proctor_flag_count}</Badge> : <span className="text-ink-500">—</span>}</td>
@@ -115,6 +121,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
   const [feedback, setFeedback] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     virtualLabService.attempt(assignmentId, studentCode).then((x) => {
       setD(x)
@@ -123,7 +130,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
       setMarks(suggested == null ? '' : String(suggested))
       setFeedback(x.attempt.teacher_feedback ?? '')
     }).catch((e) => setError(errorMessage(e)))
-  }, [assignmentId, studentCode])
+  }, [assignmentId, studentCode, reload])
 
   async function send(redo: boolean) {
     setBusy(true); setError(null)
@@ -134,7 +141,7 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
     } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
   }
 
-  if (!d) return error ? <p role="alert" className="text-sm text-bad">{error}</p> : <div className="skeleton h-64" />
+  if (!d) return error ? <ErrorState title="Couldn’t load this student’s record" message={error} onRetry={() => { setError(null); setReload((n) => n + 1) }} /> : <div className="skeleton h-64" />
   const a = d.attempt
   const fb = a.result.feedback
   const submitted = a.status === 'submitted' || a.status === 'reviewed'
@@ -153,6 +160,24 @@ function Review({ assignmentId, studentCode, onBack }: { assignmentId: string; s
         <div className="rounded-lg bg-ink-800 p-2"><dt className="text-xs text-ink-500">Submitted</dt><dd className="font-medium text-fg">{a.submitted_at ? fmtDateTime(a.submitted_at) : '—'}</dd></div>
         <div className="rounded-lg bg-ink-800 p-2"><dt className="text-xs text-ink-500">Camera check flags</dt><dd className="font-medium text-fg">{a.proctor_flag_count}</dd></div>
       </dl>
+      {!!a.videos?.length && (
+        <div className="rounded-xl border border-line p-3" aria-label="Lab videos">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">Lab videos (must be watched to the end before submitting)</h4>
+          <ul className="space-y-1.5 text-sm">
+            {a.videos.map((v) => {
+              const pct = Math.round((v.progress?.coverage ?? 0) * 100)
+              return (
+                <li key={v.resource_id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-ink-100">{v.name ?? 'Video'}</span>
+                  {v.progress?.completed
+                    ? <Badge tone="ok"><CheckCircle2 className="h-3 w-3" /> Watched{v.progress.completed_at ? ` · ${fmtDateTime(v.progress.completed_at)}` : ''}</Badge>
+                    : <><Progress value={pct} className="w-24" /><span className="w-24 text-xs text-ink-500">{v.progress ? `${pct}% watched` : 'Not started'}</span></>}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
       {fb?.overall && <p className="flex gap-2 rounded-xl border border-brand-400/30 bg-brand-500/5 p-3 text-sm text-ink-100"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />{fb.overall}</p>}
       <LabRecord worksheet={d.worksheet} work={a} result={a.result} />
 

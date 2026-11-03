@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, Eye, Send } from 'lucide-react'
 import { ResourceCard, TextbookCard } from '@/components/library/diksha/DikshaCards'
 import { DikshaFilters } from '@/components/library/diksha/DikshaFilters'
@@ -10,15 +10,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select } from '@/components/ui/field'
 import { errorMessage } from '@/services/apiClient'
+import { optionsFor, resolveFilters } from '@/lib/diksha'
 import {
-  dikshaService, type DikshaFilterOptions, type DikshaItem, type DikshaQuery, type DikshaSearchResult, type DikshaTextbook, type PublishSelection,
+  DEFAULT_CONTENT_TYPE, dikshaService, type DikshaFilterOptions, type DikshaItem, type DikshaQuery, type DikshaSearchResult, type DikshaTextbook,
+  type PublishSelection,
 } from '@/services/dikshaService'
 import type { PublishTarget } from '@/services/libraryService'
 
 const PAGE = 24
 const targetKey = (t: PublishTarget) => `${t.class_code}|${t.subject_code}`
-
-/** Teacher: search DIKSHA (live), open textbooks and chapters, select textbooks or resources, publish to a class.
+/** Teacher: search the catalogue (live), open textbooks and chapters, select textbooks or resources, publish to a class.
  *
  * `targets`/`onTargetChange` are only used to render a compact publish-to switcher in the sticky footer when
  * the teacher has more than one eligible class · subject — most teachers have exactly one, so no picker shows. */
@@ -30,7 +31,7 @@ export function DikshaBrowser({ target, targets, onTargetChange, onPublished }: 
   // remounted (key={target}) by TeacherLibrary whenever the teacher switches target, so this initial state
   // always reflects the current one.
   const [query, setQuery] = useState<DikshaQuery>(() => ({
-    content_type: 'Digital Textbook', page: 1,
+    content_type: DEFAULT_CONTENT_TYPE, page: 1,
     ...(target?.grade_number && target.grade_number >= 5 ? { class_number: target.grade_number } : {}),
     ...(target?.board ? { board: target.board } : {}),
   }))
@@ -40,11 +41,33 @@ export function DikshaBrowser({ target, targets, onTargetChange, onPublished }: 
   const [selected, setSelected] = useState<Record<string, PublishSelection>>({})
   const [open, setOpen] = useState<{ item: DikshaItem; tree?: DikshaTextbook; error?: string } | null>(null)
   const [publishing, setPublishing] = useState(false)
+  const [resolving, setResolving] = useState(false)
+  const seq = useRef(0)
 
+  // Options for the first selection; later ones arrive with each change (see `change`).
   useEffect(() => {
-    dikshaService.filters({ board: query.board, class_number: query.class_number, content_type: query.content_type })
-      .then(setOptions).catch(() => setOptions(null))
-  }, [query.board, query.class_number, query.content_type])
+    const token = seq.current
+    optionsFor(query).then((o) => { if (seq.current === token) setOptions(o) }).catch(() => setOptions(null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /** Board, class, type or subject changed: load the options for the new selection first, then search with the
+   * dependent choices that are still valid — one search, no flash of an impossible combination. */
+  async function change(next: DikshaQuery) {
+    const deps = (q: DikshaQuery) => [q.board ?? '', q.class_number ?? '', q.content_type ?? DEFAULT_CONTENT_TYPE, q.subject ?? ''].join('|')
+    if (deps(next) === deps(query)) { setQuery(next); return }
+    const token = ++seq.current
+    setResolving(true)
+    try {
+      const r = await resolveFilters(next)
+      if (seq.current !== token) return
+      setOptions(r.options); setQuery(r.query)
+    } catch {
+      if (seq.current === token) { setOptions(null); setQuery({ ...next, subject: '', medium: '' }) }
+    } finally {
+      if (seq.current === token) setResolving(false)
+    }
+  }
 
   const load = useCallback(() => {
     setResult(null); setError(null)
@@ -95,14 +118,14 @@ export function DikshaBrowser({ target, targets, onTargetChange, onPublished }: 
                   This class has no board set, so results include every supported board. Pick a class and board below to narrow it, or ask your admin to set it (Classes & subjects) to do this automatically.
                 </p>
               )}
-              <DikshaFilters options={options} value={query} onChange={setQuery} lockBoardClass={!!(target?.grade_number && target?.board)} />
-              <p className="text-xs text-ink-500">Live results from the Catalogue (NCERT, CBSE and Karnataka State Board, Classes 5–12). Content stays on the source site; publishing shares a link with your students.</p>
+              <DikshaFilters options={options} value={query} onChange={(q) => void change(q)} busy={resolving} lockBoardClass={!!(target?.grade_number && target?.board)} />
+              <p className="text-xs text-ink-500">Live results for NCERT, CBSE and Karnataka State Board, Classes 5–12. Everything opens inside EduAI; only content whose licence allows that is listed, with its credits.</p>
             </CardContent>
           </Card>
 
           {error ? <ErrorState message={error} onRetry={load} /> : !result ? <LoadingState /> : result.items.length === 0 ? (
             <EmptyState title={result.window_exceeded ? 'No more results can be shown' : 'No Catalogue content matches these filters'}>
-              {result.window_exceeded ? 'The Catalogue returns at most 10,000 results per search — narrow the filters or search by title.' : 'Try another class, subject or language.'}
+              {result.window_exceeded ? 'The Catalogue returns at most 10,000 results per search — narrow the filters or search by title.' : 'Try another content type, subject or language.'}
             </EmptyState>
           ) : (
             <>

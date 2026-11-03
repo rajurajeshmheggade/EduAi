@@ -11,6 +11,13 @@ vi.mock('@/services/assessmentService', async (orig) => {
   return { ...real, assessmentService: { ...real.assessmentService, get: vi.fn(), autosave: vi.fn(), submit: vi.fn() } }
 })
 const svc = vi.mocked(assessmentService)
+// Proctoring switched off for this module: these tests cover the runner itself (the proctored flow is tested in
+// components/proctoring/*.test.tsx).
+vi.mock('@/services/proctoringService', async (orig) => {
+  const real = await orig<typeof import('@/services/proctoringService')>()
+  const { proctorConfig } = await import('@/test/proctoring')
+  return { ...real, proctoringService: { ...real.proctoringService, config: vi.fn(async () => proctorConfig(false)) } }
+})
 
 const BASE: StudentAssessment = {
   eval_test_id: 't1', assessment_type: 'ONLINE_TEST', test_title: 'Physics Quiz', subject_code: 'PHY101',

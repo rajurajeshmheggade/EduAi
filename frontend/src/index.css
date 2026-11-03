@@ -102,10 +102,20 @@ body {
   color: transparent;
 }
 
+/* Loaders stay invisible for their first 200 ms and then fade in, so fast loads go straight to the content instead of
+   flashing spinner → skeleton → page. */
+@keyframes loader-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@utility loader-reveal {
+  animation: loader-reveal 180ms ease-out 200ms both;
+}
+
 @utility skeleton {
   background: linear-gradient(90deg, hsl(222 25% 94%) 25%, hsl(222 25% 90%) 50%, hsl(222 25% 94%) 75%);
   background-size: 200% 100%;
-  animation: var(--animate-shimmer);
+  animation: var(--animate-shimmer), loader-reveal 180ms ease-out 200ms both;
   border-radius: 0.75rem;
 }
 
