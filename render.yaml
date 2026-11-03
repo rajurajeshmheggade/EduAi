@@ -1,0 +1,46 @@
+# Render Blueprint: the EduAI API as a free Docker web service (Dashboard → New → Blueprint → this repository).
+# Database: paste a Neon connection string (free, pgvector, no expiry) into DATABASE_URL. Render's own free Postgres
+# is deleted 30 days after creation. Frontend: Vercel — see docs/DEPLOY_FREE_TIER.md for the full walkthrough.
+services:
+  - type: web
+    name: eduai-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: PROVIDER_MODE
+        sync: false
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_CHAT_DEPLOYMENT
+        value: gpt-4o
+      - key: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        value: text-embedding-3-small
+      - key: SEED_DEMO
+        value: "1"
+      - key: TZ
+        value: Asia/Kolkata
+      # Free instance = 512 MB RAM / 0.1 CPU: lighter OCR rendering and a single read-aloud worker stay inside memory.
+      - key: EVAL_OCR_DPI
+        value: "150"
+      - key: EVAL_OCR_PAGES_PER_CALL
+        value: "2"
+      - key: EVAL_MAX_SCRIPT_MB
+        value: "20"
+      - key: READ_ALOUD_WORKERS
+        value: "1"
+      - key: READ_ALOUD_LOOKAHEAD_PAGES
+        value: "1"

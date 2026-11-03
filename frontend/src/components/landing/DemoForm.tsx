@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input, Label, Select, Textarea } from '@/components/ui/field'
 import { errorMessage } from '@/services/apiClient'
+import { apiUrl } from '@/lib/apiBase'
 import { cn } from '@/lib/utils'
 
 const INTERESTS: [string, string][] = [
@@ -26,7 +27,7 @@ export function DemoForm() {
     e.preventDefault()
     setBusy(true); setError(null)
     try {
-      await axios.post('/api/v1/public/demo-requests', {
+      await axios.post(apiUrl('/api/v1/public/demo-requests'), {
         ...f, phone: f.phone || null, role: f.role || null, city: f.city || null, student_count: f.student_count || null,
         message: f.message || null, website: f.website || null, interests, consent,
       })

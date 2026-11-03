@@ -1,6 +1,7 @@
 /** Unified Axios client with JWT interceptor + single-flight refresh (replaces sessionStorage.isLogin flags). */
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import type { AuthResponse } from '@/types'
+import { apiUrl, AXIOS_BASE } from '@/lib/apiBase'
 
 const ACCESS = 'eduai.access'
 const REFRESH = 'eduai.refresh'
@@ -18,7 +19,7 @@ export const tokenStore = {
   },
 }
 
-export const api = axios.create({ baseURL: '/' })
+export const api = axios.create({ baseURL: AXIOS_BASE })
 
 api.interceptors.request.use((cfg) => {
   const t = tokenStore.access
@@ -32,7 +33,7 @@ async function refreshAccess(): Promise<string | null> {
   const rt = tokenStore.refresh
   if (!rt) return null
   try {
-    const { data } = await axios.post<AuthResponse>('/api/v1/auth/refresh', { refresh_token: rt })
+    const { data } = await axios.post<AuthResponse>(apiUrl('/api/v1/auth/refresh'), { refresh_token: rt })
     tokenStore.set(data.access_token, data.refresh_token)
     return data.access_token
   } catch {
