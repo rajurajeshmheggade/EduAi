@@ -1,0 +1,25 @@
+# Only backend/ and db/ go into the image (see Dockerfile).
+.git
+.github
+.claude
+frontend
+docs
+*.md
+.env
+.env.*
+!.env.example
+.data
+storage
+uploads
+logs
+**/node_modules
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.pyc
+backend/.data
+backend/tests
+backend/nlp/**/*.pdf
