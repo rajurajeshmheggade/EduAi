@@ -86,7 +86,8 @@ def test_lookahead_prepares_the_next_page_before_the_rest_of_this_one(monkeypatc
     steps = read_aloud.lookahead(tb, 4, "explain", "female")
 
     def label(key):
-        return f"{key.split('|')[0]}-{re.search(r'-p(\d+)\.json', key).group(1)}"
+        m = re.search(r'-p(\d+)\.json', key)
+        return f"{key.split('|')[0]}-{m.group(1)}"
     assert [label(s.key) for s in steps] == ["script-4", "audio-4", "script-5", "audio-5", "rest-4", "script-6", "audio-6"]
     needs = {label(s.key): s.needs and label(s.needs) for s in steps}
     assert needs["script-5"] == "script-4" and needs["script-6"] == "script-5"   # continuity: lessons in page order

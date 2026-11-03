@@ -336,7 +336,7 @@ def _structure(path: str, mtime_ns: int, size: int, class_label: str, subject: s
         s["title"] = f"Part {by_topic[tid]}" + (f" · {', '.join(s['keywords'])}" if s["keywords"] else "")
     return {
         "class_label": class_label, "subject": subject, "chapter": chapter,
-        "source_file": str(Path(path).relative_to(nlp_catalog.ROOT)) if Path(path).is_relative_to(nlp_catalog.ROOT) else Path(path).name,
+        "source_file": Path(path).relative_to(nlp_catalog.ROOT).as_posix() if Path(path).is_relative_to(nlp_catalog.ROOT) else Path(path).name,
         "raw_chars": len(raw), "clean_chars": len(text), "topic_source": source,
         "topics": topics, "segments": {s["id"]: s for s in segments},
     }
